@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sky Typer Squadron</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main class="layout">
+    <section class="game-shell">
+      <div class="game-header">
+        <div>
+          <p class="eyebrow">Sky Typer Squadron</p>
+          <h1>Air Battle Typing Game</h1>
+        </div>
+
+        <div class="header-actions">
+          <button id="startButton" class="primary-button" type="button">Start Mission</button>
+          <button id="pauseButton" class="secondary-button" type="button">Pause</button>
+        </div>
+      </div>
+
+      <section class="hud-row" aria-label="Mission status">
+        <div class="stat-card">
+          <span>Wave</span>
+          <strong id="waveValue">0 / 50</strong>
+        </div>
+        <div class="stat-card">
+          <span>Score</span>
+          <strong id="scoreValue">0</strong>
+        </div>
+        <div class="stat-card">
+          <span>Best</span>
+          <strong id="bestScoreValue">0</strong>
+        </div>
+        <div class="stat-card">
+          <span>Combo</span>
+          <strong id="comboValue">x1</strong>
+        </div>
+      </section>
+
+      <section class="canvas-card">
+        <canvas id="gameCanvas" width="1360" height="760" aria-label="Typing shooter game canvas"></canvas>
+
+        <div class="canvas-overlay" aria-hidden="true">
+          <div class="overlay-top-left" style="display: flex; flex-direction: column; gap: 12px; pointer-events: auto;">
+            <div class="stat-card health-card" style="max-width: 250px;">
+              <div class="health-header">
+                <span>Hull Integrity</span>
+                <strong id="healthValue">6 / 6</strong>
+              </div>
+              <div class="health-bar" aria-hidden="true">
+                <div id="healthFill" class="health-fill"></div>
+              </div>
+            </div>
+            <div class="status-banner" id="statusBanner">Choose a mission, then type the enemy words to fire.</div>
+          </div>
+          <div class="target-display">Target: <span id="targetValue">No target locked</span></div>
+        </div>
+      </section>
+
+      <section class="keyboard-panel">
+        <div class="panel-heading">
+          <h2>Touch Flight Keyboard</h2>
+          <p>Tap letters here, fly with all arrow keys, and use Space or the button to pause.</p>
+        </div>
+        <div id="touchKeyboard" class="touch-keyboard" aria-label="Touch keyboard"></div>
+      </section>
+    </section>
+
+    <aside class="control-panel">
+      <section class="panel">
+        <h2>Mission Setup</h2>
+
+        <label class="field">
+          <span>Difficulty</span>
+          <select id="difficultySelect">
+            <option value="rookie">Rookie Pilot</option>
+            <option value="pilot">Sky Captain</option>
+            <option value="ace">Ace Flyer</option>
+            <option value="legend">Squadron Commander</option>
+          </select>
+        </label>
+
+        <label class="field">
+          <span>Word Pack</span>
+          <select id="packSelect">
+            <option value="mixed">Mixed Mission</option>
+            <option value="animals">Animal Attack</option>
+            <option value="sky">Sky Squad</option>
+            <option value="colors">Color Patrol</option>
+          </select>
+        </label>
+
+        <label class="checkbox-row">
+          <input id="practiceToggle" type="checkbox">
+          <span>Practice mode (enemy planes stop shooting)</span>
+        </label>
+
+        <label class="checkbox-row">
+          <input id="audioToggle" type="checkbox" checked>
+          <span>Arcade sounds</span>
+        </label>
+
+        <div class="quick-tips">
+          <h3>Quick Flight Tips</h3>
+          <p>Type the word above a plane to fire at it.</p>
+          <p>Use all arrow keys to dodge enemy bullets, but your plane can only push a little to the right.</p>
+          <p>Press Space or the Pause button to pause. Press Esc to clear a fresh lock.</p>
+          <p>Every 10th wave brings in a giant boss plane with a much bigger word.</p>
+          <p>Pink repair planes can restore hull integrity when you blast them down.</p>
+          <p>Ground anti-air turrets use smaller words and fire bright blue flak from the mountains.</p>
+        </div>
+
+        <div class="scoreboard">
+          <div class="scoreboard-header">
+            <h3>Hall Of Fame</h3>
+            <span id="bestRunBadge">Best 0</span>
+          </div>
+          <ol id="scoreboardList" class="scoreboard-list">
+            <li>No high scores yet.</li>
+          </ol>
+        </div>
+      </section>
+    </aside>
+  </main>
+
+  <script src="game.js"></script>
+</body>
+</html>
