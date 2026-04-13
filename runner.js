@@ -112,6 +112,7 @@ class WordRunner {
     this.enemies = [];
     this.gates = [];
     this.sparks = [];
+    this.projectiles = [];
     this.cameraX = 0;
 
     // Players
@@ -145,7 +146,13 @@ class WordRunner {
        
        // More enemies on higher levels
        for(let j=0; j<=diff; j++) {
-           this.enemies.push({ x: px + gap + platW/2 + j*80, y: 460, w: 36, h: 40, vx: -50 - (diff*20), startX: px+gap+50, endX: px+gap+platW-50, dead: false });
+           if (this.currentLevel > 1 && Math.random() < 0.4) {
+               // Shooter Enemy
+               this.enemies.push({ type: 'shooter', x: px + gap + platW - 100 - j*40, y: 450, w: 36, h: 50, shootTimer: Math.random(), dead: false });
+           } else {
+               // Normal Walker
+               this.enemies.push({ type: 'walker', x: px + gap + platW/2 + j*80, y: 460, w: 36, h: 40, vx: -50 - (diff*20), startX: px+gap+50, endX: px+gap+platW-50, dead: false });
+           }
        }
        px += gap + platW;
 
@@ -157,9 +164,24 @@ class WordRunner {
        for(let j=0; j<2; j++) this.coins.push({ x: px + gap + (stepW) + j*50, y: 200, w:20, h:20, collected: false });
        px += gap + (stepW*2) + (diff*20);
 
-       // 3. Gap to Gate Approach
+       // 3. Gap to Gate Approach (Add Moving Platforms)
        gap = 180 + (diff * 40);
-       this.platforms.push({ x: px + gap, y: 450, w: 900, h: 150, active: true });
+       let isMoving = this.currentLevel >= 2 && Math.random() < 0.6;
+       let gatePlat = { x: px + gap, y: 450, w: isMoving ? 250 : 900, h: 150, active: true };
+       
+       if (isMoving) {
+          gatePlat.moveY = Math.random() > 0.5;
+          gatePlat.speed = 100 + (diff*20);
+          gatePlat.startY = gatePlat.y; gatePlat.endY = gatePlat.y - 200;
+          gatePlat.startX = gatePlat.x; gatePlat.endX = gatePlat.x + 350;
+          gatePlat.vx = gatePlat.moveY ? 0 : gatePlat.speed;
+          gatePlat.vy = gatePlat.moveY ? -gatePlat.speed : 0;
+          
+          // Additional safety landing before gate if platform is moving
+          this.platforms.push({ x: px + gap + 400, y: 450, w: 500, h: 150, active: true });
+       }
+       
+       this.platforms.push(gatePlat);
        px += gap;
 
        // 4. GATE
@@ -190,7 +212,7 @@ class WordRunner {
     this.goalFlag = { x: px + gap + 400, y: 150, w: 20, h: 350 };
   }
 
-  _hitBlock(gate, block) {
+  _hitBlock(gate, block, player) {
     if (block.hit) return;
     block.hit = true;
     if (block.isCorrect) {
@@ -198,6 +220,21 @@ class WordRunner {
        gate.cleared = true;
        gate.wall.active = false;
        this.score += 100 * this.currentLevel;
+       
+       // REVIVE Dead Teammates
+       let revived = false;
+       for(let p of this.players) {
+           if (p.dead) {
+               p.dead = false;
+               p.lives = 1;
+               p.x = this.cameraX + 150;
+               p.y = -50;
+               p.vx = 0; p.vy = 0;
+               revived = true;
+           }
+       }
+       if (revived) Sfx.win(); // special sound for revive
+       
        // Spawn confetti
        for(let i=0; i<15; i++) {
          this.sparks.push({
@@ -207,9 +244,11 @@ class WordRunner {
          });
        }
     } else {
+       // Wrong guess penalty
        Sfx.wrong();
-       this.score = Math.max(0, this.score - 20);
-       // Spaen red sparks
+       this._killPlayer(player);
+       
+       // Spawn red sparks
        for(let i=0; i<5; i++) {
          this.sparks.push({
            x: block.x + block.w/2, y: block.y + block.h,
@@ -269,8 +308,47 @@ class WordRunner {
     });
 
     // Camera (Tracks players but never goes backwards)
-    let avgX = (this.players[0].x + this.players[1].x) / 2;
+    let avgX = 0, aliveCount = 0;
+    for(let p of this.players) { if(!p.dead){ avgX += p.x; aliveCount++; } }
+    if(aliveCount > 0) avgX /= aliveCount;
     this.cameraX = Math.max(this.cameraX, avgX - 400);
+
+    // Platform Movement
+    for(let plat of this.platforms) {
+       if (!plat.active || (!plat.vx && !plat.vy)) continue;
+       let px_prev = plat.x; let py_prev = plat.y;
+       
+       if (plat.moveY) {
+           plat.y += plat.vy * dt;
+           if (plat.y < plat.endY || plat.y > plat.startY) plat.vy *= -1;
+       } else {
+           plat.x += plat.vx * dt;
+           if (plat.x > plat.endX || plat.x < plat.startX) plat.vx *= -1;
+       }
+       
+       let dx = plat.x - px_prev;
+       let dy = plat.y - py_prev;
+       
+       // Drag riding players
+       for(let p of this.players) {
+           if (!p.dead && Math.abs((p.y + p.h) - py_prev) < 2 && p.x + p.w > plat.x && p.x < plat.x + plat.w) {
+               p.x += dx;
+               p.y += dy;
+           }
+       }
+    }
+
+    // Projectiles
+    this.projectiles = this.projectiles.filter(proj => {
+        proj.x += proj.vx * dt;
+        for(let p of this.players) {
+            if (!p.dead && intersect(p, proj)) {
+                this._killPlayer(p);
+                return false; 
+            }
+        }
+        return proj.x > this.cameraX - 100; // GC offscreen
+    });
 
     // Players
     for(let p of this.players) {
@@ -339,7 +417,7 @@ class WordRunner {
                } else if (p.vy < 0 && p.y - p.vy*dt >= b.y + b.h) {
                  // Hit from below
                  p.y = b.y + b.h; p.vy = 0;
-                 this._hitBlock(gate, b);
+                 this._hitBlock(gate, b, p);
                } else {
                  // Push horizontally
                  if (p.vx > 0) p.x = b.x - p.w;
@@ -387,15 +465,25 @@ class WordRunner {
     // Enemies
     for(let e of this.enemies) {
        if (e.dead) continue;
-       e.x += e.vx * dt;
-       if (e.x < e.startX || e.x > e.endX) e.vx *= -1;
+       
+       if (e.type === 'shooter') {
+           e.shootTimer += dt;
+           if (e.shootTimer > 2.5 - (this.currentLevel * 0.4)) {
+               e.shootTimer = 0;
+               this.projectiles.push({ x: e.x - 10, y: e.y + 10, w: 12, h: 12, vx: -250, dead: false });
+           }
+       } else {
+           e.x += e.vx * dt;
+           if (e.x < e.startX || e.x > e.endX) e.vx *= -1;
+       }
 
        for(let p of this.players) {
+          if (p.dead) continue;
           if (intersect(p, e)) {
              // Stomped?
              if (p.vy > 0 && p.y + p.h - p.vy*dt <= e.y + 15) {
                 e.dead = true;
-                p.vy = -500; // bounce off enemies
+                p.vy = -600; // bounce off enemies
                 this.score += 50;
                 this._updateScore();
                 Sfx.stomp();
@@ -445,9 +533,14 @@ class WordRunner {
          this.ctx.globalAlpha = 1.0;
        } else {
          this.ctx.fillStyle = '#64748b'; // stone body
+         // Dynamic color for moving platforms
+         if (p.vx || p.vy) this.ctx.fillStyle = '#f5a623'; 
          this.ctx.fillRect(p.x, p.y, p.w, p.h);
+         
          this.ctx.fillStyle = '#475569';
+         if (p.vx || p.vy) this.ctx.fillStyle = '#cc8512';
          this.ctx.fillRect(p.x, p.y+15, p.w, p.h-15);
+         
          this.ctx.fillStyle = '#2ec97a'; // grass top
          this.ctx.fillRect(p.x, p.y, p.w, 15);
        }
@@ -495,19 +588,35 @@ class WordRunner {
        this.ctx.fillStyle = '#ffd060';
     }
 
+    // Projectiles
+    this.ctx.fillStyle = '#ffd060';
+    for(let proj of this.projectiles) {
+       this.ctx.beginPath();
+       this.ctx.arc(proj.x + proj.w/2, proj.y + proj.h/2, proj.w/2, 0, Math.PI*2);
+       this.ctx.fill();
+    }
+
     // Enemies
-    this.ctx.fillStyle = '#e84040';
     for(let e of this.enemies) {
        if (e.dead) continue;
+       
+       this.ctx.fillStyle = e.type === 'shooter' ? '#8a2be2' : '#e84040';
        this.ctx.beginPath();
        this.ctx.roundRect(e.x, e.y, e.w, e.h, 6);
        this.ctx.fill();
        // Eyes
        this.ctx.fillStyle = '#fff';
-       let dirX = e.vx > 0 ? 5 : -5;
-       this.ctx.fillRect(e.x + e.w/2 - 8 + dirX, e.y + 10, 6, 6);
-       this.ctx.fillRect(e.x + e.w/2 + 2 + dirX, e.y + 10, 6, 6);
-       this.ctx.fillStyle = '#e84040';
+       let dirX = (e.vx > 0 || e.type==='shooter') ? 5 : -5;
+       
+       if (e.type === 'shooter') {
+           // single cannon eye
+           this.ctx.fillRect(e.x + e.w/2 - 8, e.y + 10, 16, 8);
+           this.ctx.fillStyle = '#000';
+           this.ctx.fillRect(e.x + e.w/2 - 2 - (Math.sin(e.shootTimer * 6)*4), e.y + 12, 4, 4);
+       } else {
+           this.ctx.fillRect(e.x + e.w/2 - 8 + dirX, e.y + 10, 6, 6);
+           this.ctx.fillRect(e.x + e.w/2 + 2 + dirX, e.y + 10, 6, 6);
+       }
     }
 
     // Sparks
