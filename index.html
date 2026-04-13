@@ -116,54 +116,21 @@
           </ol>
         </div>
 
-        <!-- ===== CREW & TOURNAMENT ===== -->
-        <div class="tournament-zone">
+        <!-- ===== LIVE BRACKET (sidebar) ===== -->
+        <div id="sidebarTournamentZone" class="tournament-zone" style="display:none">
           <div class="scoreboard-header" style="margin-top:18px">
-            <h3>🏆 Crew &amp; Tournament</h3>
-            <button id="toggleTournamentBtn" class="secondary-button tourn-toggle-btn" type="button">▼ Open</button>
+            <h3>🏆 Tournament Live</h3>
+            <button id="resetTournamentBtn" type="button" class="secondary-button tourn-toggle-btn">↺ Reset</button>
           </div>
-
-          <div id="tournamentPanel" class="tournament-panel" style="display:none">
-
-            <!-- Crew names (all games) -->
-            <p class="hint-text">Name your crew for any mission:</p>
-            <label class="field">
-              <span>✈️ Pilot (Arrow Keys)</span>
-              <input type="text" id="pilotNameInput" placeholder="Ace" maxlength="20" class="name-input">
-            </label>
-            <label class="field">
-              <span>🎯 Gunner (Types Words)</span>
-              <input type="text" id="gunnerNameInput" placeholder="Gunner" maxlength="20" class="name-input">
-            </label>
-
-            <div class="tournament-divider"></div>
-
-            <!-- Team setup -->
-            <div id="tournamentTeamSetup">
-              <p class="hint-text">Round-robin tournament (2–8 teams):</p>
-              <div id="teamEntriesList" class="team-entries-list"></div>
-              <div class="row-btns">
-                <button id="addTeamBtn" type="button" class="secondary-button small-btn">+ Add Team</button>
-                <button id="generateBracketBtn" type="button" class="primary-button small-btn">▶ Start</button>
-              </div>
-            </div>
-
-            <!-- Bracket / standings (shown once tournament starts) -->
-            <div id="bracketView" class="bracket-view" style="display:none">
-              <div id="currentMatchBanner" class="current-match-banner"></div>
-              <table class="standings-table">
-                <thead>
-                  <tr><th>Team</th><th>W</th><th>L</th><th>Pts</th></tr>
-                </thead>
-                <tbody id="standingsTableBody"></tbody>
-              </table>
-              <button id="nextMatchBtn" type="button" class="primary-button" style="width:100%;margin-top:10px;display:none">Continue ▶</button>
-              <button id="resetTournamentBtn" type="button" class="secondary-button" style="width:100%;margin-top:6px;font-size:0.78rem;padding:8px">↺ New Tournament</button>
-            </div>
-
-          </div>
+          <div id="sidebarCurrentMatch" class="current-match-banner" style="margin-top:10px"></div>
+          <table class="standings-table" style="margin-top:8px">
+            <thead><tr><th>Team</th><th>W</th><th>L</th><th>Pts</th></tr></thead>
+            <tbody id="standingsTableBody"></tbody>
+          </table>
+          <button id="nextMatchBtn" type="button" class="primary-button"
+                  style="width:100%;margin-top:10px;display:none">Continue ▶</button>
         </div>
-        <!-- /CREW & TOURNAMENT -->
+        <!-- /LIVE BRACKET -->
 
       </section>
     </aside>

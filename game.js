@@ -2225,17 +2225,12 @@ class SkyTyperGame {
   }
 
   renderBracket() {
-    const bracket = document.getElementById("bracketView");
     const body    = document.getElementById("standingsTableBody");
-    const banner  = document.getElementById("currentMatchBanner");
     const nextBtn = document.getElementById("nextMatchBtn");
-    const setup   = document.getElementById("tournamentTeamSetup");
-    if (!bracket || !body) return;
+    if (!body) return;
 
-    bracket.style.display = "block";
-    if (setup) setup.style.display = "none";
-
-    // Standings
+    // Update sidebar banner
+    const sidebarBanner = document.getElementById("sidebarCurrentMatch");
     const sorted = [...this.tournament.teams]
       .map((t, i) => ({ ...t, _idx: i }))
       .sort((a, b) => (b.wins || 0) - (a.wins || 0) || (b.totalScore || 0) - (a.totalScore || 0));
@@ -2249,9 +2244,10 @@ class SkyTyperGame {
     });
 
     // Banner
+    let bannerHtml = "";
     if (this.tournament.phase === "done") {
       const champ = sorted[0];
-      banner.innerHTML = `<strong>🏆 Champion: ${champ.name}!</strong>${champ.pilot} &amp; ${champ.gunner} lead the skies.`;
+      bannerHtml = `<strong>🏆 Champion: ${champ.name}!</strong>${champ.pilot} &amp; ${champ.gunner} lead the skies.`;
       if (nextBtn) nextBtn.style.display = "none";
     } else {
       const match = this.tournament.schedule[this.tournament.matchIdx];
@@ -2261,13 +2257,14 @@ class SkyTyperGame {
         const num   = this.tournament.matchIdx + 1;
         const total = this.tournament.schedule.length;
         if (this.tournament.teamTurn === 0) {
-          banner.innerHTML = `<strong>Match ${num}/${total}: ${t1.name} vs ${t2.name}</strong>Playing now: ✈️ ${t1.pilot} (Pilot) &amp; 🎯 ${t1.gunner} (Gunner)`;
+          bannerHtml = `<strong>Match ${num}/${total}: ${t1.name} vs ${t2.name}</strong>Playing now: ✈️ ${t1.pilot} (Pilot) &amp; 🎯 ${t1.gunner} (Gunner)`;
         } else {
-          banner.innerHTML = `<strong>Match ${num}/${total}: ${t1.name} vs ${t2.name}</strong>Now: ✈️ ${t2.pilot} &amp; 🎯 ${t2.gunner} &nbsp;<small style="color:var(--accent)">(${t1.name} scored ${match.t1Score} pts)</small>`;
+          bannerHtml = `<strong>Match ${num}/${total}: ${t1.name} vs ${t2.name}</strong>Now: ✈️ ${t2.pilot} &amp; 🎯 ${t2.gunner} &nbsp;<small style="color:var(--accent)">(${t1.name} scored ${match.t1Score} pts)</small>`;
         }
         if (nextBtn) nextBtn.style.display = "block";
       }
     }
+    if (sidebarBanner) sidebarBanner.innerHTML = bannerHtml;
   }
 
   startTournamentFromUI() {
@@ -2290,6 +2287,9 @@ class SkyTyperGame {
     this.tournament.schedule = this.generateRoundRobin(teams);
     this.tournament.matchIdx = 0;
     this.tournament.teamTurn = 0;
+    // Show the live sidebar bracket panel
+    const sideZone = document.getElementById("sidebarTournamentZone");
+    if (sideZone) sideZone.style.display = "";
     this.closeTournamentModal();
     this.prepareTournamentTurn();
     this.renderBracket();
@@ -2316,6 +2316,7 @@ class SkyTyperGame {
       document.querySelectorAll(".team-entry-label").forEach((l, i) => { l.textContent = `Team ${i + 1}`; });
     });
     list.appendChild(div);
+    list.scrollTop = list.scrollHeight;
   }
 
   openTournamentModal() {
@@ -2444,17 +2445,22 @@ class SkyTyperGame {
     });
     if (resetBtn) resetBtn.addEventListener("click", () => {
       this.tournament = this.buildTournamentState();
+      // Hide the sidebar live bracket
+      const sideZone = document.getElementById("sidebarTournamentZone");
+      if (sideZone) sideZone.style.display = "none";
+      // Clear the modal's team list and re-seed it
       const list = document.getElementById("teamEntriesList");
       if (list) list.innerHTML = "";
-      const bracket = document.getElementById("bracketView");
-      const setup   = document.getElementById("tournamentTeamSetup");
-      if (bracket) bracket.style.display = "none";
-      if (setup)   setup.style.display = "";
       this.addTeamEntry();
       this.addTeamEntry();
+      // Clear sidebar standings
+      const body = document.getElementById("standingsTableBody");
+      if (body) body.innerHTML = "";
+      const sb = document.getElementById("sidebarCurrentMatch");
+      if (sb) sb.innerHTML = "";
     });
 
-    // Pre-populate 2 team slots
+    // Pre-populate 2 team slots in the modal list
     this.addTeamEntry();
     this.addTeamEntry();
   }
