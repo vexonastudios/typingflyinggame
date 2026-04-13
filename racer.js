@@ -16,8 +16,8 @@ const MEDALS    = ['🥇', '🥈', '🥉', '  '];
 
 const CONTROLS = [
   { up:'ArrowUp',  down:'ArrowDown',  left:'ArrowLeft',  right:'ArrowRight' },
-  { up:'w',        down:'s',          left:'a',          right:'d'          },
-  { up:'i',        down:'k',          left:'j',          right:'l'          },
+  { up:'KeyW',     down:'KeyS',       left:'KeyA',       right:'KeyD'       },
+  { up:'KeyI',     down:'KeyK',       left:'KeyJ',       right:'KeyL'       },
   { up:'Numpad8',  down:'Numpad2',    left:'Numpad4',    right:'Numpad6'    },
 ];
 
@@ -96,6 +96,66 @@ function darken(hex, amt) {
   const b = Math.max(0, (n&0xff)+amt);
   return `rgb(${r},${g},${b})`;
 }
+
+// ─────────────────────────────────────────────
+// Sound Engine (Web Audio API)
+// ─────────────────────────────────────────────
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+const Sfx = {
+  resume: () => { if (audioCtx.state === 'suspended') audioCtx.resume(); },
+  
+  playTone: (freq, type, duration, vol=0.1, rampOut=true) => {
+    try {
+      Sfx.resume();
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = type;
+      osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+      
+      gain.gain.setValueAtTime(vol, audioCtx.currentTime);
+      if (rampOut) {
+        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration);
+      } else {
+        gain.gain.setValueAtTime(vol, audioCtx.currentTime + duration - 0.05);
+        gain.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + duration);
+      }
+      
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start();
+      osc.stop(audioCtx.currentTime + duration);
+    } catch(e) {}
+  },
+
+  bump: (force) => {
+    try {
+      Sfx.resume();
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(140, audioCtx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(30, audioCtx.currentTime + 0.15);
+      
+      const v = Math.min(force * 0.0015, 0.4);
+      gain.gain.setValueAtTime(v, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.15);
+      
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start();
+      osc.stop(audioCtx.currentTime + 0.15);
+    } catch(e) {}
+  },
+
+  countdownBeep: () => Sfx.playTone(440, 'square', 0.15, 0.08, false),
+  countdownGo: ()   => Sfx.playTone(880, 'square', 0.4, 0.12, false),
+  lapComplete: ()   => Sfx.playTone(600, 'sine', 0.25, 0.1),
+  raceFinish: ()    => {
+    Sfx.playTone(523.25, 'sine', 0.15, 0.1);
+    setTimeout(() => Sfx.playTone(659.25, 'sine', 0.15, 0.1), 150);
+    setTimeout(() => Sfx.playTone(783.99, 'sine', 0.4, 0.1), 300);
+  }
+};
 
 // ─────────────────────────────────────────────
 // Main game class
@@ -218,6 +278,10 @@ class PixelRacer {
     this._countdown           = 3;
     this._cdTimer             = 1.0;
     this._cdPhase             = 'num';   // 'num' | 'go'
+    
+    // Resume audio context on start button click (requires user interaction)
+    Sfx.resume();
+    Sfx.countdownBeep();
   }
 
   _goSetup() {
@@ -365,6 +429,8 @@ class PixelRacer {
       p.quartersDone.clear();
 
       if (p.lap > LAPS) {
+        if (this.results.length === 0) Sfx.raceFinish();
+        
         p.finished    = true;
         p.finishTime  = this.raceTimer;
         p.finishPos   = this.results.length + 1;
@@ -377,6 +443,8 @@ class PixelRacer {
         if (this.results.length >= this.playerCount) {
           this._endRace();
         }
+      } else {
+        Sfx.lapComplete();
       }
     }
 
@@ -489,6 +557,8 @@ class PixelRacer {
 
         // ── Screen shake (scales with impact force) ──
         this._shake = Math.min((this._shake || 0) + impact * 0.025, 14);
+        
+        Sfx.bump(impact);
       }
     }
   }
@@ -559,9 +629,11 @@ class PixelRacer {
         if (this._cdPhase === 'num') {
           this._countdown--;
           if (this._countdown > 0) {
+            Sfx.countdownBeep();
             this._cdTimer = 1.0;
           } else {
             // Show GO
+            Sfx.countdownGo();
             this._cdPhase = 'go';
             this._cdTimer = 0.9;
           }
