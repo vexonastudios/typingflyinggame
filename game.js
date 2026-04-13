@@ -443,12 +443,26 @@ class SkyTyperGame {
 
   toggleFullScreen() {
     const shell = document.querySelector(".game-shell");
-    if (!document.fullscreenElement) {
-      shell.requestFullscreen().catch((err) => {
-        console.error(`Error attempting to enable full-screen mode: ${err.message}`);
-      });
-    } else {
-      document.exitFullscreen();
+    try {
+      if (!document.fullscreenElement && !document.webkitFullscreenElement && !document.msFullscreenElement) {
+        if (shell.requestFullscreen) {
+          shell.requestFullscreen().catch((err) => console.log(err));
+        } else if (shell.webkitRequestFullscreen) {
+          shell.webkitRequestFullscreen();
+        } else if (shell.msRequestFullscreen) {
+          shell.msRequestFullscreen();
+        }
+      } else {
+        if (document.exitFullscreen) {
+          document.exitFullscreen();
+        } else if (document.webkitExitFullscreen) {
+          document.webkitExitFullscreen();
+        } else if (document.msExitFullscreen) {
+          document.msExitFullscreen();
+        }
+      }
+    } catch (e) {
+      console.log(e);
     }
   }
 
@@ -1429,48 +1443,63 @@ class SkyTyperGame {
       this.ctx.fill();
       this.beginTriangle(-48, 8, -64, 2, -64, 14);
       this.ctx.fill();
-    } else {
-      // Default / Enemy Plane
+      // Default / Enemy Plane - Vastly Improved Custom Design
       const bodyGrad = this.ctx.createLinearGradient(-38, 0, 28, 0);
       bodyGrad.addColorStop(0, bodyColor);
-      bodyGrad.addColorStop(1, this.ctx.fillStyle = bodyColor); // Just to ensure it's used
+      bodyGrad.addColorStop(0.5, "#ffffff"); // metallic sheen
+      bodyGrad.addColorStop(1, bodyColor);
 
+      // Swept Wings (Sharper look)
       this.ctx.fillStyle = wingColor;
-      this.roundRect(-16, -7, 48, 12, 6);
+      this.beginTriangle(-10, -8, 20, -8, -16, -28);
       this.ctx.fill();
-      this.roundRect(-10, 10, 40, 10, 5);
+      this.beginTriangle(-10, 8, 20, 8, -16, 28);
       this.ctx.fill();
 
-      this.ctx.fillStyle = bodyColor;
+      // Main Hull
+      this.ctx.fillStyle = bodyGrad;
       this.roundRect(-38, -10, 66, 22, 12);
       this.ctx.fill();
 
-      // Cockpit glass
-      const glassGrad = this.ctx.createRadialGradient(-5, -8, 2, -5, -8, 10);
-      glassGrad.addColorStop(0, "#346b9a");
-      glassGrad.addColorStop(1, "#12324d");
-      this.ctx.fillStyle = glassGrad;
-      this.roundRect(-12, -14, 15, 11, 5);
+      // Jet exhaust (glowing)
+      const exhaustGrad = this.ctx.createRadialGradient(-38, 0, 2, -38, 0, 12);
+      exhaustGrad.addColorStop(0, "#ffffff");
+      exhaustGrad.addColorStop(0.5, "#00ccff");
+      exhaustGrad.addColorStop(1, "transparent");
+      this.ctx.fillStyle = exhaustGrad;
+      this.ctx.beginPath();
+      this.ctx.arc(-38, 0, 12, 0, Math.PI * 2);
       this.ctx.fill();
 
-      // Tail & Fins
+      // Cockpit glass with glare
+      const glassGrad = this.ctx.createLinearGradient(-12, -14, 3, -3);
+      glassGrad.addColorStop(0, "#12324d");
+      glassGrad.addColorStop(0.3, "#42a5f5");
+      glassGrad.addColorStop(1, "#12324d");
+      this.ctx.fillStyle = glassGrad;
+      this.roundRect(-8, -12, 18, 10, 4);
+      this.ctx.fill();
+
+      // Tail fins
       this.ctx.fillStyle = wingColor;
-      this.beginTriangle(28, 0, 46, -8, 46, 8);
+      this.beginTriangle(18, 0, 28, -6, 28, 6);
       this.ctx.fill();
-      this.beginTriangle(-34, -2, -48, -16, -24, -6);
-      this.ctx.fill();
-      this.beginTriangle(-34, 4, -48, 18, -24, 8);
-      this.ctx.fill();
+      
+      // Panel line detailing
+      this.ctx.strokeStyle = "rgba(0,0,0,0.3)";
+      this.ctx.lineWidth = 1;
+      this.ctx.strokeRect(-20, -5, 10, 10);
+      this.ctx.strokeRect(0, -5, 15, 10);
 
       // Propulsion line
       this.ctx.strokeStyle = "rgba(255, 255, 255, 0.85)";
       this.ctx.lineWidth = 3;
       this.ctx.beginPath();
       const propAngle = this.totalTime * 30;
-      this.ctx.moveTo(42, Math.sin(propAngle) * 8);
-      this.ctx.lineTo(42, Math.sin(propAngle + Math.PI) * 8);
+      this.ctx.moveTo(34, Math.sin(propAngle) * 8);
+      this.ctx.lineTo(34, Math.sin(propAngle + Math.PI) * 8);
       this.ctx.stroke();
-    }
+
 
     this.ctx.restore();
   }
