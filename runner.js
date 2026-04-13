@@ -37,16 +37,46 @@ const Sfx = {
 // Vocabulary Prompts
 // ─────────────────────────────────────────────
 const PROMPTS = [
+  // Prefixes / Suffixes
   { q: "Means 'again'", a: "re-", w: ["un-", "pre-"] },
-  { q: "Meaning 'large'", a: "huge", w: ["tiny", "soft"] },
-  { q: "Opposite of 'always'", a: "never", w: ["often", "rare"] },
-  { q: "Very happy", a: "joyful", w: ["angry", "sad"] },
   { q: "Means 'before'", a: "pre-", w: ["post-", "re-"] },
+  { q: "Means 'not'", a: "un-", w: ["bi-", "pro-"] },
+  { q: "Means 'two'", a: "bi-", w: ["tri-", "uni-"] },
+  { q: "Means 'three'", a: "tri-", w: ["bi-", "sub-"] },
+  { q: "Means 'under' or 'below'", a: "sub-", w: ["super-", "over-"] },
+  { q: "Means 'against'", a: "anti-", w: ["pro-", "co-"] },
+  { q: "Means 'together'", a: "co-", w: ["ex-", "un-"] },
+  // Synonyms / Definitions
+  { q: "Meaning 'large'", a: "huge", w: ["tiny", "soft"] },
+  { q: "Meaning 'small'", a: "tiny", w: ["huge", "heavy"] },
+  { q: "Very happy", a: "joyful", w: ["angry", "sad"] },
   { q: "To mix together", a: "blend", w: ["break", "cut"] },
   { q: "Extremely hot", a: "boiling", w: ["chilly", "mild"] },
   { q: "A deep hole", a: "pit", w: ["hill", "cloud"] },
   { q: "To move quickly", a: "dash", w: ["crawl", "rest"] },
-  { q: "Without fear", a: "brave", w: ["weak", "scared"] }
+  { q: "Without fear", a: "brave", w: ["weak", "scared"] },
+  { q: "To build", a: "create", w: ["destroy", "lose"] },
+  { q: "To yell loudly", a: "shout", w: ["whisper", "sing"] },
+  { q: "A strong wind", a: "gale", w: ["breeze", "calm"] },
+  { q: "To pull apart", a: "tear", w: ["mend", "sew"] },
+  { q: "Very tired", a: "weary", w: ["energetic", "awake"] },
+  { q: "Looking carefully", a: "search", w: ["ignore", "hide"] },
+  // Antonyms
+  { q: "Opposite of 'always'", a: "never", w: ["often", "rare"] },
+  { q: "Opposite of 'bright'", a: "dim", w: ["shiny", "clear"] },
+  { q: "Opposite of 'smooth'", a: "rough", w: ["flat", "glassy"] },
+  { q: "Opposite of 'empty'", a: "full", w: ["blank", "hollow"] },
+  { q: "Opposite of 'arrive'", a: "leave", w: ["enter", "come"] },
+  { q: "Opposite of 'begin'", a: "finish", w: ["start", "open"] },
+  { q: "Opposite of 'brave'", a: "cowardly", w: ["bold", "heroic"] },
+  // Spelling / Parts
+  { q: "Plural of 'child'", a: "children", w: ["childs", "childes"] },
+  { q: "Plural of 'mouse'", a: "mice", w: ["mouses", "meece"] },
+  { q: "Past tense of 'run'", a: "ran", w: ["runned", "running"] },
+  { q: "Past tense of 'eat'", a: "ate", w: ["eated", "eaten"] },
+  { q: "A piece of fruit", a: "apple", w: ["appl", "apel"] },
+  { q: "Color of the sky", a: "blue", w: ["bloo", "blu"] },
+  { q: "A type of flower", a: "daisy", w: ["dazy", "daisee"] }
 ];
 
 function intersect(a, b) {
@@ -95,6 +125,7 @@ class WordRunner {
     this.sparks = [];
     this.players = [];
     this.projectiles = [];
+    this.hearts = [];
     this.cameraX = 0;
 
     requestAnimationFrame((ts) => this._loop(ts));
@@ -114,6 +145,7 @@ class WordRunner {
     this.gates = [];
     this.sparks = [];
     this.projectiles = [];
+    this.hearts = [];
     this.cameraX = 0;
 
     // Players
@@ -144,6 +176,10 @@ class WordRunner {
        let platW = Math.max(300, 700 - (diff * 150));
        this.platforms.push({ x: px + gap, y: 500, w: platW, h: 100, active: true });
        for(let j=0; j<3; j++) this.coins.push({ x: px + gap + (platW/2) - 60 + j*60, y: 380, w:20, h:20, collected: false });
+       
+       if (Math.random() < 0.3) {
+           this.hearts.push({ x: px + gap + (platW/2), y: 320, w: 20, h: 20, collected: false });
+       }
        
        // More enemies on higher levels
        for(let j=0; j<=diff; j++) {
@@ -281,9 +317,14 @@ class WordRunner {
           document.getElementById('gameEnd').style.display = 'flex';
        }
     } else {
-       // Respawn safely near camera edge but on highest active ground
-       p.x = this.cameraX + 150;
-       p.y = -50;
+       // Respawn safely on the first active stable platform ahead of the camera
+       let safePlat = this.platforms.find(plat => plat.active && !plat.moveY && !plat.isGate && plat.x + plat.w > this.cameraX + 50);
+       if (safePlat) {
+           p.x = Math.max(this.cameraX + 50, safePlat.x + 50);
+       } else {
+           p.x = this.cameraX + 150;
+       }
+       p.y = -100;
        p.vx = 0; p.vy = 0;
     }
   }
@@ -442,6 +483,17 @@ class WordRunner {
              this.score += 10;
              this._updateScore();
              Sfx.coin();
+          }
+       }
+
+       // Hearts
+       for(let h of this.hearts) {
+          if(!h.collected && intersect(p, h)) {
+             h.collected = true;
+             p.lives++;
+             this._updateScore();
+             // Play win sound for heart pickup
+             Sfx.win(); 
           }
        }
 
@@ -613,13 +665,24 @@ class WordRunner {
        
        if (e.type === 'shooter') {
            // single cannon eye
-           this.ctx.fillRect(e.x + e.w/2 - 8, e.y + 10, 16, 8);
+           this.ctx.fillRect(e.x + e.w/2 - 8, e.y + e.h/2 - 8, 16, 16);
            this.ctx.fillStyle = '#000';
-           this.ctx.fillRect(e.x + e.w/2 - 2 - (Math.sin(e.shootTimer * 6)*4), e.y + 12, 4, 4);
+           this.ctx.fillRect(e.x + e.w/2 - 4 - (Math.sin(e.shootTimer * 6)*4), e.y + e.h/2 - 4, 8, 8);
        } else {
            this.ctx.fillRect(e.x + e.w/2 - 8 + dirX, e.y + 10, 6, 6);
            this.ctx.fillRect(e.x + e.w/2 + 2 + dirX, e.y + 10, 6, 6);
        }
+    }
+
+    // Hearts
+    this.ctx.fillStyle = '#ff4d4d';
+    for(let h of this.hearts) {
+       if (h.collected) continue;
+       this.ctx.beginPath();
+       this.ctx.arc(h.x + h.w/4, h.y + h.w/4, h.w/4, Math.PI, 0);
+       this.ctx.arc(h.x + h.w*0.75, h.y + h.w/4, h.w/4, Math.PI, 0);
+       this.ctx.lineTo(h.x + h.w/2, h.y + h.h);
+       this.ctx.fill();
     }
 
     // Sparks
