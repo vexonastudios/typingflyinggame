@@ -909,8 +909,6 @@ class SkyTyperGame {
       this.enemies.push(this.createTurret(waveConfig, turretIndex));
     }
 
-    this.playerBullets = [];
-    this.enemyBullets = [];
     this.pendingWaveTimer = 0;
     if (this.settings.practice) {
       this.messageText = waveConfig.isBossWave
