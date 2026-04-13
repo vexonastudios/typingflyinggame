@@ -75,8 +75,21 @@ const PROMPTS = [
   { q: "Past tense of 'run'", a: "ran", w: ["runned", "running"] },
   { q: "Past tense of 'eat'", a: "ate", w: ["eated", "eaten"] },
   { q: "A piece of fruit", a: "apple", w: ["appl", "apel"] },
+  { q: "A piece of fruit", a: "apple", w: ["appl", "apel"] },
   { q: "Color of the sky", a: "blue", w: ["bloo", "blu"] },
-  { q: "A type of flower", a: "daisy", w: ["dazy", "daisee"] }
+  { q: "A type of flower", a: "daisy", w: ["dazy", "daisee"] },
+  // Homophones
+  { q: "Used to see", a: "eye", w: ["I", "aye"] },
+  { q: "A pretty plant", a: "flower", w: ["flour", "floor"] },
+  { q: "Number after seven", a: "eight", w: ["ate", "at"] },
+  { q: "To observe", a: "see", w: ["sea", "C"] },
+  { q: "A male child", a: "son", w: ["sun", "sin"] },
+  // Rhymes
+  { q: "Rhymes with 'cat'", a: "bat", w: ["bit", "car"] },
+  { q: "Rhymes with 'light'", a: "night", w: ["late", "lip"] },
+  { q: "Rhymes with 'blue'", a: "shoe", w: ["glow", "blow"] },
+  { q: "Rhymes with 'fast'", a: "past", w: ["pest", "first"] },
+  { q: "Rhymes with 'game'", a: "name", w: ["gain", "none"] }
 ];
 
 function intersect(a, b) {
@@ -126,6 +139,7 @@ class WordRunner {
     this.players = [];
     this.projectiles = [];
     this.hearts = [];
+    this.spikes = [];
     this.cameraX = 0;
 
     requestAnimationFrame((ts) => this._loop(ts));
@@ -146,6 +160,7 @@ class WordRunner {
     this.sparks = [];
     this.projectiles = [];
     this.hearts = [];
+    this.spikes = [];
     this.cameraX = 0;
 
     // Players
@@ -183,11 +198,14 @@ class WordRunner {
        
        // More enemies on higher levels
        for(let j=0; j<=diff; j++) {
-           if (this.currentLevel > 1 && Math.random() < 0.4) {
-               // Shooter Enemy
+           let r = Math.random();
+           if (this.currentLevel > 1 && r < 0.25) {
                this.enemies.push({ type: 'shooter', x: px + gap + platW - 100 - j*40, y: 450, w: 36, h: 50, shootTimer: Math.random(), dead: false });
+           } else if (this.currentLevel > 1 && r < 0.5) {
+               this.enemies.push({ type: 'flyer', x: px + gap + platW/2 + j*60, y: 350, w: 36, h: 30, startY: 350, flyOffset: Math.random()*10, dead: false });
+           } else if (this.currentLevel > 1 && r < 0.7) {
+               this.enemies.push({ type: 'chaser', x: px + gap + platW/2 + j*70, y: 460, w: 36, h: 40, vx: 0, dead: false });
            } else {
-               // Normal Walker
                this.enemies.push({ type: 'walker', x: px + gap + platW/2 + j*80, y: 460, w: 36, h: 40, vx: -50 - (diff*20), startX: px+gap+50, endX: px+gap+platW-50, dead: false });
            }
        }
@@ -199,6 +217,11 @@ class WordRunner {
        this.platforms.push({ x: px + gap, y: 400, w: stepW, h: 200, active: true });
        this.platforms.push({ x: px + gap + stepW + (diff*20), y: 300, w: stepW, h: 300, active: true });
        for(let j=0; j<2; j++) this.coins.push({ x: px + gap + (stepW) + j*50, y: 200, w:20, h:20, collected: false });
+       
+       if (this.currentLevel >= 2 && Math.random() < 0.5) {
+           this.spikes.push({ x: px + gap + (stepW/2), y: 485, w: 80, h: 15 });
+       }
+       
        px += gap + (stepW*2) + (diff*20);
 
        // 3. Gap to Gate Approach (Add Moving Platforms)
@@ -475,6 +498,13 @@ class WordRunner {
        if (p.y > CH + 100) {
           this._killPlayer(p);
        }
+       
+       // Spikes
+       for(let s of this.spikes) {
+          if (intersect(p, s)) {
+             this._killPlayer(p);
+          }
+       }
 
        // Coins
        for(let c of this.coins) {
@@ -527,6 +557,23 @@ class WordRunner {
                e.shootTimer = 0;
                this.projectiles.push({ x: e.x - 10, y: e.y + 10, w: 12, h: 12, vx: -250, dead: false });
            }
+       } else if (e.type === 'flyer') {
+           e.flyOffset += dt * 4;
+           e.y = e.startY + Math.sin(e.flyOffset) * 60;
+           e.x += -80 * dt;
+       } else if (e.type === 'chaser') {
+           let closest = null; let minDist = 9999;
+           for(let p of this.players) {
+               if(p.dead) continue;
+               let d = Math.abs(p.x - e.x);
+               if (d < minDist) { minDist = d; closest = p; }
+           }
+           if (closest && minDist < 350) {
+               e.vx = closest.x < e.x ? -110 : 110;
+           } else {
+               e.vx *= 0.5;
+           }
+           e.x += e.vx * dt;
        } else {
            e.x += e.vx * dt;
            if (e.x < e.startX || e.x > e.endX) e.vx *= -1;
@@ -651,14 +698,31 @@ class WordRunner {
        this.ctx.fill();
     }
 
+    // Spikes
+    this.ctx.fillStyle = '#b91c1c';
+    for(let s of this.spikes) {
+       for(let x = s.x; x < s.x + s.w; x += 15) {
+           this.ctx.beginPath();
+           this.ctx.moveTo(x, s.y + s.h);
+           this.ctx.lineTo(x + 7.5, s.y);
+           this.ctx.lineTo(Math.min(x + 15, s.x+s.w), s.y + s.h);
+           this.ctx.fill();
+       }
+    }
+
     // Enemies
     for(let e of this.enemies) {
        if (e.dead) continue;
        
-       this.ctx.fillStyle = e.type === 'shooter' ? '#8a2be2' : '#e84040';
+       if (e.type === 'shooter') this.ctx.fillStyle = '#8a2be2';
+       else if (e.type === 'flyer') this.ctx.fillStyle = '#f97316';
+       else if (e.type === 'chaser') this.ctx.fillStyle = '#65a30d';
+       else this.ctx.fillStyle = '#e84040';
+
        this.ctx.beginPath();
        this.ctx.roundRect(e.x, e.y, e.w, e.h, 6);
        this.ctx.fill();
+       
        // Eyes
        this.ctx.fillStyle = '#fff';
        let dirX = (e.vx > 0 || e.type==='shooter') ? 5 : -5;
@@ -668,6 +732,9 @@ class WordRunner {
            this.ctx.fillRect(e.x + e.w/2 - 8, e.y + e.h/2 - 8, 16, 16);
            this.ctx.fillStyle = '#000';
            this.ctx.fillRect(e.x + e.w/2 - 4 - (Math.sin(e.shootTimer * 6)*4), e.y + e.h/2 - 4, 8, 8);
+       } else if (e.type === 'flyer') {
+           this.ctx.fillRect(e.x + 4, e.y + e.h/2 - 4, 8, 8);
+           this.ctx.fillRect(e.x + e.w - 12, e.y + e.h/2 - 4, 8, 8);
        } else {
            this.ctx.fillRect(e.x + e.w/2 - 8 + dirX, e.y + 10, 6, 6);
            this.ctx.fillRect(e.x + e.w/2 + 2 + dirX, e.y + 10, 6, 6);
