@@ -94,6 +94,7 @@ class WordRunner {
     this.gates = [];
     this.sparks = [];
     this.players = [];
+    this.projectiles = [];
     this.cameraX = 0;
 
     requestAnimationFrame((ts) => this._loop(ts));
