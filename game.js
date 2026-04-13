@@ -1196,7 +1196,7 @@ class SkyTyperGame {
 
     if (this.enemies.length === 0 && this.enemyBullets.length === 0) {
       if (this.pendingWaveTimer <= 0) {
-        this.pendingWaveTimer = 1.35;
+        this.pendingWaveTimer = 0.6;
         this.messageText = this.wave >= this.maxWaves ? "Sky clear. Mission complete!" : "Wave clear. New planes are on the way.";
         this.updateUi();
       }
@@ -2187,6 +2187,8 @@ class SkyTyperGame {
       } else {
         this.prepareTournamentTurn();
       }
+      // Always show the round result popup after both teams have played
+      this.showRoundResultModal(match);
     }
     this.renderBracket();
     this.updateUi();
@@ -2275,9 +2277,9 @@ class SkyTyperGame {
       const inputs = entry.querySelectorAll(".team-input");
       if (inputs.length >= 3) {
         teams.push({
-          name:       inputs[0].value.trim() || `Team ${teams.length + 1}`,
-          pilot:      inputs[1].value.trim() || "Pilot",
-          gunner:     inputs[2].value.trim() || "Gunner",
+          name:   inputs[0].value.trim() || `Team ${teams.length + 1}`,
+          pilot:  inputs[1].value.trim() || "Pilot",
+          gunner: inputs[2].value.trim() || "Gunner",
           wins: 0, losses: 0, totalScore: 0, matches: 0
         });
       }
@@ -2288,6 +2290,7 @@ class SkyTyperGame {
     this.tournament.schedule = this.generateRoundRobin(teams);
     this.tournament.matchIdx = 0;
     this.tournament.teamTurn = 0;
+    this.closeTournamentModal();
     this.prepareTournamentTurn();
     this.renderBracket();
   }
@@ -2315,36 +2318,143 @@ class SkyTyperGame {
     list.appendChild(div);
   }
 
-  bindTournamentEvents() {
-    const addBtn      = document.getElementById("addTeamBtn");
-    const genBtn      = document.getElementById("generateBracketBtn");
-    const nextBtn     = document.getElementById("nextMatchBtn");
-    const resetBtn    = document.getElementById("resetTournamentBtn");
-    const toggleBtn   = document.getElementById("toggleTournamentBtn");
-    const panel       = document.getElementById("tournamentPanel");
+  openTournamentModal() {
+    const modal = document.getElementById("tournamentModal");
+    if (modal) modal.style.display = "flex";
+  }
 
-    if (addBtn)    addBtn.addEventListener("click",  () => this.addTeamEntry());
-    if (genBtn)    genBtn.addEventListener("click",  () => this.startTournamentFromUI());
-    if (nextBtn)   nextBtn.addEventListener("click", () => { if (this.tournament.phase === "awaiting") this.prepareTournamentTurn(); });
-    if (resetBtn)  resetBtn.addEventListener("click", () => {
-      this.tournament = this.buildTournamentState();
-      const setup = document.getElementById("tournamentTeamSetup");
-      const bracket = document.getElementById("bracketView");
-      if (setup)   setup.style.display = "";
-      if (bracket) bracket.style.display = "none";
-      document.getElementById("teamEntriesList").innerHTML = "";
-      this.addTeamEntry();
-      this.addTeamEntry();
-    });
-    if (toggleBtn && panel) {
-      toggleBtn.addEventListener("click", () => {
-        const open = panel.style.display !== "none";
-        panel.style.display = open ? "none" : "block";
-        toggleBtn.textContent = open ? "▼ Open" : "▲ Close";
+  closeTournamentModal() {
+    const modal = document.getElementById("tournamentModal");
+    if (modal) modal.style.display = "none";
+  }
+
+  // Called after both teams in a match have played — shows popup with scores + who's next
+  showRoundResultModal(match) {
+    const modal   = document.getElementById("roundResultModal");
+    const body    = document.getElementById("rrBody");
+    const title   = document.getElementById("rrModalTitle");
+    const contBtn = document.getElementById("rrContinueBtn");
+    if (!modal || !body) return;
+
+    const t1 = this.tournament.teams[match.t1Idx];
+    const t2 = this.tournament.teams[match.t2Idx];
+    const winnerIdx = match.winner;
+    const winner = this.tournament.teams[winnerIdx];
+
+    const num   = this.tournament.matchIdx;   // already incremented
+    const total = this.tournament.schedule.length;
+
+    title.textContent = this.tournament.phase === "done"
+      ? "🏆 Tournament Complete!"
+      : `Match ${num}/${total} — Result`;
+
+    // Build score cards
+    const t1Winner = winnerIdx === match.t1Idx;
+    const scoresHtml = `
+      <div class="rr-scores">
+        <div class="rr-score-card ${t1Winner ? "is-winner" : ""}">
+          <div class="rr-team">${t1.name}</div>
+          <div class="rr-crew">✈️ ${t1.pilot}<br>🎯 ${t1.gunner}</div>
+          <div class="rr-pts">${match.t1Score ?? 0}</div>
+          ${t1Winner ? "<div class='rr-winner-badge'>⭐ Match Winner</div>" : ""}
+        </div>
+        <div class="rr-score-card ${!t1Winner ? "is-winner" : ""}">
+          <div class="rr-team">${t2.name}</div>
+          <div class="rr-crew">✈️ ${t2.pilot}<br>🎯 ${t2.gunner}</div>
+          <div class="rr-pts">${match.t2Score ?? 0}</div>
+          ${!t1Winner ? "<div class='rr-winner-badge'>⭐ Match Winner</div>" : ""}
+        </div>
+      </div>`;
+
+    // Standings mini-table
+    const sorted = [...this.tournament.teams]
+      .map((t, i) => ({ ...t, _i: i }))
+      .sort((a, b) => (b.wins || 0) - (a.wins || 0) || (b.totalScore || 0) - (a.totalScore || 0));
+
+    const standingsHtml = `
+      <div class="rr-standings">
+        <h4>Current Standings</h4>
+        <table class="standings-table">
+          <thead><tr><th>Team</th><th>W</th><th>L</th><th>Pts</th></tr></thead>
+          <tbody>${sorted.map((t, rank) => `
+            <tr class="${rank === 0 && (t.matches || 0) > 0 ? "is-leader" : ""}">
+              <td>${t.name}</td><td>${t.wins||0}</td><td>${t.losses||0}</td><td>${t.totalScore||0}</td>
+            </tr>`).join("")}
+          </tbody>
+        </table>
+      </div>`;
+
+    // Next match block
+    let nextHtml = "";
+    if (this.tournament.phase === "done") {
+      nextHtml = `<div class="rr-next"><strong>🏆 Champion: ${winner.name}!</strong>Congratulations — ${winner.pilot} &amp; ${winner.gunner} dominate the skies!</div>`;
+      contBtn.textContent = "Close";
+    } else {
+      const next = this.tournament.schedule[this.tournament.matchIdx];
+      if (next) {
+        const nt1 = this.tournament.teams[next.t1Idx];
+        const nt2 = this.tournament.teams[next.t2Idx];
+        const nextNum = this.tournament.matchIdx + 1;
+        nextHtml = `<div class="rr-next"><strong>Next: Match ${nextNum}/${total} — ${nt1.name} vs ${nt2.name}</strong>
+          ✈️ ${nt1.pilot} &amp; 🎯 ${nt1.gunner} play first. Press Start Mission when ready!</div>`;
+      }
+      contBtn.textContent = "Got It — Let's Play! ▶";
+    }
+
+    body.innerHTML = scoresHtml + standingsHtml + nextHtml;
+    modal.style.display = "flex";
+
+    // One-time continue handler
+    const onContinue = () => {
+      modal.style.display = "none";
+      contBtn.removeEventListener("click", onContinue);
+    };
+    contBtn.addEventListener("click", onContinue);
+  }
+
+  bindTournamentEvents() {
+    // Header "Tournament" button opens the setup modal
+    const tmBtn = document.getElementById("tournamentModalBtn");
+    if (tmBtn) tmBtn.addEventListener("click", () => this.openTournamentModal());
+
+    // Close buttons
+    const closeBtn  = document.getElementById("closeTournamentModal");
+    const closeBtn2 = document.getElementById("closeTournamentModal2");
+    if (closeBtn)  closeBtn.addEventListener("click",  () => this.closeTournamentModal());
+    if (closeBtn2) closeBtn2.addEventListener("click", () => this.closeTournamentModal());
+
+    // Click backdrop to close
+    const tmModal = document.getElementById("tournamentModal");
+    if (tmModal) {
+      tmModal.addEventListener("click", (e) => {
+        if (e.target === tmModal) this.closeTournamentModal();
       });
     }
 
-    // Pre-populate 2 team slots for convenience
+    // Add team / generate buttons
+    const addBtn  = document.getElementById("addTeamBtn");
+    const genBtn  = document.getElementById("generateBracketBtn");
+    const nextBtn = document.getElementById("nextMatchBtn");
+    const resetBtn = document.getElementById("resetTournamentBtn");
+
+    if (addBtn) addBtn.addEventListener("click", () => this.addTeamEntry());
+    if (genBtn) genBtn.addEventListener("click", () => this.startTournamentFromUI());
+    if (nextBtn) nextBtn.addEventListener("click", () => {
+      if (this.tournament.phase === "awaiting") this.prepareTournamentTurn();
+    });
+    if (resetBtn) resetBtn.addEventListener("click", () => {
+      this.tournament = this.buildTournamentState();
+      const list = document.getElementById("teamEntriesList");
+      if (list) list.innerHTML = "";
+      const bracket = document.getElementById("bracketView");
+      const setup   = document.getElementById("tournamentTeamSetup");
+      if (bracket) bracket.style.display = "none";
+      if (setup)   setup.style.display = "";
+      this.addTeamEntry();
+      this.addTeamEntry();
+    });
+
+    // Pre-populate 2 team slots
     this.addTeamEntry();
     this.addTeamEntry();
   }

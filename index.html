@@ -17,6 +17,7 @@
         <div class="header-actions">
           <button id="startButton" class="primary-button" type="button">Start Mission</button>
           <button id="pauseButton" class="secondary-button" type="button">Pause</button>
+          <button id="tournamentModalBtn" class="secondary-button" type="button">🏆 Tournament</button>
           <button id="fullscreenButton" class="secondary-button fs-btn" type="button">⛶ Full Screen</button>
         </div>
       </div>
@@ -167,6 +168,54 @@
       </section>
     </aside>
   </main>
+
+  <!-- ===== TOURNAMENT SETUP MODAL ===== -->
+  <div id="tournamentModal" class="modal-backdrop" style="display:none" role="dialog" aria-modal="true" aria-labelledby="tmModalTitle">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h2 id="tmModalTitle">🏆 Tournament Setup</h2>
+        <button id="closeTournamentModal" class="modal-close" type="button" aria-label="Close">✕</button>
+      </div>
+      <div class="modal-body">
+        <p class="hint-text" style="margin-top:0">Name your crew for any single mission:</p>
+        <div class="modal-crew-row">
+          <label class="field">
+            <span>✈️ Pilot (Arrow Keys)</span>
+            <input type="text" id="pilotNameInput" placeholder="Ace" maxlength="20" class="name-input">
+          </label>
+          <label class="field">
+            <span>🎯 Gunner (Types Words)</span>
+            <input type="text" id="gunnerNameInput" placeholder="Gunner" maxlength="20" class="name-input">
+          </label>
+        </div>
+
+        <div class="modal-divider"></div>
+
+        <p class="hint-text" style="margin-top:0">Round-robin tournament — add 2 to 8 teams:</p>
+        <div id="teamEntriesList" class="team-entries-list"></div>
+        <div class="row-btns" style="margin-top:10px">
+          <button id="addTeamBtn" type="button" class="secondary-button small-btn">+ Add Team</button>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="closeTournamentModal2" type="button" class="secondary-button">Cancel</button>
+        <button id="generateBracketBtn" type="button" class="primary-button">▶ Start Tournament</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== ROUND RESULT MODAL ===== -->
+  <div id="roundResultModal" class="modal-backdrop" style="display:none" role="dialog" aria-modal="true" aria-labelledby="rrModalTitle">
+    <div class="modal-box modal-box--result">
+      <div class="modal-header">
+        <h2 id="rrModalTitle" id="rrTitle">Round Result</h2>
+      </div>
+      <div class="modal-body" id="rrBody"></div>
+      <div class="modal-footer">
+        <button id="rrContinueBtn" type="button" class="primary-button" style="width:100%">Continue ▶</button>
+      </div>
+    </div>
+  </div>
 
   <script src="game.js"></script>
 </body>
