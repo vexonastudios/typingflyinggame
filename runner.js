@@ -89,7 +89,13 @@ const PROMPTS = [
   { q: "Rhymes with 'light'", a: "night", w: ["late", "lip"] },
   { q: "Rhymes with 'blue'", a: "shoe", w: ["glow", "blow"] },
   { q: "Rhymes with 'fast'", a: "past", w: ["pest", "first"] },
-  { q: "Rhymes with 'game'", a: "name", w: ["gain", "none"] }
+  { q: "Rhymes with 'game'", a: "name", w: ["gain", "none"] },
+  // Simple Equations
+  { q: "Solve: 5 + x = 12", a: "7", w: ["8", "6"] },
+  { q: "Solve: x - 3 = 10", a: "13", w: ["7", "10"] },
+  { q: "Solve: 2 * x = 16", a: "8", w: ["6", "4"] },
+  { q: "Solve: 10 / x = 2", a: "5", w: ["4", "8"] },
+  { q: "Solve: x + x = 20", a: "10", w: ["5", "15"] }
 ];
 
 function intersect(a, b) {
@@ -199,12 +205,15 @@ class WordRunner {
        // More enemies on higher levels
        for(let j=0; j<=diff; j++) {
            let r = Math.random();
-           if (this.currentLevel > 1 && r < 0.25) {
+           if (this.currentLevel > 1 && r < 0.2) {
                this.enemies.push({ type: 'shooter', x: px + gap + platW - 100 - j*40, y: 450, w: 36, h: 50, shootTimer: Math.random(), dead: false });
-           } else if (this.currentLevel > 1 && r < 0.5) {
-               this.enemies.push({ type: 'flyer', x: px + gap + platW/2 + j*60, y: 350, w: 36, h: 30, startY: 350, flyOffset: Math.random()*10, dead: false });
-           } else if (this.currentLevel > 1 && r < 0.7) {
+           } else if (this.currentLevel > 1 && r < 0.4) {
+               this.enemies.push({ type: 'flyer', x: px + gap + 100, y: 300, w: 36, h: 30, vx: -100, startX: px+gap+50, endX: px+gap+platW-50, startY: 300, flyOffset: Math.random()*10, dead: false });
+           } else if (this.currentLevel > 1 && r < 0.6) {
                this.enemies.push({ type: 'chaser', x: px + gap + platW/2 + j*70, y: 460, w: 36, h: 40, vx: 0, dead: false });
+           } else if (this.currentLevel > 1 && r < 0.8) {
+               let py = 150 + Math.random()*100;
+               this.enemies.push({ type: 'pacer', x: px + gap + 100 + j*100, y: py, w: 40, h: 40, vy: 120, startY: py, endY: py + 250, dead: false });
            } else {
                this.enemies.push({ type: 'walker', x: px + gap + platW/2 + j*80, y: 460, w: 36, h: 40, vx: -50 - (diff*20), startX: px+gap+50, endX: px+gap+platW-50, dead: false });
            }
@@ -560,7 +569,11 @@ class WordRunner {
        } else if (e.type === 'flyer') {
            e.flyOffset += dt * 4;
            e.y = e.startY + Math.sin(e.flyOffset) * 60;
-           e.x += -80 * dt;
+           e.x += e.vx * dt;
+           if (e.x < e.startX || e.x > e.endX) e.vx *= -1;
+       } else if (e.type === 'pacer') {
+           e.y += e.vy * dt;
+           if (e.y < e.startY || e.y > e.endY) e.vy *= -1;
        } else if (e.type === 'chaser') {
            let closest = null; let minDist = 9999;
            for(let p of this.players) {
@@ -717,6 +730,7 @@ class WordRunner {
        if (e.type === 'shooter') this.ctx.fillStyle = '#8a2be2';
        else if (e.type === 'flyer') this.ctx.fillStyle = '#f97316';
        else if (e.type === 'chaser') this.ctx.fillStyle = '#65a30d';
+       else if (e.type === 'pacer') this.ctx.fillStyle = '#14b8a6';
        else this.ctx.fillStyle = '#e84040';
 
        this.ctx.beginPath();
