@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Brain Bridge – Vexona</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="bridge.css">
+</head>
+<body>
+
+  <div class="bb-layout">
+    <!-- Header -->
+    <header class="bb-header">
+      <div class="header-left">
+        <a href="index.html" class="hub-btn">← Hub</a>
+        <div>
+          <h1 class="bb-title">Brain Bridge</h1>
+          <div class="bb-sub">Co-op Builder: Player 1 Solves, Player 2 Builds</div>
+        </div>
+      </div>
+      <div class="header-right">
+        <button id="testBridgeBtn" class="action-btn primary" disabled>🚜 Test Bridge</button>
+        <button id="resetBridgeBtn" class="action-btn secondary">↺ Clear</button>
+      </div>
+    </header>
+
+    <!-- Canvas Area -->
+    <div class="bb-canvas-wrapper" id="canvasContainer">
+      <canvas id="bridgeCanvas" width="1200" height="500"></canvas>
+      
+      <!-- Overlays -->
+      <div id="gameSetup" class="bb-overlay">
+        <div class="bb-modal">
+          <h2>Co-op Rescue Mission</h2>
+          <p>Two roles, one computer.</p>
+          <ul class="role-list">
+            <li><strong>🧠 The Solver (Keyboard):</strong> Type answers to math problems to generate building materials.</li>
+            <li><strong>👷 The Engineer (Mouse):</strong> Drag between grid points to build a bridge strong enough for the rescue truck.</li>
+          </ul>
+          
+          <div class="difficulty-select">
+            <label>Math Focus:</label>
+            <select id="mathMode">
+              <option value="add">Addition & Subtraction</option>
+              <option value="mult" selected>Multiplication & Division</option>
+              <option value="mixed">Mixed Challenge</option>
+            </select>
+          </div>
+          
+          <button id="startMissionBtn" class="start-btn">Start Building</button>
+        </div>
+      </div>
+      
+      <div id="gameEnd" class="bb-overlay" style="display:none">
+        <div class="bb-modal">
+          <h2 id="endTitle">Bridge Holds!</h2>
+          <p id="endMessage">The rescue truck made it across safely!</p>
+          <button id="playAgainBtn" class="start-btn" style="margin-top:20px">Next Canyon</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Stations Area -->
+    <div class="bb-stations">
+      
+      <!-- Solver Station -->
+      <div class="station solver-station">
+        <div class="station-header">
+          <div class="station-icon">🧠</div>
+          <h3>Solver Station</h3>
+          <span class="station-hint">(Use Keyboard)</span>
+        </div>
+        <div class="solver-screen">
+          <div class="math-problem" id="mathProblem">8 × 7 = ?</div>
+          <input type="number" id="mathInput" class="math-input" placeholder="Type answer..." autocomplete="off">
+          <div class="feedback-text" id="mathFeedback">Type and press Enter</div>
+        </div>
+      </div>
+
+      <!-- Engineer Station -->
+      <div class="station engineer-station">
+        <div class="station-header">
+          <div class="station-icon">👷</div>
+          <h3>Engineer Inventory</h3>
+          <span class="station-hint">(Use Mouse)</span>
+        </div>
+        <div class="inventory-grid">
+          
+          <div class="inv-item active" data-type="wood" id="inv-wood">
+            <div class="inv-visual visual-wood"></div>
+            <div class="inv-info">
+              <div class="inv-name">Wood Beam</div>
+              <div class="inv-count" id="count-wood">0</div>
+            </div>
+            <div class="inv-key">Standard</div>
+          </div>
+
+          <div class="inv-item" data-type="steel" id="inv-steel">
+            <div class="inv-visual visual-steel"></div>
+            <div class="inv-info">
+              <div class="inv-name">Steel Girder</div>
+              <div class="inv-count" id="count-steel">0</div>
+            </div>
+            <div class="inv-key">Strong</div>
+          </div>
+          
+          <div class="inv-item" data-type="road" id="inv-road">
+            <div class="inv-visual visual-road"></div>
+            <div class="inv-info">
+              <div class="inv-name">Road Deck</div>
+              <div class="inv-count" id="count-road">0</div>
+            </div>
+            <div class="inv-key">Drivable</div>
+          </div>
+
+        </div>
+        <div class="feedback-text engineer-feedback">Select a material, then click and drag between grid points.</div>
+      </div>
+
+    </div>
+  </div>
+
+  <script src="bridge.js"></script>
+</body>
+</html>

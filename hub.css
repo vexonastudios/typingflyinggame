@@ -129,6 +129,7 @@ body {
 /* Blue glow (sky typer) */
 .game-card:hover .card-glow--blue { opacity: 1; }
 .game-card:hover .card-glow--red  { opacity: 1; }
+.game-card:hover .card-glow--gold { opacity: 1; }
 
 .card-glow {
   position: absolute;
@@ -146,6 +147,10 @@ body {
 .card-glow--red {
   box-shadow: inset 0 0 0 2px rgba(255,77,77,0.7), 0 0 40px rgba(255,77,77,0.25);
   border: 2px solid rgba(255,77,77,0.7);
+}
+.card-glow--gold {
+  box-shadow: inset 0 0 0 2px rgba(255,208,96,0.7), 0 0 40px rgba(255,208,96,0.25);
+  border: 2px solid rgba(255,208,96,0.7);
 }
 
 .game-card--locked {
@@ -257,6 +262,39 @@ body {
   to   { transform: rotate(360deg) translateX(80px) rotate(90deg); }
 }
 
+/* Bridge art */
+.card-art--bridge {
+  background: linear-gradient(180deg, #101827 0%, #1e293b 60%, #0f172a 100%);
+}
+.art-bridge-line {
+  position: absolute;
+  top: 55%;
+  left: -10%;
+  width: 120%;
+  height: 8px;
+  background: #334155;
+  border-top: 2px dashed #94a3b8;
+  transform: rotate(-2deg);
+}
+.art-bridge-truck {
+  position: absolute;
+  top: 40%;
+  left: 20%;
+  width: 30px;
+  height: 20px;
+  background: #f5a623;
+  border-radius: 4px;
+  animation: truckDrive 3s ease-in-out infinite alternate;
+}
+.art-bridge-truck::after {
+  content: ''; position: absolute; bottom: -4px; left: 2px; width: 8px; height: 8px; background: #111; border-radius: 50%; box-shadow: 18px 0 0 #111;
+}
+
+@keyframes truckDrive {
+  from { transform: translateX(0) rotate(-2deg); }
+  to   { transform: translateX(120px) rotate(-2deg); }
+}
+
 /* Locked art */
 .card-art--locked {
   background: linear-gradient(180deg, #0e1a2a, #1a2a3a);
@@ -300,6 +338,7 @@ body {
 
 .badge--blue    { background: rgba(59,158,255,0.18); color: #7ec8ff; border: 1px solid rgba(59,158,255,0.3); }
 .badge--red     { background: rgba(255,77,77,0.18);  color: #ff9090; border: 1px solid rgba(255,77,77,0.3); }
+.badge--gold    { background: rgba(255,208,96,0.18); color: #ffd060; border: 1px solid rgba(255,208,96,0.3); }
 .badge--players { background: rgba(255,208,96,0.14); color: #ffd060; border: 1px solid rgba(255,208,96,0.3); }
 .badge--dim     { background: rgba(255,255,255,0.07); color: var(--muted); border: 1px solid var(--border); }
 
@@ -338,6 +377,10 @@ body {
 
 #card-racer .card-play-btn {
   background: linear-gradient(135deg, #cc2222, #e85c1a);
+}
+
+#card-bridge .card-play-btn {
+  background: linear-gradient(135deg, #e0a800, #d46b08);
 }
 
 /* ---- Footer ---- */
