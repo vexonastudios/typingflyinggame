@@ -84,32 +84,27 @@ class BrainBridge {
     this.nodes = [];
     this.edges = [];
     this.sparks = [];
-    this.inv = { wood: 5, steel: 2, road: 5 }; // starting bits
+    this.inv = { wood: 15, steel: 8, road: 14 }; // Increased starting bits
     this.updateInventoryUI();
     
-    // Left Cliff Anchors
-    this._addNode(50, 250, true);
-    this._addNode(100, 250, true);
-    this._addNode(150, 250, true);
-    this._addNode(50, 300, true);
-    this._addNode(100, 300, true);
-    this._addNode(150, 300, true);
+    // Left Cliff Anchors (extended to x=350)
+    for(let x=50; x<=350; x+=50) {
+      this._addNode(x, 250, true);
+      this._addNode(x, 300, true);
+    }
 
-    // Right Cliff Anchors
-    this._addNode(1050, 250, true);
-    this._addNode(1100, 250, true);
-    this._addNode(1150, 250, true);
-    this._addNode(1050, 300, true);
-    this._addNode(1100, 300, true);
-    this._addNode(1150, 300, true);
+    // Right Cliff Anchors (extended from x=850)
+    for(let x=850; x<=1150; x+=50) {
+      this._addNode(x, 250, true);
+      this._addNode(x, 300, true);
+    }
 
     // Initial basic support
-    this._addEdge(this._getNode(100,250), this._getNode(150,250), 'road');
-    this._addEdge(this._getNode(150,300), this._getNode(150,250), 'wood');
+    this._addEdge(this._getNode(300,250), this._getNode(350,250), 'road');
+    this._addEdge(this._getNode(350,300), this._getNode(350,250), 'wood');
     
-    this._addEdge(this._getNode(1150,250), this._getNode(1100,250), 'road');
-    this._addEdge(this._getNode(1050,300), this._getNode(1050,250), 'wood');
-    this._addEdge(this._getNode(1100,250), this._getNode(1050,250), 'road');
+    this._addEdge(this._getNode(900,250), this._getNode(850,250), 'road');
+    this._addEdge(this._getNode(850,300), this._getNode(850,250), 'wood');
   }
 
   _addNode(x, y, pinned=false) {
@@ -157,7 +152,7 @@ class BrainBridge {
     document.getElementById('testBridgeBtn').addEventListener('click', () => {
       this.state = 'test';
       this.truck.active = true;
-      this.truck.x = 100;
+      this.truck.x = 280;
       this.truck.y = 230;
       this.truck.failTimer = 0;
     });
@@ -231,7 +226,7 @@ class BrainBridge {
     // Validations
     if(dist < 10) { this.dragStart = null; return; } // clicked same spot
     
-    const MAX_LEN = this.activeMat === 'steel' ? GRID * 3.5 : GRID * 2.5;
+    const MAX_LEN = this.activeMat === 'steel' ? GRID * 5.5 : GRID * 4.5;
     if(dist > MAX_LEN) {
       this._floatingText("Too far!", this.hoverGrid.x, this.hoverGrid.y, '#e84040');
       Sfx.wrong();
@@ -313,12 +308,14 @@ class BrainBridge {
     const val = parseInt(this.mathInput.value, 10);
     if(val === this.currentAnswer) {
       Sfx.correct();
-      this.mathFeedback.textContent = "Correct! Sending piece...";
+      this.mathFeedback.textContent = "Correct! Sending 3 pieces...";
       this.mathFeedback.className = "feedback-text good";
       // Random piece weight: 50% wood, 30% road, 20% steel
-      const r = Math.random();
-      const type = r < 0.5 ? 'wood' : r < 0.8 ? 'road' : 'steel';
-      this.inv[type]++;
+      for(let i=0; i<3; i++) {
+        const r = Math.random();
+        const type = r < 0.5 ? 'wood' : r < 0.8 ? 'road' : 'steel';
+        this.inv[type]++;
+      }
       this.updateInventoryUI();
       
       this.mathProblem.textContent = "CORRECT!";
@@ -407,8 +404,8 @@ class BrainBridge {
         if(!e.n1.pinned) { e.n1.x += ox * stiff; e.n1.y += oy * stiff; }
         if(!e.n2.pinned) { e.n2.x -= ox * stiff; e.n2.y -= oy * stiff; }
 
-        // Break limit map
-        const breaks = { 'steel': 0.35, 'wood': 0.18, 'road': 0.12 };
+        // Break limit map (buffed to make game easier)
+        const breaks = { 'steel': 0.60, 'wood': 0.35, 'road': 0.25 };
         if(this.state === 'test' && Math.abs(diff) > e.baseLen * breaks[e.type]) {
            e.broken = true;
            Sfx.snap();
@@ -471,7 +468,7 @@ class BrainBridge {
           Sfx.wrong();
           this.state = 'end';
         }
-      } else if(this.truck.x > 1050) {
+      } else if(this.truck.x > 850) {
         // Win!
         document.getElementById('endTitle').textContent = "Bridge Holds!";
         document.getElementById('endTitle').style.color = "#2ec97a";
@@ -491,25 +488,25 @@ class BrainBridge {
 
     // Canyon Background
     ctx.fillStyle = '#0f172a';
-    ctx.fillRect(200, 300, 800, 200); // the gap
+    ctx.fillRect(350, 300, 500, 200); // the gap
     
     // Cliffs (Snapping to grid)
     ctx.fillStyle = '#334155';
-    ctx.fillRect(0, 250, 200, 250);   // Left cliff
-    ctx.fillRect(1000, 250, 200, 250); // Right cliff
+    ctx.fillRect(0, 250, 350, 250);   // Left cliff
+    ctx.fillRect(850, 250, 350, 250); // Right cliff
 
     // Grid dots
-    ctx.fillStyle = 'rgba(255,255,255,0.06)';
-    for(let x=200; x<=1000; x+=GRID) {
+    ctx.fillStyle = 'rgba(255,255,255,0.08)';
+    for(let x=350; x<=850; x+=GRID) {
       for(let y=50; y<=400; y+=GRID) {
-        ctx.beginPath(); ctx.arc(x,y, 2, 0, Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.arc(x,y, 3, 0, Math.PI*2); ctx.fill();
       }
     }
 
     // Hover UI
     if(this.hoverGrid && this.state === 'build') {
-      ctx.fillStyle = 'rgba(255,255,255,0.2)';
-      ctx.beginPath(); ctx.arc(this.hoverGrid.x, this.hoverGrid.y, 8, 0, Math.PI*2); ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,0.3)';
+      ctx.beginPath(); ctx.arc(this.hoverGrid.x, this.hoverGrid.y, 10, 0, Math.PI*2); ctx.fill();
     }
     if(this.dragStart && this.hoverGrid && this.state === 'build') {
       ctx.strokeStyle = 'rgba(255,255,255,0.4)';
