@@ -77,10 +77,16 @@ class WordRunner {
 
     document.getElementById('playAgainBtn').addEventListener('click', () => {
       document.getElementById('gameEnd').style.display = 'none';
-      this.startGame();
+      if (this.gameIsOver || this.currentLevel >= 3) {
+         this.startGame(1);
+      } else {
+         this.startGame(this.currentLevel + 1);
+      }
     });
 
     this.state = 'setup'; // setup, playing, end
+    this.currentLevel = 1;
+    this.gameIsOver = false;
 
     this.platforms = [];
     this.coins = [];
@@ -93,10 +99,13 @@ class WordRunner {
     requestAnimationFrame((ts) => this._loop(ts));
   }
 
-  startGame() {
+  startGame(level = 1) {
+    this.currentLevel = level;
     this.state = 'playing';
-    this.score = 0;
-    this._updateScore();
+    this.gameIsOver = false;
+    if (level === 1) this.score = 0;
+
+    document.getElementById('startMissionBtn').textContent = `Start Level ${level}`;
 
     this.platforms = [];
     this.coins = [];
@@ -107,15 +116,18 @@ class WordRunner {
 
     // Players
     this.players = [
-      { id: 1, x: 50,  y: 300, w: 32, h: 48, vx: 0, vy: 0, color: '#3b9eff', grounded: false, up:'w', left:'a', right:'d' },
-      { id: 2, x: 100, y: 300, w: 32, h: 48, vx: 0, vy: 0, color: '#ff4d4d', grounded: false, up:'ArrowUp', left:'ArrowLeft', right:'ArrowRight' }
+      { id: 1, lives: 3, x: 50,  y: 300, w: 32, h: 48, vx: 0, vy: 0, color: '#3b9eff', grounded: false, up:'w', left:'a', right:'d', dead: false },
+      { id: 2, lives: 3, x: 100, y: 300, w: 32, h: 48, vx: 0, vy: 0, color: '#ff4d4d', grounded: false, up:'ArrowUp', left:'ArrowLeft', right:'ArrowRight', dead: false }
     ];
 
+    this._updateScore();
     this._generateLevel();
   }
 
   _generateLevel() {
     let px = 0;
+    let diff = this.currentLevel - 1; // 0, 1, 2
+    let gateCount = 5 + (diff * 2); 
     
     // Start pad
     this.platforms.push({ x: -200, y: 500, w: 600, h: 100, active: true });
@@ -124,23 +136,29 @@ class WordRunner {
     // Shuffle prompts for variety
     const levelPrompts = [...PROMPTS].sort(() => Math.random() - 0.5);
 
-    for (let i = 0; i < 5; i++) {
+    for (let i = 0; i < gateCount; i++) {
        // 1. Jump Section
-       let gap = 150 + Math.random() * 50;
-       this.platforms.push({ x: px + gap, y: 500, w: 700, h: 100, active: true });
-       for(let j=0; j<3; j++) this.coins.push({ x: px + gap + 300 + j*60, y: 380, w:20, h:20, collected: false });
-       this.enemies.push({ x: px + gap + 500, y: 460, w: 36, h: 40, vx: -50, startX: px+gap+200, endX: px+gap+600, dead: false });
-       px += gap + 700;
+       let gap = 150 + Math.random() * 50 + (diff * 35);
+       let platW = Math.max(300, 700 - (diff * 150));
+       this.platforms.push({ x: px + gap, y: 500, w: platW, h: 100, active: true });
+       for(let j=0; j<3; j++) this.coins.push({ x: px + gap + (platW/2) - 60 + j*60, y: 380, w:20, h:20, collected: false });
+       
+       // More enemies on higher levels
+       for(let j=0; j<=diff; j++) {
+           this.enemies.push({ x: px + gap + platW/2 + j*80, y: 460, w: 36, h: 40, vx: -50 - (diff*20), startX: px+gap+50, endX: px+gap+platW-50, dead: false });
+       }
+       px += gap + platW;
 
-       // 2. Stairs / Platforms
-       gap = 100;
-       this.platforms.push({ x: px + gap, y: 400, w: 150, h: 200, active: true });
-       this.platforms.push({ x: px + gap + 150, y: 300, w: 150, h: 300, active: true });
-       for(let j=0; j<2; j++) this.coins.push({ x: px + gap + 200 + j*50, y: 200, w:20, h:20, collected: false });
-       px += gap + 300;
+       // 2. Stairs / Platforms (Make gaps harder)
+       gap = 100 + (diff * 30);
+       let stepW = Math.max(80, 150 - (diff * 25));
+       this.platforms.push({ x: px + gap, y: 400, w: stepW, h: 200, active: true });
+       this.platforms.push({ x: px + gap + stepW + (diff*20), y: 300, w: stepW, h: 300, active: true });
+       for(let j=0; j<2; j++) this.coins.push({ x: px + gap + (stepW) + j*50, y: 200, w:20, h:20, collected: false });
+       px += gap + (stepW*2) + (diff*20);
 
        // 3. Gap to Gate Approach
-       gap = 180;
+       gap = 180 + (diff * 40);
        this.platforms.push({ x: px + gap, y: 450, w: 900, h: 150, active: true });
        px += gap;
 
@@ -179,7 +197,7 @@ class WordRunner {
        Sfx.correct();
        gate.cleared = true;
        gate.wall.active = false;
-       this.score += 100;
+       this.score += 100 * this.currentLevel;
        // Spawn confetti
        for(let i=0; i<15; i++) {
          this.sparks.push({
@@ -204,18 +222,38 @@ class WordRunner {
   }
 
   _killPlayer(p) {
+    if (p.dead) return;
+    p.lives--;
     Sfx.wrong();
     this.score = Math.max(0, this.score - 50);
     this._updateScore();
 
-    // Respawn safely near camera edge but on highest active ground
-    p.x = this.cameraX + 150;
-    p.y = -50;
-    p.vx = 0; p.vy = 0;
+    if (p.lives <= 0) {
+       p.dead = true;
+       // check if both dead
+       if (this.players.every(pl => pl.dead)) {
+          this.gameIsOver = true;
+          this.state = 'end';
+          document.getElementById('endTitle').textContent = "Game Over!";
+          document.getElementById('endTitle').style.color = "#e84040";
+          document.getElementById('endMessage').textContent = "Both players ran out of lives.";
+          document.getElementById('playAgainBtn').textContent = "Restart Game";
+          document.getElementById('gameEnd').style.display = 'flex';
+       }
+    } else {
+       // Respawn safely near camera edge but on highest active ground
+       p.x = this.cameraX + 150;
+       p.y = -50;
+       p.vx = 0; p.vy = 0;
+    }
   }
 
   _updateScore() {
     document.getElementById('scoreDisplay').textContent = this.score;
+    if (this.players && this.players.length > 1) {
+       document.getElementById('p1Lives').textContent = this.players[0].lives;
+       document.getElementById('p2Lives').textContent = this.players[1].lives;
+    }
   }
 
   _update(dt) {
@@ -328,11 +366,20 @@ class WordRunner {
        }
 
        // Goal
-       if (intersect(p, this.goalFlag)) {
+       if (!p.dead && Math.abs(p.x - this.goalFlag.x) < 30) {
           this.state = 'end';
           Sfx.win();
-          document.getElementById('endTitle').textContent = "Level Complete!";
-          document.getElementById('endMessage').textContent = `Fantastic run! Final Score: ${this.score}`;
+          this.gameIsOver = false;
+          if (this.currentLevel < 3) {
+             document.getElementById('endTitle').textContent = `Level ${this.currentLevel} Complete!`;
+             document.getElementById('endTitle').style.color = "#2ec97a";
+             document.getElementById('playAgainBtn').textContent = `Start Level ${this.currentLevel + 1}`;
+          } else {
+             document.getElementById('endTitle').textContent = "You Beat the Game!";
+             document.getElementById('endTitle').style.color = "#ffd060";
+             document.getElementById('playAgainBtn').textContent = "Play Again";
+          }
+          document.getElementById('endMessage').textContent = `Fantastic run! Score so far: ${this.score}`;
           document.getElementById('gameEnd').style.display = 'flex';
        }
     }
