@@ -132,16 +132,11 @@ button,
 }
 
 .primary-button,
-.secondary-button,
-.touch-key {
+.secondary-button {
   border: none;
   border-radius: 16px;
   cursor: pointer;
   transition: transform 160ms ease, box-shadow 160ms ease, opacity 160ms ease;
-}
-
-.primary-button,
-.secondary-button {
   padding: 14px 18px;
   font-weight: 700;
   box-shadow: 0 10px 24px rgba(0, 0, 0, 0.22);
@@ -159,14 +154,12 @@ button,
 }
 
 .primary-button:hover,
-.secondary-button:hover,
-.touch-key:hover {
+.secondary-button:hover {
   transform: translateY(-1px);
 }
 
 .primary-button:active,
-.secondary-button:active,
-.touch-key:active {
+.secondary-button:active {
   transform: translateY(1px) scale(0.99);
 }
 
@@ -290,43 +283,9 @@ button,
   color: var(--good);
 }
 
-.keyboard-panel {
-  margin-top: 18px;
-  padding: 18px;
-  border-radius: 24px;
-  background: rgba(255, 255, 255, 0.12);
-  border: 1px solid rgba(255, 255, 255, 0.14);
-}
+/* Removed touch keyboard class */
 
-.panel-heading {
-  gap: 16px;
-  margin-bottom: 14px;
-}
-
-.panel-heading p {
-  margin: 0;
-  color: var(--text-soft);
-  max-width: 360px;
-  font-family: var(--font-ui);
-}
-
-.touch-keyboard {
-  display: grid;
-  grid-template-columns: repeat(10, minmax(0, 1fr));
-  gap: 10px;
-}
-
-.touch-key {
-  min-height: 52px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(225, 238, 255, 0.82));
-  color: #163052;
-  font-weight: 800;
-  font-size: 1.1rem;
-}
-
-.touch-key.is-wide {
-  grid-column: span 2;
-}
+/* Removed touch keyboard span 2 */
 
 .control-panel {
   display: block;
@@ -513,11 +472,33 @@ kbd {
 }
 
 @media (max-width: 560px) {
-  .touch-keyboard {
-    grid-template-columns: repeat(5, minmax(0, 1fr));
-  }
+/* Removed mobile touch keyboard grid */
+}
 
-  .touch-key {
-    min-height: 48px;
-  }
+/* Fullscreen styles */
+.game-shell:fullscreen {
+  width: 100vw;
+  height: 100vh;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.game-shell:fullscreen .canvas-card {
+  flex: 1;
+  border: none;
+  border-radius: 0;
+}
+
+.game-shell:fullscreen #gameCanvas {
+  height: 100%;
+  object-fit: contain;
+}
+
+.game-shell:fullscreen .game-header,
+.game-shell:fullscreen .hud-row {
+  padding: 10px 20px;
+  background: rgba(0, 0, 0, 0.4);
 }

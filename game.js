@@ -194,7 +194,7 @@ class SkyTyperGame {
       comboValue: document.getElementById("comboValue"),
       statusBanner: document.getElementById("statusBanner"),
       targetValue: document.getElementById("targetValue"),
-      touchKeyboard: document.getElementById("touchKeyboard")
+      fullscreenButton: document.getElementById("fullscreenButton")
     };
 
     this.audioContext = null;
@@ -205,9 +205,6 @@ class SkyTyperGame {
     this.highScores = this.loadHighScores();
     this.settings = this.buildSettings();
 
-    this.createTouchKeyboard();
-    this.bindEvents();
-    this.resizeCanvas();
     this.seedBackground();
     this.resetState();
     this.renderHighScores();
@@ -358,7 +355,9 @@ class SkyTyperGame {
   bindEvents() {
     this.ui.startButton.addEventListener("click", () => this.startMission());
     this.ui.pauseButton.addEventListener("click", () => this.togglePause());
+    this.ui.fullscreenButton.addEventListener("click", () => this.toggleFullScreen());
     window.addEventListener("resize", () => this.resizeCanvas());
+    document.addEventListener("fullscreenchange", () => this.resizeCanvas());
     this.ui.difficultySelect.addEventListener("change", () => this.refreshMenuPreview());
     window.addEventListener("blur", () => {
       this.input.up = false;
@@ -442,33 +441,15 @@ class SkyTyperGame {
     });
   }
 
-  createTouchKeyboard() {
-    const rows = ["QWERTYUIOP", "ASDFGHJKL", "ZXCVBNM"];
-
-    rows.forEach((row) => {
-      row.split("").forEach((letter) => {
-        const button = document.createElement("button");
-        button.type = "button";
-        button.className = "touch-key";
-        button.textContent = letter;
-        button.addEventListener("click", () => this.processLetter(letter.toLowerCase()));
-        this.ui.touchKeyboard.append(button);
+  toggleFullScreen() {
+    const shell = document.querySelector(".game-shell");
+    if (!document.fullscreenElement) {
+      shell.requestFullscreen().catch((err) => {
+        console.error(`Error attempting to enable full-screen mode: ${err.message}`);
       });
-    });
-
-    const pauseButton = document.createElement("button");
-    pauseButton.type = "button";
-    pauseButton.className = "touch-key is-wide";
-    pauseButton.textContent = "Pause";
-    pauseButton.addEventListener("click", () => this.togglePause());
-    this.ui.touchKeyboard.append(pauseButton);
-
-    const clearButton = document.createElement("button");
-    clearButton.type = "button";
-    clearButton.className = "touch-key is-wide";
-    clearButton.textContent = "Clear";
-    clearButton.addEventListener("click", () => this.clearFreshLock());
-    this.ui.touchKeyboard.append(clearButton);
+    } else {
+      document.exitFullscreen();
+    }
   }
 
   resizeCanvas() {
@@ -1368,52 +1349,92 @@ class SkyTyperGame {
     }
 
     if (level === 2) {
-      this.ctx.fillStyle = "#2b5f78";
+      // Body Gradient
+      const bodyGrad = this.ctx.createLinearGradient(-42, 0, 34, 0);
+      bodyGrad.addColorStop(0, "#4a90e2");
+      bodyGrad.addColorStop(1, "#6be0ff");
+      
+      // Wing Gradient
+      const wingGrad = this.ctx.createLinearGradient(0, -12, 0, 26);
+      wingGrad.addColorStop(0, "#2b5f78");
+      wingGrad.addColorStop(1, "#1a3a4a");
+
+      this.ctx.fillStyle = wingGrad;
       this.roundRect(-20, -12, 54, 14, 6);
       this.ctx.fill();
       this.roundRect(-14, 14, 46, 12, 5);
       this.ctx.fill();
-      this.ctx.fillStyle = "#6be0ff";
+
+      this.ctx.fillStyle = bodyGrad;
       this.roundRect(-42, -14, 76, 28, 14);
       this.ctx.fill();
-      this.ctx.fillStyle = "#12324d";
+
+      // Exhaust Glow
+      this.ctx.fillStyle = "#ffaa00";
+      this.beginTriangle(-42, 0, -56, -8, -56, 8);
+      this.ctx.fill();
+
+      // Cockpit
+      const cockpitGrad = this.ctx.createLinearGradient(-10, -16, 10, -3);
+      cockpitGrad.addColorStop(0, "#12324d");
+      cockpitGrad.addColorStop(0.5, "#346b9a");
+      cockpitGrad.addColorStop(1, "#12324d");
+      this.ctx.fillStyle = cockpitGrad;
       this.roundRect(-10, -16, 20, 13, 6);
       this.ctx.fill();
-      this.ctx.fillStyle = "#2b5f78";
+
+      // Tail
+      this.ctx.fillStyle = wingGrad;
       this.beginTriangle(32, 0, 52, -10, 52, 10);
       this.ctx.fill();
-      this.beginTriangle(-38, -4, -54, -20, -26, -8);
-      this.ctx.fill();
-      this.beginTriangle(-38, 6, -54, 22, -26, 10);
-      this.ctx.fill();
-      this.ctx.fillStyle = "#ffaa00";
-      this.beginTriangle(-42, 0, -56, -6, -56, 6);
-      this.ctx.fill();
+      
+      this.ctx.strokeStyle = "rgba(255,255,255,0.3)";
+      this.ctx.lineWidth = 1;
+      this.ctx.strokeRect(-30, -5, 40, 10);
     } else if (level >= 3) {
-      this.ctx.fillStyle = "#800080";
+      // Body Gradient
+      const bodyGrad = this.ctx.createLinearGradient(-48, 0, 38, 0);
+      bodyGrad.addColorStop(0, "#ffd700");
+      bodyGrad.addColorStop(0.5, "#fdfd96");
+      bodyGrad.addColorStop(1, "#ffd700");
+      
+      const decoColor = "#800080";
+
+      this.ctx.fillStyle = decoColor;
       this.roundRect(-24, -16, 60, 16, 8);
       this.ctx.fill();
       this.roundRect(-18, 18, 52, 14, 6);
       this.ctx.fill();
-      this.ctx.fillStyle = "#ffd700";
+
+      this.ctx.fillStyle = bodyGrad;
       this.roundRect(-48, -18, 86, 34, 16);
       this.ctx.fill();
-      this.ctx.fillStyle = "#ffffff";
+
+      // Cockpit
+      const cockpitGrad = this.ctx.createLinearGradient(-4, -20, 20, -5);
+      cockpitGrad.addColorStop(0, "#ffffff");
+      cockpitGrad.addColorStop(0.5, "#caecff");
+      cockpitGrad.addColorStop(1, "#ffffff");
+      this.ctx.fillStyle = cockpitGrad;
       this.roundRect(-4, -20, 24, 15, 7);
       this.ctx.fill();
-      this.ctx.fillStyle = "#800080";
+
+      this.ctx.fillStyle = decoColor;
       this.beginTriangle(36, 0, 60, -12, 60, 12);
       this.ctx.fill();
-      this.beginTriangle(-42, -6, -60, -24, -30, -10);
-      this.ctx.fill();
-      this.beginTriangle(-42, 8, -60, 26, -30, 12);
-      this.ctx.fill();
+
+      // Exotic Exhausts
       this.ctx.fillStyle = "#00ffff";
       this.beginTriangle(-48, -8, -64, -14, -64, -2);
       this.ctx.fill();
       this.beginTriangle(-48, 8, -64, 2, -64, 14);
       this.ctx.fill();
     } else {
+      // Default / Enemy Plane
+      const bodyGrad = this.ctx.createLinearGradient(-38, 0, 28, 0);
+      bodyGrad.addColorStop(0, bodyColor);
+      bodyGrad.addColorStop(1, this.ctx.fillStyle = bodyColor); // Just to ensure it's used
+
       this.ctx.fillStyle = wingColor;
       this.roundRect(-16, -7, 48, 12, 6);
       this.ctx.fill();
@@ -1424,15 +1445,15 @@ class SkyTyperGame {
       this.roundRect(-38, -10, 66, 22, 12);
       this.ctx.fill();
 
-      // Advanced visual upgrade detail for planes (level 1 & enemies)
-      this.ctx.fillStyle = "rgba(255,255,255,0.2)";
-      this.roundRect(-30, -4, 40, 8, 4);
-      this.ctx.fill();
-
-      this.ctx.fillStyle = "#12324d";
+      // Cockpit glass
+      const glassGrad = this.ctx.createRadialGradient(-5, -8, 2, -5, -8, 10);
+      glassGrad.addColorStop(0, "#346b9a");
+      glassGrad.addColorStop(1, "#12324d");
+      this.ctx.fillStyle = glassGrad;
       this.roundRect(-12, -14, 15, 11, 5);
       this.ctx.fill();
 
+      // Tail & Fins
       this.ctx.fillStyle = wingColor;
       this.beginTriangle(28, 0, 46, -8, 46, 8);
       this.ctx.fill();
@@ -1441,13 +1462,7 @@ class SkyTyperGame {
       this.beginTriangle(-34, 4, -48, 18, -24, 8);
       this.ctx.fill();
 
-      this.ctx.strokeStyle = "#ffffff";
-      this.ctx.lineWidth = 2;
-      this.ctx.beginPath();
-      this.ctx.moveTo(-43, -12);
-      this.ctx.lineTo(-43, 12);
-      this.ctx.stroke();
-
+      // Propulsion line
       this.ctx.strokeStyle = "rgba(255, 255, 255, 0.85)";
       this.ctx.lineWidth = 3;
       this.ctx.beginPath();
@@ -1480,13 +1495,41 @@ class SkyTyperGame {
     this.roundRect(-82, -26, 154, 56, 20);
     this.ctx.fill();
 
-    this.ctx.fillStyle = "#163a4a";
+    // Exhausts
+    this.ctx.fillStyle = "#ff8f57";
+    this.roundRect(-80, -10, 20, 20, 5);
+    this.ctx.fill();
+    
+    // Main Hull Gradient
+    const hullGrad = this.ctx.createLinearGradient(-82, 0, 72, 0);
+    hullGrad.addColorStop(0, "#5a9a7a");
+    hullGrad.addColorStop(0.5, "#79c8a5");
+    hullGrad.addColorStop(1, "#5a9a7a");
+
+    this.ctx.fillStyle = "#3d5d78";
+    this.roundRect(-40, -18, 120, 22, 10);
+    this.ctx.fill();
+    this.roundRect(-26, 18, 112, 18, 10);
+    this.ctx.fill();
+
+    this.ctx.fillStyle = hullGrad;
+    this.roundRect(-82, -26, 154, 56, 20);
+    this.ctx.fill();
+
+    // Cockpit
+    const cockpitGrad = this.ctx.createLinearGradient(-34, -34, 12, -14);
+    cockpitGrad.addColorStop(0, "#163a4a");
+    cockpitGrad.addColorStop(1, "#2a6279");
+    this.ctx.fillStyle = cockpitGrad;
     this.roundRect(-34, -34, 46, 20, 8);
     this.ctx.fill();
 
     this.ctx.fillStyle = "#3d5d78";
     this.beginTriangle(72, 0, 106, -16, 106, 16);
     this.ctx.fill();
+    
+    // Large Fins
+    this.ctx.fillStyle = "#2b5f78";
     this.beginTriangle(-78, -4, -114, -28, -44, -10);
     this.ctx.fill();
     this.beginTriangle(-78, 6, -114, 30, -44, 12);
@@ -1497,11 +1540,12 @@ class SkyTyperGame {
       this.ctx.fillStyle = "#14263d";
       this.roundRect(localX - 8, gun.y - 7, 18, 14, 6);
       this.ctx.fill();
-      this.ctx.fillStyle = "#ff8f57";
+      this.ctx.fillStyle = "#ff6347";
       this.roundRect(localX + 8, gun.y - 3, 16, 6, 3);
       this.ctx.fill();
     });
 
+    // Propellers
     this.ctx.strokeStyle = "rgba(255, 255, 255, 0.9)";
     this.ctx.lineWidth = 4;
     this.ctx.beginPath();
