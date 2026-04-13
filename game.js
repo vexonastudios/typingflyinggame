@@ -205,6 +205,8 @@ class SkyTyperGame {
     this.highScores = this.loadHighScores();
     this.settings = this.buildSettings();
 
+    this.bindEvents();
+    this.resizeCanvas();
     this.seedBackground();
     this.resetState();
     this.renderHighScores();
@@ -1443,63 +1445,112 @@ class SkyTyperGame {
       this.ctx.fill();
       this.beginTriangle(-48, 8, -64, 2, -64, 14);
       this.ctx.fill();
-      // Default / Enemy Plane - Vastly Improved Custom Design
-      const bodyGrad = this.ctx.createLinearGradient(-38, 0, 28, 0);
-      bodyGrad.addColorStop(0, bodyColor);
-      bodyGrad.addColorStop(0.5, "#ffffff"); // metallic sheen
-      bodyGrad.addColorStop(1, bodyColor);
+    } else {
+      // === DEFAULT / ENEMY PLANE — Fully Redrawn ===
+      // Draw swept wings first (behind fuselage)
+      const wingGradDef = this.ctx.createLinearGradient(0, -26, 0, 26);
+      wingGradDef.addColorStop(0, wingColor);
+      wingGradDef.addColorStop(0.5, bodyColor);
+      wingGradDef.addColorStop(1, wingColor);
 
-      // Swept Wings (Sharper look)
+      // Forward swept main wing
+      this.ctx.fillStyle = wingGradDef;
+      this.ctx.beginPath();
+      this.ctx.moveTo(-5, -4);
+      this.ctx.lineTo(16, -4);
+      this.ctx.lineTo(-18, -28);
+      this.ctx.lineTo(-26, -20);
+      this.ctx.closePath();
+      this.ctx.fill();
+
+      this.ctx.beginPath();
+      this.ctx.moveTo(-5, 4);
+      this.ctx.lineTo(16, 4);
+      this.ctx.lineTo(-18, 28);
+      this.ctx.lineTo(-26, 20);
+      this.ctx.closePath();
+      this.ctx.fill();
+
+      // Small rear stabilizers
       this.ctx.fillStyle = wingColor;
-      this.beginTriangle(-10, -8, 20, -8, -16, -28);
+      this.beginTriangle(-28, -3, -38, -14, -22, -3);
       this.ctx.fill();
-      this.beginTriangle(-10, 8, 20, 8, -16, 28);
-      this.ctx.fill();
-
-      // Main Hull
-      this.ctx.fillStyle = bodyGrad;
-      this.roundRect(-38, -10, 66, 22, 12);
+      this.beginTriangle(-28, 3, -38, 14, -22, 3);
       this.ctx.fill();
 
-      // Jet exhaust (glowing)
-      const exhaustGrad = this.ctx.createRadialGradient(-38, 0, 2, -38, 0, 12);
-      exhaustGrad.addColorStop(0, "#ffffff");
-      exhaustGrad.addColorStop(0.5, "#00ccff");
-      exhaustGrad.addColorStop(1, "transparent");
+      // Main fuselage with metallic gradient
+      const hullGrad = this.ctx.createLinearGradient(-38, -10, -38, 12);
+      hullGrad.addColorStop(0, bodyColor);
+      hullGrad.addColorStop(0.35, "rgba(255,255,255,0.55)");
+      hullGrad.addColorStop(0.6, bodyColor);
+      hullGrad.addColorStop(1, wingColor);
+      this.ctx.fillStyle = hullGrad;
+      this.roundRect(-38, -10, 68, 20, 10);
+      this.ctx.fill();
+
+      // Nose cone
+      this.ctx.fillStyle = wingColor;
+      this.ctx.beginPath();
+      this.ctx.moveTo(30, 0);
+      this.ctx.lineTo(48, 0);
+      this.ctx.lineTo(30, -6);
+      this.ctx.closePath();
+      this.ctx.fill();
+      this.ctx.beginPath();
+      this.ctx.moveTo(30, 0);
+      this.ctx.lineTo(48, 0);
+      this.ctx.lineTo(30, 6);
+      this.ctx.closePath();
+      this.ctx.fill();
+
+      // Cockpit canopy with glare
+      const cockpitGrad = this.ctx.createLinearGradient(-4, -16, 12, -5);
+      cockpitGrad.addColorStop(0, "#0d1f33");
+      cockpitGrad.addColorStop(0.4, "#3ea6e8");
+      cockpitGrad.addColorStop(1, "#0d1f33");
+      this.ctx.fillStyle = cockpitGrad;
+      this.roundRect(2, -15, 18, 12, 4);
+      this.ctx.fill();
+
+      // Canopy glare streak
+      this.ctx.strokeStyle = "rgba(255,255,255,0.6)";
+      this.ctx.lineWidth = 1.5;
+      this.ctx.beginPath();
+      this.ctx.moveTo(5, -13);
+      this.ctx.lineTo(14, -5);
+      this.ctx.stroke();
+
+      // Panel lines
+      this.ctx.strokeStyle = "rgba(0,0,0,0.25)";
+      this.ctx.lineWidth = 1;
+      this.ctx.beginPath();
+      this.ctx.moveTo(-10, -10);
+      this.ctx.lineTo(-10, 10);
+      this.ctx.stroke();
+      this.ctx.beginPath();
+      this.ctx.moveTo(2, -10);
+      this.ctx.lineTo(2, 10);
+      this.ctx.stroke();
+
+      // Engine exhaust glow
+      const exhaustGrad = this.ctx.createRadialGradient(-40, 0, 0, -40, 0, 10);
+      exhaustGrad.addColorStop(0, "rgba(255,200,80,0.9)");
+      exhaustGrad.addColorStop(0.4, "rgba(255,100,20,0.6)");
+      exhaustGrad.addColorStop(1, "rgba(255,50,0,0)");
       this.ctx.fillStyle = exhaustGrad;
       this.ctx.beginPath();
-      this.ctx.arc(-38, 0, 12, 0, Math.PI * 2);
+      this.ctx.ellipse(-40, 0, 10, 5, 0, 0, Math.PI * 2);
       this.ctx.fill();
 
-      // Cockpit glass with glare
-      const glassGrad = this.ctx.createLinearGradient(-12, -14, 3, -3);
-      glassGrad.addColorStop(0, "#12324d");
-      glassGrad.addColorStop(0.3, "#42a5f5");
-      glassGrad.addColorStop(1, "#12324d");
-      this.ctx.fillStyle = glassGrad;
-      this.roundRect(-8, -12, 18, 10, 4);
-      this.ctx.fill();
-
-      // Tail fins
-      this.ctx.fillStyle = wingColor;
-      this.beginTriangle(18, 0, 28, -6, 28, 6);
-      this.ctx.fill();
-      
-      // Panel line detailing
-      this.ctx.strokeStyle = "rgba(0,0,0,0.3)";
-      this.ctx.lineWidth = 1;
-      this.ctx.strokeRect(-20, -5, 10, 10);
-      this.ctx.strokeRect(0, -5, 15, 10);
-
-      // Propulsion line
-      this.ctx.strokeStyle = "rgba(255, 255, 255, 0.85)";
+      // Propeller spin
+      this.ctx.strokeStyle = "rgba(255,255,255,0.85)";
       this.ctx.lineWidth = 3;
       this.ctx.beginPath();
       const propAngle = this.totalTime * 30;
-      this.ctx.moveTo(34, Math.sin(propAngle) * 8);
-      this.ctx.lineTo(34, Math.sin(propAngle + Math.PI) * 8);
+      this.ctx.moveTo(46, Math.sin(propAngle) * 8);
+      this.ctx.lineTo(46, Math.sin(propAngle + Math.PI) * 8);
       this.ctx.stroke();
-
+    }
 
     this.ctx.restore();
   }
