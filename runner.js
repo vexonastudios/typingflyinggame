@@ -353,6 +353,7 @@ class WordRunner {
 
     // Players
     for(let p of this.players) {
+       if (p.dead) continue;
        // Input
        let accel = 1200;
        let friction = 0.82;
@@ -469,7 +470,8 @@ class WordRunner {
        
        if (e.type === 'shooter') {
            e.shootTimer += dt;
-           if (e.shootTimer > 2.5 - (this.currentLevel * 0.4)) {
+           // Only shoot if on screen
+           if (e.shootTimer > 2.5 - (this.currentLevel * 0.4) && e.x < this.cameraX + CW) {
                e.shootTimer = 0;
                this.projectiles.push({ x: e.x - 10, y: e.y + 10, w: 12, h: 12, vx: -250, dead: false });
            }
@@ -632,6 +634,7 @@ class WordRunner {
 
     // Players
     for(let p of this.players) {
+       if (p.dead) continue;
        // Body
        this.ctx.fillStyle = p.color;
        this.ctx.beginPath();
