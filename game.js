@@ -1194,10 +1194,10 @@ class SkyTyperGame {
       return bullet.x > -50 && bullet.y > -50 && bullet.y < LOGICAL_HEIGHT + 50;
     });
 
-    if (this.enemies.length === 0 && this.enemyBullets.length === 0) {
+    if (this.enemies.length === 0) {
       if (this.pendingWaveTimer <= 0) {
-        this.pendingWaveTimer = 0.6;
-        this.messageText = this.wave >= this.maxWaves ? "Sky clear. Mission complete!" : "Wave clear. New planes are on the way.";
+        this.pendingWaveTimer = 0.15;
+        this.messageText = this.wave >= this.maxWaves ? "Sky clear. Mission complete!" : "Wave clear!";
         this.updateUi();
       }
     }
