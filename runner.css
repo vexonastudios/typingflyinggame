@@ -1,0 +1,187 @@
+/* ============================================================
+   WORD RUNNER – runner.css
+   ============================================================ */
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --font: 'Outfit', system-ui, sans-serif;
+  --bg-dark: #0f1522;
+  --bg-panel: #1a2235;
+  --border: rgba(255,255,255,0.15);
+  --text: #f0f4f8;
+  --text-muted: #94a3b8;
+  --accent: #ff4db8; 
+  --correct: #2ec97a;
+  --error: #e84040;
+}
+
+body {
+  font-family: var(--font);
+  background: var(--bg-dark);
+  color: var(--text);
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  padding: 20px;
+}
+
+.wr-layout {
+  width: 100%;
+  max-width: 1200px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* ── Header ── */
+.wr-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 16px 24px;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.hub-btn {
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.15);
+  color: var(--text);
+  text-decoration: none;
+  font-weight: 700;
+  font-size: 0.9rem;
+  padding: 8px 16px;
+  border-radius: 100px;
+  transition: all 0.2s;
+}
+.hub-btn:hover { background: rgba(255,255,255,0.15); }
+
+.wr-title {
+  font-size: 1.8rem;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  color: #fff;
+  line-height: 1;
+}
+
+.wr-sub {
+  font-size: 0.85rem;
+  color: var(--accent);
+  font-weight: 700;
+  margin-top: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.wr-score-box {
+  background: rgba(0,0,0,0.3);
+  border: 1px solid var(--border);
+  padding: 8px 20px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.score-label {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+
+.score-val {
+  font-family: monospace;
+  font-size: 1.8rem;
+  font-weight: 900;
+  color: var(--accent);
+}
+
+/* ── Canvas Area ── */
+.wr-canvas-wrapper {
+  position: relative;
+  width: 100%;
+  background: #a0d8ef; /* Default sky background, overridden in JS */
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.6);
+}
+
+#runnerCanvas {
+  display: block;
+  width: 100%;
+}
+
+.wr-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,0.6);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+}
+
+.wr-modal {
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 32px 40px;
+  max-width: 500px;
+  box-shadow: 0 20px 50px rgba(0,0,0,0.8);
+  text-align: center;
+}
+
+.wr-modal h2 {
+  font-size: 2.2rem;
+  font-weight: 900;
+  color: var(--accent);
+  margin-bottom: 12px;
+}
+
+.wr-modal p {
+  color: #cbd5e1;
+  line-height: 1.5;
+  margin-bottom: 24px;
+  font-size: 1.05rem;
+}
+
+.role-list {
+  text-align: left;
+  list-style: none;
+  background: rgba(0,0,0,0.25);
+  padding: 16px;
+  border-radius: 12px;
+  margin-bottom: 24px;
+  display: flex;
+  justify-content: space-around;
+}
+.role-list li { font-size: 0.95rem; color: #f0f4f8; }
+.role-list strong { color: var(--accent); display: block; margin-bottom: 6px; font-size: 1.1rem; }
+
+.start-btn {
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  font-family: var(--font);
+  font-size: 1.1rem;
+  font-weight: 800;
+  width: 100%;
+  padding: 16px;
+  border-radius: 12px;
+  cursor: pointer;
+  box-shadow: 0 6px 20px rgba(255, 77, 184, 0.4);
+  transition: transform 0.15s, background 0.15s;
+}
+.start-btn:hover { filter: brightness(1.1); }
+.start-btn:active { transform: scale(0.97); }

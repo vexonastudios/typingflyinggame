@@ -130,6 +130,7 @@ body {
 .game-card:hover .card-glow--blue { opacity: 1; }
 .game-card:hover .card-glow--red  { opacity: 1; }
 .game-card:hover .card-glow--gold { opacity: 1; }
+.game-card:hover .card-glow--pink { opacity: 1; }
 
 .card-glow {
   position: absolute;
@@ -151,6 +152,10 @@ body {
 .card-glow--gold {
   box-shadow: inset 0 0 0 2px rgba(255,208,96,0.7), 0 0 40px rgba(255,208,96,0.25);
   border: 2px solid rgba(255,208,96,0.7);
+}
+.card-glow--pink {
+  box-shadow: inset 0 0 0 2px rgba(255,77,184,0.7), 0 0 40px rgba(255,77,184,0.25);
+  border: 2px solid rgba(255,77,184,0.7);
 }
 
 .game-card--locked {
@@ -295,6 +300,36 @@ body {
   to   { transform: translateX(120px) rotate(-2deg); }
 }
 
+/* Runner art */
+.card-art--runner {
+  background: linear-gradient(180deg, #1f2937 0%, #312e81 60%, #4c1d95 100%);
+}
+.art-runner-block {
+  position: absolute;
+  width: 40px; height: 40px;
+  background: #ff4db8;
+  border-radius: 8px;
+  box-shadow: 0 4px 15px rgba(255,77,184,0.4);
+  top: 40%; left: 30%;
+  animation: floatBlock 2s ease-in-out infinite;
+}
+.art-runner-block::after {
+  content: '?';
+  color: #fff; font-size: 24px; font-weight: 900;
+  position: absolute; top:50%; left:50%; transform: translate(-50%,-50%);
+}
+.art-runner-block.block2 {
+  left: 55%; top: 35%;
+  background: #2ec97a;
+  animation-delay: 0.5s;
+  box-shadow: 0 4px 15px rgba(46,201,122,0.4);
+}
+
+@keyframes floatBlock {
+  0%,100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+
 /* Locked art */
 .card-art--locked {
   background: linear-gradient(180deg, #0e1a2a, #1a2a3a);
@@ -339,6 +374,7 @@ body {
 .badge--blue    { background: rgba(59,158,255,0.18); color: #7ec8ff; border: 1px solid rgba(59,158,255,0.3); }
 .badge--red     { background: rgba(255,77,77,0.18);  color: #ff9090; border: 1px solid rgba(255,77,77,0.3); }
 .badge--gold    { background: rgba(255,208,96,0.18); color: #ffd060; border: 1px solid rgba(255,208,96,0.3); }
+.badge--pink    { background: rgba(255,77,184,0.18); color: #ff90d2; border: 1px solid rgba(255,77,184,0.3); }
 .badge--players { background: rgba(255,208,96,0.14); color: #ffd060; border: 1px solid rgba(255,208,96,0.3); }
 .badge--dim     { background: rgba(255,255,255,0.07); color: var(--muted); border: 1px solid var(--border); }
 
@@ -381,6 +417,10 @@ body {
 
 #card-bridge .card-play-btn {
   background: linear-gradient(135deg, #e0a800, #d46b08);
+}
+
+#card-runner .card-play-btn {
+  background: linear-gradient(135deg, #b8229e, #ff4db8);
 }
 
 /* ---- Footer ---- */

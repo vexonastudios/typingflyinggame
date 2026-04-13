@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Word Runner – Vexona</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="runner.css">
+</head>
+<body>
+
+  <div class="wr-layout">
+    <!-- Header -->
+    <header class="wr-header">
+      <div class="header-left">
+        <a href="index.html" class="hub-btn">← Hub</a>
+        <div>
+          <h1 class="wr-title">Word Runner</h1>
+          <div class="wr-sub">Co-op Action Platformer</div>
+        </div>
+      </div>
+      <div class="header-right">
+        <div class="wr-score-box">
+          <span class="score-label">Score</span>
+          <span class="score-val" id="scoreDisplay">0</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- Canvas Area -->
+    <div class="wr-canvas-wrapper" id="canvasContainer">
+      <canvas id="runnerCanvas" width="1200" height="600"></canvas>
+      
+      <!-- Overlays -->
+      <div id="gameSetup" class="wr-overlay">
+        <div class="wr-modal">
+          <h2>Word Runner</h2>
+          <p>Run, jump, and stomp enemies. At every gate, jump into the correct word block to answer the riddle and unlock the path!</p>
+          <ul class="role-list">
+            <li><strong>Player 1:</strong> WASD keys</li>
+            <li><strong>Player 2:</strong> Arrow keys</li>
+          </ul>
+          <button id="startMissionBtn" class="start-btn">Start Level 1</button>
+        </div>
+      </div>
+      
+      <div id="gameEnd" class="wr-overlay" style="display:none">
+        <div class="wr-modal">
+          <h2 id="endTitle">Level Complete!</h2>
+          <p id="endMessage">You passed all the word gates!</p>
+          <button id="playAgainBtn" class="start-btn" style="margin-top:20px">Play Again</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="runner.js"></script>
+</body>
+</html>
