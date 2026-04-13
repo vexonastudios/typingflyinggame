@@ -81,6 +81,15 @@ class WordRunner {
     });
 
     this.state = 'setup'; // setup, playing, end
+
+    this.platforms = [];
+    this.coins = [];
+    this.enemies = [];
+    this.gates = [];
+    this.sparks = [];
+    this.players = [];
+    this.cameraX = 0;
+
     requestAnimationFrame((ts) => this._loop(ts));
   }
 
