@@ -46,6 +46,7 @@ const TURN_SPD    = 2.7;    // rad/s at full speed
 const MIN_TURN_V  = 35;     // minimum speed to allow turning
 const CAR_HL      = 24;     // half-length of car rect
 const CAR_HW      = 13;     // half-width
+const COL_RADIUS  = 22;     // circle collision radius per car
 
 // ─────────────────────────────────────────────
 // Maths helpers
@@ -118,6 +119,8 @@ class PixelRacer {
     this.results     = [];
     this.lastTs      = 0;
     this._raceEndCountdown = null;
+    this._colSparks  = [];   // shared collision spark pool
+    this._shake      = 0;    // screen-shake intensity
 
     this._bindEvents();
     this._resizeCanvas();
@@ -255,6 +258,8 @@ class PixelRacer {
         trail:          [],
         sparks:         [],
         onGrass:        false,
+        angularVel:     0,    // spin from collisions (rad/s)
+        colTimer:       0,    // cooldown so one bump doesn't retrigger instantly
       });
     }
   }
@@ -330,6 +335,12 @@ class PixelRacer {
       if (right) p.angle += turn;
     }
 
+    // Apply collision spin and decay it
+    p.angle      += p.angularVel * dt;
+    p.angularVel *= Math.pow(0.82, dt * 60);
+    if (Math.abs(p.angularVel) < 0.005) p.angularVel = 0;
+    p.colTimer    = Math.max(0, p.colTimer - dt);
+
     // Move
     p.x += Math.cos(p.angle) * p.speed * dt;
     p.y += Math.sin(p.angle) * p.speed * dt;
@@ -387,6 +398,98 @@ class PixelRacer {
       const a = Math.random() * Math.PI * 2;
       const v = 80 + Math.random() * 220;
       p.sparks.push({ x: p.x, y: p.y, vx: Math.cos(a)*v, vy: Math.sin(a)*v, life: 1.2 + Math.random() });
+    }
+  }
+
+  // ── Car-to-car collision ───────────────────
+  _resolveCollisions() {
+    const MIN_D = COL_RADIUS * 2;
+    const n     = this.players.length;
+    for (let i = 0; i < n; i++) {
+      for (let j = i + 1; j < n; j++) {
+        const a = this.players[i];
+        const b = this.players[j];
+        // Skip if both finished or either is in cooldown
+        if ((a.finished && b.finished) || a.colTimer > 0 || b.colTimer > 0) continue;
+
+        const dx   = b.x - a.x;
+        const dy   = b.y - a.y;
+        const dist = Math.hypot(dx, dy);
+        if (dist >= MIN_D || dist < 0.5) continue;
+
+        // ── Separate overlapping cars ──
+        const nx      = dx / dist;
+        const ny      = dy / dist;
+        const overlap = (MIN_D - dist) * 0.52;
+        a.x -= nx * overlap;
+        a.y -= ny * overlap;
+        b.x += nx * overlap;
+        b.y += ny * overlap;
+
+        // ── World-space velocity vectors ──
+        const avx = Math.cos(a.angle) * a.speed;
+        const avy = Math.sin(a.angle) * a.speed;
+        const bvx = Math.cos(b.angle) * b.speed;
+        const bvy = Math.sin(b.angle) * b.speed;
+
+        // Relative velocity along the collision normal
+        const rvx = avx - bvx;
+        const rvy = avy - bvy;
+        const dot = rvx * nx + rvy * ny;
+
+        // Only resolve if cars are approaching each other
+        if (dot >= 0) continue;
+
+        const restitution = 0.52;    // bounciness (0=no bounce, 1=perfectly elastic)
+        const impulse     = -(1 + restitution) * dot / 2;
+
+        // New velocity vectors after impulse
+        const nAvx = avx + impulse * nx;
+        const nAvy = avy + impulse * ny;
+        const nBvx = bvx - impulse * nx;
+        const nBvy = bvy - impulse * ny;
+
+        // Energy loss coefficient
+        const damp = 0.80;
+
+        // Project new velocity onto each car's heading → update speed
+        // Perpendicular component → spin (angularVel)
+        const aHx = Math.cos(a.angle), aHy = Math.sin(a.angle);
+        const bHx = Math.cos(b.angle), bHy = Math.sin(b.angle);
+
+        a.speed      = (nAvx * aHx + nAvy * aHy) * damp;
+        a.angularVel = Math.max(-6, Math.min(6,
+          a.angularVel + (-nAvx * aHy + nAvy * aHx) * 0.055
+        ));
+
+        b.speed      = (nBvx * bHx + nBvy * bHy) * damp;
+        b.angularVel = Math.max(-6, Math.min(6,
+          b.angularVel + (-nBvx * bHy + nBvy * bHx) * 0.055
+        ));
+
+        // Cooldown to prevent jitter
+        a.colTimer = b.colTimer = 0.08;
+
+        // ── Impact sparks at contact point ──
+        const cx       = (a.x + b.x) / 2;
+        const cy       = (a.y + b.y) / 2;
+        const impact   = Math.abs(dot);
+        const numSparks = Math.min(Math.floor(impact / 25) + 6, 22);
+        for (let k = 0; k < numSparks; k++) {
+          const sa = Math.random() * Math.PI * 2;
+          const sv = 70 + Math.random() * 210;
+          this._colSparks.push({
+            x: cx, y: cy,
+            vx: Math.cos(sa) * sv,
+            vy: Math.sin(sa) * sv,
+            life: 0.35 + Math.random() * 0.45,
+            color: Math.random() < 0.5 ? a.color : b.color,
+          });
+        }
+
+        // ── Screen shake (scales with impact force) ──
+        this._shake = Math.min((this._shake || 0) + impact * 0.025, 14);
+      }
     }
   }
 
@@ -472,8 +575,21 @@ class PixelRacer {
     if (this.state === 'racing') {
       this.raceTimer += dt;
       this.players.forEach(p => this._updatePlayer(p, dt));
+      if (this.players.length > 1) this._resolveCollisions();
       this._rankPlayers();
       this._updateHUD();
+
+      // Update shared collision sparks
+      this._colSparks = this._colSparks.filter(s => {
+        s.x    += s.vx * dt;
+        s.y    += s.vy * dt;
+        s.life -= dt;
+        return s.life > 0;
+      });
+
+      // Decay screen shake
+      this._shake *= Math.pow(0.78, dt * 60);
+      if (this._shake < 0.3) this._shake = 0;
 
       if (this._raceEndCountdown !== null) {
         this._raceEndCountdown -= dt;
@@ -488,8 +604,19 @@ class PixelRacer {
   // Drawing
   // ─────────────────────────────────────────────
   _draw() {
-    const ctx = this.ctx;
-    ctx.clearRect(0, 0, CW, CH);
+    const ctx   = this.ctx;
+    const shake = this._shake || 0;
+
+    ctx.save();
+    if (shake > 0.3) {
+      // Apply random screen shake offset
+      ctx.translate(
+        (Math.random() - 0.5) * shake,
+        (Math.random() - 0.5) * shake
+      );
+    }
+
+    ctx.clearRect(-shake, -shake, CW + shake*2, CH + shake*2);
 
     this._drawGrass(ctx);
     this._drawTrackSurface(ctx);
@@ -498,13 +625,20 @@ class PixelRacer {
     this._drawCheckpointLines(ctx);
     this._drawTrails(ctx);
 
+    // Per-player finish sparks
     this.players.forEach(p => {
       p.sparks.forEach(s => this._drawSpark(ctx, s, p.color));
     });
+
+    // Collision impact sparks (drawn under cars so they feel grounded)
+    this._colSparks.forEach(s => this._drawSpark(ctx, s, s.color));
+
     this.players.forEach(p => this._drawCar(ctx, p));
 
     if (this.state === 'countdown') this._drawCountdown(ctx);
     if (this.state === 'racing' || this.state === 'finished') this._drawOnCanvasTimer(ctx);
+
+    ctx.restore();
   }
 
   _drawGrass(ctx) {
