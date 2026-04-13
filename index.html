@@ -3,187 +3,147 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Sky Typer Squadron</title>
-  <link rel="stylesheet" href="styles.css">
+  <title>Vexona Family Game Hub</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="hub.css">
 </head>
 <body>
-  <main class="layout">
-    <section class="game-shell">
-      <div class="game-header">
+  <canvas id="starCanvas" aria-hidden="true"></canvas>
+
+  <div class="hub-layout">
+    <header class="hub-header">
+      <div class="hub-logo">
+        <span class="hub-logo-icon">🎮</span>
         <div>
-          <p class="eyebrow">Sky Typer Squadron</p>
-          <h1>Air Battle Typing Game</h1>
-        </div>
-        <div class="header-actions">
-          <button id="startButton" class="primary-button" type="button">Start Mission</button>
-          <button id="pauseButton" class="secondary-button" type="button">Pause</button>
-          <button id="tournamentModalBtn" class="secondary-button" type="button">🏆 Tournament</button>
-          <button id="fullscreenButton" class="secondary-button fs-btn" type="button">⛶ Full Screen</button>
+          <p class="hub-eyebrow">Vexona Studios</p>
+          <h1 class="hub-title">Family Game Hub</h1>
         </div>
       </div>
+      <p class="hub-subtitle">Pick a game and play together</p>
+    </header>
 
-      <section class="hud-row" aria-label="Mission status">
-        <div class="stat-card">
-          <span>Wave</span>
-          <strong id="waveValue">0 / 50</strong>
-        </div>
-        <div class="stat-card">
-          <span>Score</span>
-          <strong id="scoreValue">0</strong>
-        </div>
-        <div class="stat-card">
-          <span>Best</span>
-          <strong id="bestScoreValue">0</strong>
-        </div>
-        <div class="stat-card">
-          <span>Combo</span>
-          <strong id="comboValue">x1</strong>
-        </div>
-      </section>
+    <main class="hub-grid">
 
-      <section class="canvas-card">
-        <canvas id="gameCanvas" width="1360" height="760" aria-label="Typing shooter game canvas"></canvas>
-        <div class="canvas-overlay" aria-hidden="true">
-          <div class="overlay-top-left">
-            <div class="stat-card health-card">
-              <div class="health-header">
-                <span>Hull Integrity</span>
-                <strong id="healthValue">6 / 6</strong>
-              </div>
-              <div class="health-bar" aria-hidden="true">
-                <div id="healthFill" class="health-fill"></div>
-              </div>
-            </div>
-            <div class="status-banner" id="statusBanner">Choose a mission, then type the enemy words to fire.</div>
+      <!-- Sky Typer Squadron -->
+      <a href="sky-typer.html" class="game-card" id="card-skytyper" aria-label="Play Sky Typer Squadron">
+        <div class="card-glow card-glow--blue"></div>
+        <div class="card-art card-art--sky">
+          <div class="art-plane art-plane--player"></div>
+          <div class="art-plane art-plane--enemy art-plane--enemy1"></div>
+          <div class="art-plane art-plane--enemy art-plane--enemy2"></div>
+          <div class="art-word">FIRE</div>
+        </div>
+        <div class="card-body">
+          <div class="card-badges">
+            <span class="badge badge--blue">Typing</span>
+            <span class="badge badge--players">2 Players</span>
           </div>
-          <div class="target-display">Target: <span id="targetValue">No target locked</span></div>
-        </div>
-      </section>
-    </section>
-
-    <aside class="control-panel">
-      <section class="panel">
-        <h2>Mission Setup</h2>
-
-        <label class="field">
-          <span>Difficulty</span>
-          <select id="difficultySelect">
-            <option value="rookie">Rookie Pilot</option>
-            <option value="pilot">Sky Captain</option>
-            <option value="ace">Ace Flyer</option>
-            <option value="legend">Squadron Commander</option>
-          </select>
-        </label>
-
-        <label class="field">
-          <span>Word Pack</span>
-          <select id="packSelect">
-            <option value="mixed">Mixed Mission</option>
-            <option value="animals">Animal Attack</option>
-            <option value="sky">Sky Squad</option>
-            <option value="colors">Color Patrol</option>
-            <option value="combat">Combat Zone</option>
-            <option value="space">Deep Space</option>
-          </select>
-        </label>
-
-        <label class="checkbox-row">
-          <input id="practiceToggle" type="checkbox">
-          <span>Practice mode (enemy planes stop shooting)</span>
-        </label>
-
-        <label class="checkbox-row">
-          <input id="audioToggle" type="checkbox" checked>
-          <span>Arcade sounds</span>
-        </label>
-
-        <div class="quick-tips">
-          <h3>Quick Flight Tips</h3>
-          <p>Type the word above a plane to fire at it.</p>
-          <p>Arrow keys or Numpad 8/2/4/6 to dodge. Space to pause.</p>
-          <p>Every 10th wave: boss plane with a long word.</p>
-          <p>Pink repair planes restore hull integrity.</p>
-          <p>Score 3 500+ pts to upgrade your plane to Level 2; 12 000+ for Level 3.</p>
-        </div>
-
-        <div class="scoreboard">
-          <div class="scoreboard-header">
-            <h3>Hall Of Fame</h3>
-            <span id="bestRunBadge">Best 0</span>
+          <h2 class="card-title">Sky Typer Squadron</h2>
+          <p class="card-desc">Team up as Pilot and Gunner. Fly your plane with arrow keys while your partner types enemy words to fire. Tournament mode included!</p>
+          <div class="card-footer">
+            <span class="card-play-btn">Play Now ▶</span>
           </div>
-          <ol id="scoreboardList" class="scoreboard-list">
-            <li>No high scores yet.</li>
-          </ol>
         </div>
+      </a>
 
-        <!-- ===== LIVE BRACKET (sidebar) ===== -->
-        <div id="sidebarTournamentZone" class="tournament-zone" style="display:none">
-          <div class="scoreboard-header" style="margin-top:18px">
-            <h3>🏆 Tournament Live</h3>
-            <button id="resetTournamentBtn" type="button" class="secondary-button tourn-toggle-btn">↺ Reset</button>
+      <!-- Pixel Racer -->
+      <a href="racer.html" class="game-card" id="card-racer" aria-label="Play Pixel Racer">
+        <div class="card-glow card-glow--red"></div>
+        <div class="card-art card-art--race">
+          <div class="art-track"></div>
+          <div class="art-car art-car--1"></div>
+          <div class="art-car art-car--2"></div>
+          <div class="art-car art-car--3"></div>
+        </div>
+        <div class="card-body">
+          <div class="card-badges">
+            <span class="badge badge--red">Racing</span>
+            <span class="badge badge--players">2–4 Players</span>
           </div>
-          <div id="sidebarCurrentMatch" class="current-match-banner" style="margin-top:10px"></div>
-          <table class="standings-table" style="margin-top:8px">
-            <thead><tr><th>Team</th><th>W</th><th>L</th><th>Pts</th></tr></thead>
-            <tbody id="standingsTableBody"></tbody>
-          </table>
-          <button id="nextMatchBtn" type="button" class="primary-button"
-                  style="width:100%;margin-top:10px;display:none">Continue ▶</button>
+          <h2 class="card-title">Pixel Racer</h2>
+          <p class="card-desc">Grab a keyboard and race head-to-head on a full circuit. Up to 4 players on one or two keyboards. First to 3 laps wins!</p>
+          <div class="card-footer">
+            <span class="card-play-btn">Play Now ▶</span>
+          </div>
         </div>
-        <!-- /LIVE BRACKET -->
+      </a>
 
-      </section>
-    </aside>
-  </main>
-
-  <!-- ===== TOURNAMENT SETUP MODAL ===== -->
-  <div id="tournamentModal" class="modal-backdrop" style="display:none" role="dialog" aria-modal="true" aria-labelledby="tmModalTitle">
-    <div class="modal-box">
-      <div class="modal-header">
-        <h2 id="tmModalTitle">🏆 Tournament Setup</h2>
-        <button id="closeTournamentModal" class="modal-close" type="button" aria-label="Close">✕</button>
-      </div>
-      <div class="modal-body">
-        <p class="hint-text" style="margin-top:0">Name your crew for any single mission:</p>
-        <div class="modal-crew-row">
-          <label class="field">
-            <span>✈️ Pilot (Arrow Keys)</span>
-            <input type="text" id="pilotNameInput" placeholder="Ace" maxlength="20" class="name-input">
-          </label>
-          <label class="field">
-            <span>🎯 Gunner (Types Words)</span>
-            <input type="text" id="gunnerNameInput" placeholder="Gunner" maxlength="20" class="name-input">
-          </label>
+      <!-- Coming Soon 1 -->
+      <div class="game-card game-card--locked" aria-label="Coming soon">
+        <div class="card-art card-art--locked">
+          <span class="locked-icon">🔒</span>
+          <span class="locked-label">Coming Soon</span>
         </div>
-
-        <div class="modal-divider"></div>
-
-        <p class="hint-text" style="margin-top:0">Round-robin tournament — add 2 to 8 teams:</p>
-        <div id="teamEntriesList" class="team-entries-list"></div>
-        <div class="row-btns" style="margin-top:10px">
-          <button id="addTeamBtn" type="button" class="secondary-button small-btn">+ Add Team</button>
+        <div class="card-body">
+          <div class="card-badges">
+            <span class="badge badge--dim">Mystery</span>
+          </div>
+          <h2 class="card-title">???</h2>
+          <p class="card-desc">A brand-new family game is being built. Check back soon!</p>
         </div>
       </div>
-      <div class="modal-footer">
-        <button id="closeTournamentModal2" type="button" class="secondary-button">Cancel</button>
-        <button id="generateBracketBtn" type="button" class="primary-button">▶ Start Tournament</button>
+
+      <!-- Coming Soon 2 -->
+      <div class="game-card game-card--locked" aria-label="Coming soon">
+        <div class="card-art card-art--locked">
+          <span class="locked-icon">🔒</span>
+          <span class="locked-label">Coming Soon</span>
+        </div>
+        <div class="card-body">
+          <div class="card-badges">
+            <span class="badge badge--dim">Mystery</span>
+          </div>
+          <h2 class="card-title">???</h2>
+          <p class="card-desc">More family fun on the way. Stay tuned!</p>
+        </div>
       </div>
-    </div>
+
+    </main>
+
+    <footer class="hub-footer">
+      <p>Vexona Studios · Family Game Hub · All games playable in browser</p>
+    </footer>
   </div>
 
-  <!-- ===== ROUND RESULT MODAL ===== -->
-  <div id="roundResultModal" class="modal-backdrop" style="display:none" role="dialog" aria-modal="true" aria-labelledby="rrModalTitle">
-    <div class="modal-box modal-box--result">
-      <div class="modal-header">
-        <h2 id="rrModalTitle" id="rrTitle">Round Result</h2>
-      </div>
-      <div class="modal-body" id="rrBody"></div>
-      <div class="modal-footer">
-        <button id="rrContinueBtn" type="button" class="primary-button" style="width:100%">Continue ▶</button>
-      </div>
-    </div>
-  </div>
+  <script>
+    // Animated star canvas
+    const canvas = document.getElementById('starCanvas');
+    const ctx = canvas.getContext('2d');
+    let stars = [];
 
-  <script src="game.js"></script>
+    function resize() {
+      canvas.width  = window.innerWidth;
+      canvas.height = window.innerHeight;
+    }
+
+    function seedStars() {
+      stars = Array.from({ length: 160 }, () => ({
+        x: Math.random() * canvas.width,
+        y: Math.random() * canvas.height,
+        r: 0.5 + Math.random() * 1.5,
+        alpha: 0.2 + Math.random() * 0.7,
+        speed: 0.0002 + Math.random() * 0.0006,
+        phase: Math.random() * Math.PI * 2
+      }));
+    }
+
+    function drawStars(t) {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      stars.forEach(s => {
+        const a = s.alpha * (0.55 + 0.45 * Math.sin(s.phase + t * s.speed * 1000));
+        ctx.beginPath();
+        ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(255,255,255,${a})`;
+        ctx.fill();
+      });
+      requestAnimationFrame(drawStars);
+    }
+
+    resize();
+    seedStars();
+    window.addEventListener('resize', () => { resize(); seedStars(); });
+    requestAnimationFrame(drawStars);
+  </script>
 </body>
 </html>

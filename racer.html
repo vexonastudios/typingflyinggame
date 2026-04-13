@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pixel Racer – Vexona</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="racer.css">
+</head>
+<body>
+
+  <!-- Canvas fills the whole screen -->
+  <canvas id="raceCanvas" width="1440" height="810"></canvas>
+
+  <!-- ── Setup overlay ── -->
+  <div id="raceSetup" class="overlay">
+    <div class="setup-box">
+      <a href="index.html" class="r-back-btn">← Hub</a>
+      <div class="setup-logo">🏎️</div>
+      <h1 class="setup-title">Pixel Racer</h1>
+      <p class="setup-sub">Split-keyboard family racing · 2–4 players · 3 laps</p>
+
+      <div class="player-count-row">
+        <span class="count-label">Players:</span>
+        <button id="p2Btn" class="count-btn active" type="button">2</button>
+        <button id="p3Btn" class="count-btn" type="button">3</button>
+        <button id="p4Btn" class="count-btn" type="button">4</button>
+      </div>
+
+      <div class="controls-grid" id="controlsGrid">
+        <!-- filled by JS -->
+      </div>
+
+      <button id="startRaceBtn" class="start-btn" type="button">🚦 Start Race!</button>
+    </div>
+  </div>
+
+  <!-- ── HUD (shown during race) ── -->
+  <div id="raceHUD" class="race-hud" style="display:none">
+    <div class="hud-players" id="hudPlayers">
+      <!-- per-player cards filled by JS -->
+    </div>
+    <div class="hud-timer" id="raceTimerDisplay">0:00.00</div>
+    <a href="index.html" class="r-back-btn r-back-overlay">← Hub</a>
+  </div>
+
+  <!-- ── Results overlay ── -->
+  <div id="raceResults" class="overlay" style="display:none">
+    <div class="results-box">
+      <h2 class="results-title">🏆 Race Results</h2>
+      <div id="resultsList" class="results-list"></div>
+      <div class="results-actions">
+        <button id="restartBtn" class="start-btn" type="button">🔄 Race Again</button>
+        <a href="index.html" class="hub-link-btn">← Hub</a>
+      </div>
+    </div>
+  </div>
+
+  <script src="racer.js"></script>
+</body>
+</html>

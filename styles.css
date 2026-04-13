@@ -17,6 +17,29 @@
   --form-border: rgba(18, 39, 67, 0.2);
 }
 
+/* Back to Hub button */
+.hub-back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.16);
+  border-radius: 100px;
+  color: var(--text-soft);
+  text-decoration: none;
+  font-family: var(--font-ui);
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  transition: background 0.15s, color 0.15s;
+}
+.hub-back-btn:hover {
+  background: rgba(255,255,255,0.18);
+  color: #fff;
+}
+
 * {
   box-sizing: border-box;
 }
