@@ -11,53 +11,145 @@ const TURRET_WORD_BANK = ["aim", "arc", "ash", "bam", "bolt", "burst", "flak", "
 
 const WORD_BANKS = {
   animals: [
-    "ant", "bat", "bee", "cat", "cow", "dog", "eel", "fox", "hen", "owl",
-    "pig", "yak", "bear", "bird", "clam", "crab", "deer", "duck", "frog", "goat",
-    "hawk", "lion", "mole", "seal", "shark", "sheep", "snail", "tiger", "whale",
-    "beaver", "rabbit", "otter", "monkey", "panther", "giraffe", "penguin", "hamster",
-    "buffalo", "dolphin", "elephant", "kangaroo", "seahorse", "porcupine", "alligator",
-    "butterfly", "caterpillar", "dragonfly"
+    "ant", "bat", "bee", "cat", "cod", "cow", "dog", "doe", "elk", "emu",
+    "fly", "fox", "gnu", "hen", "hog", "jay", "koi", "owl", "pig", "ram",
+    "rat", "yak",
+    "bear", "bird", "boar", "bull", "clam", "crab", "crow", "deer", "dove",
+    "duck", "fawn", "fish", "flea", "frog", "gnat", "goat", "gull", "hare",
+    "hawk", "ibis", "kite", "lamb", "lark", "lion", "lynx", "mink", "mole",
+    "moth", "mule", "newt", "pony", "puma", "seal", "slug", "swan", "toad",
+    "vole", "wasp", "worm", "wren",
+    "bison", "cobra", "crane", "eagle", "egret", "finch", "gecko", "heron",
+    "hippo", "horse", "hyena", "koala", "llama", "macaw", "moose", "mouse",
+    "otter", "panda", "quail", "raven", "rhino", "robin", "shark", "sheep",
+    "skunk", "sloth", "snail", "squid", "stork", "swift", "tapir", "tiger",
+    "trout", "viper", "vixen", "whale", "zebra",
+    "badger", "beaver", "canary", "condor", "coyote", "donkey", "falcon",
+    "ferret", "gopher", "iguana", "impala", "jaguar", "lizard", "magpie",
+    "monkey", "osprey", "parrot", "pigeon", "rabbit", "salmon", "toucan",
+    "turkey", "walrus", "weasel", "buffalo", "caribou", "dolphin", "gorilla",
+    "hamster", "manatee", "meerkat", "narwhal", "peacock", "penguin",
+    "flamingo", "hedgehog", "pangolin", "platypus", "scorpion", "starfish",
+    "stingray", "wolverine", "alligator", "butterfly", "caterpillar",
+    "chimpanzee", "dragonfly", "elephant", "kangaroo", "porcupine",
+    "rhinoceros", "seahorse", "tarantula"
   ],
   sky: [
-    "air", "jet", "sky", "zoom", "cloud", "flare", "glide", "pilot", "prop", "rocket",
-    "soar", "spin", "swoop", "trail", "wing", "boost", "breeze", "comet", "dash", "roll",
-    "airplane", "landing", "airstrip", "hangar", "propeller", "tailwind", "crosswind",
-    "starlight", "moonbeam", "sunshine", "windstorm", "parachute", "afterburner",
-    "formation", "cloudbank", "starfighter", "wingspan"
+    "ace", "air", "arc", "fog", "jet", "sky", "sun", "zap", "zoom",
+    "beam", "bolt", "calm", "dart", "dash", "dive", "dusk", "flap", "flip",
+    "flock", "foam", "gale", "glide", "glow", "halo", "high", "kite", "loft",
+    "loop", "mist", "nose", "peak", "prop", "roll", "roar", "rise", "rush",
+    "sail", "scan", "soar", "spin", "star", "surf", "tail", "tilt", "turn",
+    "veer", "wake", "wing", "yaw",
+    "airfoil", "airship", "ascent", "aviator", "balloon", "banking", "biplane",
+    "breeze", "capsule", "carrier", "ceiling", "circuit", "cirrus", "clipper",
+    "cockpit", "compass", "convoy", "descent", "drifter", "fighter", "flyover",
+    "fuselage", "glider", "hangar", "heading", "horizon", "joystick",
+    "landing", "mayday", "missile", "runway", "sortie", "strafe", "throttle",
+    "turbine", "updraft", "vector", "waypoint",
+    "afterburner", "airfield", "airframe", "airspeed", "airstrip", "approach",
+    "autopilot", "cloudbank", "contrail", "crosswind", "downdraft", "freefall",
+    "formation", "headwind", "overcast", "parachute", "propeller", "rollover",
+    "starfighter", "tailspin", "tailwind", "touchdown", "turbulence",
+    "wingspan", "wingman", "moonbeam", "sunshine", "starlight", "windstorm"
   ],
   colors: [
-    "aqua", "blue", "cyan", "gold", "gray", "green", "navy", "pink", "red", "tan",
-    "teal", "white", "amber", "black", "coral", "ivory", "lilac", "olive", "peach",
-    "violet", "indigo", "maroon", "scarlet", "crimson", "rainbow", "lavender",
-    "turquoise", "tangerine", "goldenrod", "chocolate", "aquamarine", "silver"
+    "aqua", "blue", "cyan", "gold", "gray", "jade", "lime", "navy", "pink",
+    "plum", "red", "rose", "rust", "sage", "tan", "teal",
+    "amber", "black", "blush", "brown", "camel", "cocoa", "coral", "cream",
+    "ebony", "green", "hazel", "honey", "ivory", "khaki", "lilac", "mauve",
+    "mocha", "ochre", "olive", "pearl", "peach", "rouge", "taupe", "umber",
+    "white", "wheat",
+    "cobalt", "crimson", "fuchsia", "indigo", "jasper", "maroon", "orange",
+    "orchid", "purple", "salmon", "sienna", "silver", "violet",
+    "aquamarine", "aubergine", "carnelian", "champagne", "chocolate",
+    "goldenrod", "lavender", "periwinkle", "tangerine", "turquoise",
+    "vermillion", "ultramarine", "scarlet", "cerulean", "magenta", "rainbow"
+  ],
+  combat: [
+    "aim", "arc", "bay", "cap", "gun", "hit", "map", "ops", "war", "zap",
+    "alert", "ammo", "base", "bomb", "bolt", "camp", "code", "deck", "duel",
+    "duty", "flak", "fort", "frag", "fuel", "gear", "grid", "jump", "land",
+    "lift", "line", "load", "lock", "mark", "mine", "move", "navy", "nest",
+    "pack", "path", "plan", "post", "push", "raid", "rank", "role", "safe",
+    "scan", "seek", "send", "ship", "site", "slam", "sort", "tank", "test",
+    "trap", "unit", "wave", "zone",
+    "bandit", "bogey", "bullet", "bunker", "combat", "convoy", "defend",
+    "deploy", "eject", "engage", "escort", "fighter", "flank", "gunner",
+    "hangar", "hostile", "impact", "launch", "mortar", "patrol", "pincer",
+    "radar", "recon", "rescue", "rocket", "search", "sector", "signal",
+    "sortie", "strafe", "strike", "supply", "target", "vector", "volley",
+    "airstrike", "ambush", "assault", "barrage", "bearing", "callsign",
+    "cluster", "command", "counter", "defense", "disable", "evasion",
+    "extract", "flanking", "gambit", "garrison", "grenade", "gunship",
+    "intercept", "lockdown", "marksman", "mission", "ordnance", "perimeter",
+    "regiment", "reinforce", "skirmish", "squadron", "standoff", "stealth",
+    "suppress", "tactical", "torpedo", "tracer", "warfare"
+  ],
+  space: [
+    "arc", "gas", "ray", "sun", "void",
+    "atom", "burn", "core", "dark", "dawn", "dust", "flux", "glow", "heat",
+    "halo", "hull", "lens", "lift", "mass", "moon", "nova", "pull", "ring",
+    "rock", "scan", "ship", "spin", "star", "tide", "warp", "wave",
+    "comet", "craft", "dense", "drift", "dwarf", "earth", "flare", "giant",
+    "laser", "lunar", "orbit", "ozone", "phase", "probe", "radio", "relay",
+    "rings", "rover", "solar", "sonic", "speed", "titan", "venus", "zenith",
+    "aurora", "cosmos", "crater", "debris", "fusion", "galaxy", "helium",
+    "impact", "launch", "meteor", "nebula", "oxygen", "photon", "plasma",
+    "pulsar", "quasar", "rocket", "saturn", "signal", "sulfur", "system",
+    "thrust", "vacuum", "voyage",
+    "asteroid", "blackhole", "cosmonaut", "eclipse", "exoplanet",
+    "graviton", "ionized", "isotope", "jupiter", "magnetic", "momentum",
+    "neptune", "particle", "reentry", "satellite", "spectrum", "starfield",
+    "supernova", "telescope", "universe", "wormhole", "xenon", "quantum",
+    "spacecraft", "atmosphere"
   ]
 };
 
 WORD_BANKS.mixed = Array.from(new Set([
   ...WORD_BANKS.animals,
   ...WORD_BANKS.sky,
-  ...WORD_BANKS.colors
+  ...WORD_BANKS.colors,
+  ...WORD_BANKS.combat,
+  ...WORD_BANKS.space
 ]));
 
 const BOSS_WORD_BANKS = {
   animals: [
-    "alligator", "butterfly", "caterpillar", "chimpanzee", "dragonfly", "elephant",
-    "kangaroo", "porcupine", "rhinoceros", "seahorse"
+    "alligator", "butterfly", "caterpillar", "chimpanzee", "dragonfly",
+    "elephant", "kangaroo", "porcupine", "rhinoceros", "seahorse",
+    "wolverine", "tarantula", "platypus", "hedgehog", "flamingo", "stingray"
   ],
   sky: [
-    "afterburner", "airplane", "airstrip", "cloudbank", "crosswind", "formation",
-    "helicopter", "moonbeam", "parachute", "starfighter", "tailwind", "turbulence"
+    "afterburner", "airplane", "airstrip", "cloudbank", "crosswind",
+    "formation", "parachute", "starfighter", "tailwind", "turbulence",
+    "wingspan", "autopilot", "contrail", "freefall", "windstorm"
   ],
   colors: [
-    "aquamarine", "chocolate", "goldenrod", "lavender", "periwinkle", "tangerine",
-    "turquoise", "ultramarine"
+    "aquamarine", "aubergine", "carnelian", "champagne", "chocolate",
+    "goldenrod", "lavender", "periwinkle", "tangerine", "turquoise",
+    "ultramarine", "vermillion", "cerulean"
+  ],
+  combat: [
+    "airstrike", "barricade", "bombardment", "callsign", "commander",
+    "counterattack", "deployment", "extraction", "frontline", "infiltrate",
+    "interception", "lockdown", "marksmen", "munitions", "perimeter",
+    "reconnaissance", "reinforcement", "skirmish", "squadron", "suppression",
+    "tactical", "warfare"
+  ],
+  space: [
+    "atmosphere", "constellation", "cosmonaut", "exoplanet", "gravitational",
+    "interstellar", "propulsion", "satellite", "singularity", "spacecraft",
+    "starfield", "supernova", "telescope", "wormhole", "blackhole"
   ]
 };
 
 BOSS_WORD_BANKS.mixed = Array.from(new Set([
   ...BOSS_WORD_BANKS.animals,
   ...BOSS_WORD_BANKS.sky,
-  ...BOSS_WORD_BANKS.colors
+  ...BOSS_WORD_BANKS.colors,
+  ...BOSS_WORD_BANKS.combat,
+  ...BOSS_WORD_BANKS.space
 ]));
 
 const DIFFICULTIES = {
@@ -204,8 +296,10 @@ class SkyTyperGame {
     this.input = { up: false, down: false, left: false, right: false };
     this.highScores = this.loadHighScores();
     this.settings = this.buildSettings();
+    this.tournament = this.buildTournamentState();
 
     this.bindEvents();
+    this.bindTournamentEvents();
     this.resizeCanvas();
     this.seedBackground();
     this.resetState();
@@ -359,7 +453,13 @@ class SkyTyperGame {
     this.ui.pauseButton.addEventListener("click", () => this.togglePause());
     this.ui.fullscreenButton.addEventListener("click", () => this.toggleFullScreen());
     window.addEventListener("resize", () => this.resizeCanvas());
-    document.addEventListener("fullscreenchange", () => this.resizeCanvas());
+    document.addEventListener("fullscreenchange", () => {
+      if (!document.fullscreenElement) {
+        document.body.classList.remove("fs-mode");
+        this.ui.fullscreenButton.textContent = "\u26F6 Full Screen";
+      }
+      this.resizeCanvas();
+    });
     this.ui.difficultySelect.addEventListener("change", () => this.refreshMenuPreview());
     window.addEventListener("blur", () => {
       this.input.up = false;
@@ -444,27 +544,20 @@ class SkyTyperGame {
   }
 
   toggleFullScreen() {
-    const shell = document.querySelector(".game-shell");
-    try {
-      if (!document.fullscreenElement && !document.webkitFullscreenElement && !document.msFullscreenElement) {
-        if (shell.requestFullscreen) {
-          shell.requestFullscreen().catch((err) => console.log(err));
-        } else if (shell.webkitRequestFullscreen) {
-          shell.webkitRequestFullscreen();
-        } else if (shell.msRequestFullscreen) {
-          shell.msRequestFullscreen();
-        }
-      } else {
-        if (document.exitFullscreen) {
-          document.exitFullscreen();
-        } else if (document.webkitExitFullscreen) {
-          document.webkitExitFullscreen();
-        } else if (document.msExitFullscreen) {
-          document.msExitFullscreen();
-        }
-      }
-    } catch (e) {
-      console.log(e);
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().then(() => {
+        document.body.classList.add("fs-mode");
+        this.ui.fullscreenButton.textContent = "\u2715 Exit Full Screen";
+        this.resizeCanvas();
+      }).catch((err) => {
+        console.log("Fullscreen error:", err);
+      });
+    } else {
+      document.exitFullscreen().then(() => {
+        document.body.classList.remove("fs-mode");
+        this.ui.fullscreenButton.textContent = "\u26F6 Full Screen";
+        this.resizeCanvas();
+      });
     }
   }
 
@@ -1199,6 +1292,7 @@ class SkyTyperGame {
       : `Mission complete! Score ${this.score}. Your pilot saved the sky!`;
     this.ui.pauseButton.textContent = "Pause";
     this.playSound("victory");
+    if (this.tournament.active) this.recordTournamentScore(this.score);
     this.updateUi();
   }
 
@@ -1211,6 +1305,7 @@ class SkyTyperGame {
       : "Your plane needs repairs. Press Start Mission to fly again.";
     this.ui.pauseButton.textContent = "Pause";
     this.playSound("gameover");
+    if (this.tournament.active) this.recordTournamentScore(this.score);
     this.updateUi();
   }
 
@@ -1262,6 +1357,7 @@ class SkyTyperGame {
     this.drawEnemies();
     this.drawEffects();
     this.drawOverlay();
+    this.drawCrewBadge();
   }
 
   drawBackground() {
@@ -1977,6 +2073,280 @@ class SkyTyperGame {
       oscillator.start(noteStart);
       oscillator.stop(noteEnd + 0.02);
     });
+  }
+
+  // =========================================================
+  // TOURNAMENT SYSTEM
+  // =========================================================
+
+  buildTournamentState() {
+    return {
+      active: false,
+      teams: [],     // [{name, pilot, gunner, wins, losses, totalScore, matches}]
+      schedule: [],  // [{t1Idx, t2Idx, t1Score, t2Score, done}]
+      matchIdx: 0,
+      teamTurn: 0,   // 0 = first team of match, 1 = second
+      phase: "idle"  // idle | playing | awaiting | done
+    };
+  }
+
+  getCrewNames() {
+    if (this.tournament.active && this.tournament.phase !== "idle") {
+      const match = this.tournament.schedule[this.tournament.matchIdx];
+      if (!match) return { team: "", pilot: "", gunner: "" };
+      const idx = this.tournament.teamTurn === 0 ? match.t1Idx : match.t2Idx;
+      const team = this.tournament.teams[idx] || {};
+      return { team: team.name || "", pilot: team.pilot || "", gunner: team.gunner || "" };
+    }
+    return {
+      team: "",
+      pilot: (document.getElementById("pilotNameInput") || {}).value || "",
+      gunner: (document.getElementById("gunnerNameInput") || {}).value || ""
+    };
+  }
+
+  drawCrewBadge() {
+    const crew = this.getCrewNames();
+    const parts = [];
+    if (crew.team)   parts.push(`⚡ ${crew.team}`);
+    if (crew.pilot)  parts.push(`✈ ${crew.pilot}`);
+    if (crew.gunner) parts.push(`◎ ${crew.gunner}`);
+    if (!parts.length) return;
+
+    const text = parts.join("   |   ");
+    this.ctx.save();
+    this.ctx.font = "bold 13px 'Trebuchet MS', sans-serif";
+    const tw = this.ctx.measureText(text).width;
+    const px = 14;
+    const bx = LOGICAL_WIDTH - tw - px * 2 - 10;
+    const by = 10;
+    const bw = tw + px * 2;
+    const bh = 28;
+
+    this.ctx.fillStyle = "rgba(4,18,44,0.82)";
+    this.roundRect(bx, by, bw, bh, 10);
+    this.ctx.fill();
+
+    this.ctx.strokeStyle = "rgba(255,255,255,0.18)";
+    this.ctx.lineWidth = 1;
+    this.roundRect(bx, by, bw, bh, 10);
+    this.ctx.stroke();
+
+    this.ctx.fillStyle = "#c8ddf2";
+    this.ctx.textAlign = "right";
+    this.ctx.textBaseline = "middle";
+    this.ctx.fillText(text, LOGICAL_WIDTH - 10 - px, by + bh / 2);
+    this.ctx.restore();
+  }
+
+  // Generate round-robin pairs from team list
+  generateRoundRobin(teams) {
+    const schedule = [];
+    for (let i = 0; i < teams.length; i++) {
+      for (let j = i + 1; j < teams.length; j++) {
+        schedule.push({ t1Idx: i, t2Idx: j, t1Score: null, t2Score: null, done: false });
+      }
+    }
+    return schedule;
+  }
+
+  prepareTournamentTurn() {
+    const match = this.tournament.schedule[this.tournament.matchIdx];
+    if (!match) return;
+    const idx  = this.tournament.teamTurn === 0 ? match.t1Idx : match.t2Idx;
+    const oppI = this.tournament.teamTurn === 0 ? match.t2Idx : match.t1Idx;
+    const team = this.tournament.teams[idx];
+    const opp  = this.tournament.teams[oppI];
+    const total = this.tournament.schedule.length;
+    const num   = this.tournament.matchIdx + 1;
+    this.messageText = `Match ${num}/${total}: ${team.name} vs ${opp.name} — ${team.pilot} flies & ${team.gunner} types! Press Start Mission.`;
+    this.tournament.phase = "awaiting";
+    this.updateUi();
+    this.renderBracket();
+  }
+
+  recordTournamentScore(score) {
+    const match = this.tournament.schedule[this.tournament.matchIdx];
+    if (!match) return;
+
+    if (this.tournament.teamTurn === 0) {
+      match.t1Score = score;
+      this.tournament.teamTurn = 1;
+      const t2 = this.tournament.teams[match.t2Idx];
+      this.messageText = `Score recorded (${score} pts)! Now ${t2.name}: ${t2.pilot} flies & ${t2.gunner} types. Press Start Mission!`;
+      this.tournament.phase = "awaiting";
+    } else {
+      match.t2Score = score;
+      match.done = true;
+      this.resolveMatch(match);
+      this.tournament.matchIdx++;
+      this.tournament.teamTurn = 0;
+      if (this.tournament.matchIdx >= this.tournament.schedule.length) {
+        this.tournament.phase = "done";
+        this.finishTournament();
+      } else {
+        this.prepareTournamentTurn();
+      }
+    }
+    this.renderBracket();
+    this.updateUi();
+  }
+
+  resolveMatch(match) {
+    const t1 = this.tournament.teams[match.t1Idx];
+    const t2 = this.tournament.teams[match.t2Idx];
+    t1.totalScore = (t1.totalScore || 0) + (match.t1Score || 0);
+    t2.totalScore = (t2.totalScore || 0) + (match.t2Score || 0);
+    t1.matches = (t1.matches || 0) + 1;
+    t2.matches = (t2.matches || 0) + 1;
+    if ((match.t1Score || 0) >= (match.t2Score || 0)) {
+      t1.wins   = (t1.wins   || 0) + 1;
+      t2.losses = (t2.losses || 0) + 1;
+      match.winner = match.t1Idx;
+    } else {
+      t2.wins   = (t2.wins   || 0) + 1;
+      t1.losses = (t1.losses || 0) + 1;
+      match.winner = match.t2Idx;
+    }
+  }
+
+  finishTournament() {
+    const sorted = [...this.tournament.teams].sort(
+      (a, b) => (b.wins || 0) - (a.wins || 0) || (b.totalScore || 0) - (a.totalScore || 0)
+    );
+    const champ = sorted[0];
+    this.messageText = `🏆 Tournament Over! Champion: ${champ.name} — ${champ.wins || 0} wins, ${champ.totalScore || 0} total points!`;
+    this.renderBracket();
+    this.updateUi();
+    const nb = document.getElementById("nextMatchBtn");
+    if (nb) nb.style.display = "none";
+  }
+
+  renderBracket() {
+    const bracket = document.getElementById("bracketView");
+    const body    = document.getElementById("standingsTableBody");
+    const banner  = document.getElementById("currentMatchBanner");
+    const nextBtn = document.getElementById("nextMatchBtn");
+    const setup   = document.getElementById("tournamentTeamSetup");
+    if (!bracket || !body) return;
+
+    bracket.style.display = "block";
+    if (setup) setup.style.display = "none";
+
+    // Standings
+    const sorted = [...this.tournament.teams]
+      .map((t, i) => ({ ...t, _idx: i }))
+      .sort((a, b) => (b.wins || 0) - (a.wins || 0) || (b.totalScore || 0) - (a.totalScore || 0));
+
+    body.innerHTML = "";
+    sorted.forEach((team, rank) => {
+      const tr = document.createElement("tr");
+      if (rank === 0 && (team.matches || 0) > 0) tr.className = "is-leader";
+      tr.innerHTML = `<td>${team.name}</td><td>${team.wins || 0}</td><td>${team.losses || 0}</td><td>${team.totalScore || 0}</td>`;
+      body.appendChild(tr);
+    });
+
+    // Banner
+    if (this.tournament.phase === "done") {
+      const champ = sorted[0];
+      banner.innerHTML = `<strong>🏆 Champion: ${champ.name}!</strong>${champ.pilot} &amp; ${champ.gunner} lead the skies.`;
+      if (nextBtn) nextBtn.style.display = "none";
+    } else {
+      const match = this.tournament.schedule[this.tournament.matchIdx];
+      if (match) {
+        const t1 = this.tournament.teams[match.t1Idx];
+        const t2 = this.tournament.teams[match.t2Idx];
+        const num   = this.tournament.matchIdx + 1;
+        const total = this.tournament.schedule.length;
+        if (this.tournament.teamTurn === 0) {
+          banner.innerHTML = `<strong>Match ${num}/${total}: ${t1.name} vs ${t2.name}</strong>Playing now: ✈️ ${t1.pilot} (Pilot) &amp; 🎯 ${t1.gunner} (Gunner)`;
+        } else {
+          banner.innerHTML = `<strong>Match ${num}/${total}: ${t1.name} vs ${t2.name}</strong>Now: ✈️ ${t2.pilot} &amp; 🎯 ${t2.gunner} &nbsp;<small style="color:var(--accent)">(${t1.name} scored ${match.t1Score} pts)</small>`;
+        }
+        if (nextBtn) nextBtn.style.display = "block";
+      }
+    }
+  }
+
+  startTournamentFromUI() {
+    const entries = document.querySelectorAll(".team-entry");
+    const teams = [];
+    entries.forEach((entry) => {
+      const inputs = entry.querySelectorAll(".team-input");
+      if (inputs.length >= 3) {
+        teams.push({
+          name:       inputs[0].value.trim() || `Team ${teams.length + 1}`,
+          pilot:      inputs[1].value.trim() || "Pilot",
+          gunner:     inputs[2].value.trim() || "Gunner",
+          wins: 0, losses: 0, totalScore: 0, matches: 0
+        });
+      }
+    });
+    if (teams.length < 2) { alert("Add at least 2 teams!"); return; }
+    this.tournament.active   = true;
+    this.tournament.teams    = teams;
+    this.tournament.schedule = this.generateRoundRobin(teams);
+    this.tournament.matchIdx = 0;
+    this.tournament.teamTurn = 0;
+    this.prepareTournamentTurn();
+    this.renderBracket();
+  }
+
+  addTeamEntry() {
+    const list = document.getElementById("teamEntriesList");
+    if (!list) return;
+    const count = list.children.length + 1;
+    if (count > 8) { alert("Maximum 8 teams in a tournament."); return; }
+    const div = document.createElement("div");
+    div.className = "team-entry";
+    div.innerHTML = `
+      <div class="team-entry-header">
+        <span class="team-entry-label">Team ${count}</span>
+        <button class="team-entry-remove" type="button">✕</button>
+      </div>
+      <input type="text" class="team-input" placeholder="Team Name" maxlength="18">
+      <input type="text" class="team-input" placeholder="✈️ Pilot Name" maxlength="18">
+      <input type="text" class="team-input" placeholder="🎯 Gunner Name" maxlength="18">
+    `;
+    div.querySelector(".team-entry-remove").addEventListener("click", () => {
+      div.remove();
+      document.querySelectorAll(".team-entry-label").forEach((l, i) => { l.textContent = `Team ${i + 1}`; });
+    });
+    list.appendChild(div);
+  }
+
+  bindTournamentEvents() {
+    const addBtn      = document.getElementById("addTeamBtn");
+    const genBtn      = document.getElementById("generateBracketBtn");
+    const nextBtn     = document.getElementById("nextMatchBtn");
+    const resetBtn    = document.getElementById("resetTournamentBtn");
+    const toggleBtn   = document.getElementById("toggleTournamentBtn");
+    const panel       = document.getElementById("tournamentPanel");
+
+    if (addBtn)    addBtn.addEventListener("click",  () => this.addTeamEntry());
+    if (genBtn)    genBtn.addEventListener("click",  () => this.startTournamentFromUI());
+    if (nextBtn)   nextBtn.addEventListener("click", () => { if (this.tournament.phase === "awaiting") this.prepareTournamentTurn(); });
+    if (resetBtn)  resetBtn.addEventListener("click", () => {
+      this.tournament = this.buildTournamentState();
+      const setup = document.getElementById("tournamentTeamSetup");
+      const bracket = document.getElementById("bracketView");
+      if (setup)   setup.style.display = "";
+      if (bracket) bracket.style.display = "none";
+      document.getElementById("teamEntriesList").innerHTML = "";
+      this.addTeamEntry();
+      this.addTeamEntry();
+    });
+    if (toggleBtn && panel) {
+      toggleBtn.addEventListener("click", () => {
+        const open = panel.style.display !== "none";
+        panel.style.display = open ? "none" : "block";
+        toggleBtn.textContent = open ? "▼ Open" : "▲ Close";
+      });
+    }
+
+    // Pre-populate 2 team slots for convenience
+    this.addTeamEntry();
+    this.addTeamEntry();
   }
 }
 

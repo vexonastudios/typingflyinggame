@@ -14,11 +14,10 @@
           <p class="eyebrow">Sky Typer Squadron</p>
           <h1>Air Battle Typing Game</h1>
         </div>
-
         <div class="header-actions">
           <button id="startButton" class="primary-button" type="button">Start Mission</button>
           <button id="pauseButton" class="secondary-button" type="button">Pause</button>
-          <button id="fullscreenButton" class="secondary-button" type="button">Full Screen</button>
+          <button id="fullscreenButton" class="secondary-button fs-btn" type="button">⛶ Full Screen</button>
         </div>
       </div>
 
@@ -43,10 +42,9 @@
 
       <section class="canvas-card">
         <canvas id="gameCanvas" width="1360" height="760" aria-label="Typing shooter game canvas"></canvas>
-
         <div class="canvas-overlay" aria-hidden="true">
-          <div class="overlay-top-left" style="display: flex; flex-direction: column; gap: 12px; pointer-events: auto;">
-            <div class="stat-card health-card" style="max-width: 250px;">
+          <div class="overlay-top-left">
+            <div class="stat-card health-card">
               <div class="health-header">
                 <span>Hull Integrity</span>
                 <strong id="healthValue">6 / 6</strong>
@@ -60,7 +58,6 @@
           <div class="target-display">Target: <span id="targetValue">No target locked</span></div>
         </div>
       </section>
-
     </section>
 
     <aside class="control-panel">
@@ -84,6 +81,8 @@
             <option value="animals">Animal Attack</option>
             <option value="sky">Sky Squad</option>
             <option value="colors">Color Patrol</option>
+            <option value="combat">Combat Zone</option>
+            <option value="space">Deep Space</option>
           </select>
         </label>
 
@@ -100,11 +99,10 @@
         <div class="quick-tips">
           <h3>Quick Flight Tips</h3>
           <p>Type the word above a plane to fire at it.</p>
-          <p>Use all arrow keys to dodge enemy bullets, but your plane can only push a little to the right.</p>
-          <p>Press Space or the Pause button to pause. Press Esc to clear a fresh lock.</p>
-          <p>Every 10th wave brings in a giant boss plane with a much bigger word.</p>
-          <p>Pink repair planes can restore hull integrity when you blast them down.</p>
-          <p>Ground anti-air turrets use smaller words and fire bright blue flak from the mountains.</p>
+          <p>Arrow keys or Numpad 8/2/4/6 to dodge. Space to pause.</p>
+          <p>Every 10th wave: boss plane with a long word.</p>
+          <p>Pink repair planes restore hull integrity.</p>
+          <p>Score 3 500+ pts to upgrade your plane to Level 2; 12 000+ for Level 3.</p>
         </div>
 
         <div class="scoreboard">
@@ -116,6 +114,56 @@
             <li>No high scores yet.</li>
           </ol>
         </div>
+
+        <!-- ===== CREW & TOURNAMENT ===== -->
+        <div class="tournament-zone">
+          <div class="scoreboard-header" style="margin-top:18px">
+            <h3>🏆 Crew &amp; Tournament</h3>
+            <button id="toggleTournamentBtn" class="secondary-button tourn-toggle-btn" type="button">▼ Open</button>
+          </div>
+
+          <div id="tournamentPanel" class="tournament-panel" style="display:none">
+
+            <!-- Crew names (all games) -->
+            <p class="hint-text">Name your crew for any mission:</p>
+            <label class="field">
+              <span>✈️ Pilot (Arrow Keys)</span>
+              <input type="text" id="pilotNameInput" placeholder="Ace" maxlength="20" class="name-input">
+            </label>
+            <label class="field">
+              <span>🎯 Gunner (Types Words)</span>
+              <input type="text" id="gunnerNameInput" placeholder="Gunner" maxlength="20" class="name-input">
+            </label>
+
+            <div class="tournament-divider"></div>
+
+            <!-- Team setup -->
+            <div id="tournamentTeamSetup">
+              <p class="hint-text">Round-robin tournament (2–8 teams):</p>
+              <div id="teamEntriesList" class="team-entries-list"></div>
+              <div class="row-btns">
+                <button id="addTeamBtn" type="button" class="secondary-button small-btn">+ Add Team</button>
+                <button id="generateBracketBtn" type="button" class="primary-button small-btn">▶ Start</button>
+              </div>
+            </div>
+
+            <!-- Bracket / standings (shown once tournament starts) -->
+            <div id="bracketView" class="bracket-view" style="display:none">
+              <div id="currentMatchBanner" class="current-match-banner"></div>
+              <table class="standings-table">
+                <thead>
+                  <tr><th>Team</th><th>W</th><th>L</th><th>Pts</th></tr>
+                </thead>
+                <tbody id="standingsTableBody"></tbody>
+              </table>
+              <button id="nextMatchBtn" type="button" class="primary-button" style="width:100%;margin-top:10px;display:none">Continue ▶</button>
+              <button id="resetTournamentBtn" type="button" class="secondary-button" style="width:100%;margin-top:6px;font-size:0.78rem;padding:8px">↺ New Tournament</button>
+            </div>
+
+          </div>
+        </div>
+        <!-- /CREW & TOURNAMENT -->
+
       </section>
     </aside>
   </main>

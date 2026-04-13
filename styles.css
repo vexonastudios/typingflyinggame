@@ -497,8 +497,248 @@ kbd {
   object-fit: contain;
 }
 
-.game-shell:fullscreen .game-header,
-.game-shell:fullscreen .hud-row {
-  padding: 10px 20px;
-  background: rgba(0, 0, 0, 0.4);
 }
+
+/* Removed old :fullscreen rules — now handled via body.fs-mode class */
+
+/* ============================================================
+   FULLSCREEN MODE  (toggled via body.fs-mode class by JS)
+   ============================================================ */
+body.fs-mode {
+  overflow: hidden;
+}
+
+body.fs-mode .layout {
+  width: 100vw;
+  max-width: 100vw;
+  height: 100vh;
+  max-height: 100vh;
+  padding: 0;
+  gap: 0;
+  overflow: hidden;
+  grid-template-columns: 1fr;
+}
+
+body.fs-mode .control-panel {
+  display: none !important;
+}
+
+body.fs-mode .game-shell {
+  border-radius: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+}
+
+body.fs-mode .game-header {
+  flex-shrink: 0;
+  padding: 6px 14px;
+  margin-bottom: 4px;
+  background: rgba(0,0,0,0.35);
+}
+
+body.fs-mode .eyebrow { display: none; }
+
+body.fs-mode h1 {
+  font-size: clamp(1rem, 2vw, 1.4rem);
+}
+
+body.fs-mode .hud-row {
+  flex-shrink: 0;
+  margin-bottom: 4px;
+  padding: 0 10px;
+  flex-wrap: nowrap;
+}
+
+body.fs-mode .stat-card { padding: 8px 12px; }
+
+body.fs-mode .canvas-card {
+  flex: 1;
+  min-height: 0;
+  border-radius: 0;
+  border: none;
+}
+
+body.fs-mode #gameCanvas {
+  width: 100% !important;
+  height: 100% !important;
+  aspect-ratio: unset !important;
+  display: block;
+}
+
+/* ============================================================
+   CREW NAMES & TOURNAMENT UI
+   ============================================================ */
+
+.canvas-overlay .overlay-top-left {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  pointer-events: auto;
+  max-width: 260px;
+}
+
+.health-card {
+  padding: 12px 14px 14px;
+  max-width: 250px;
+}
+
+.hint-text {
+  margin: 10px 0 6px;
+  color: var(--text-soft);
+  font-size: 0.8rem;
+  font-family: var(--font-ui);
+}
+
+.name-input {
+  appearance: none;
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 12px;
+  color: var(--form-text);
+  background: #eef4fd;
+  border: 1px solid var(--form-border);
+  font-family: var(--font-ui);
+  font-weight: 600;
+  font-size: 0.88rem;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.75), 0 4px 10px rgba(3,16,35,0.12);
+}
+
+.tournament-zone {
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(255,255,255,0.14);
+}
+
+.tournament-panel { margin-top: 10px; }
+
+.tournament-divider {
+  height: 1px;
+  background: rgba(255,255,255,0.12);
+  margin: 14px 0;
+}
+
+.tourn-toggle-btn {
+  font-size: 0.72rem !important;
+  padding: 5px 10px !important;
+  border-radius: 10px !important;
+}
+
+.team-entries-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.team-entry {
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 12px;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.team-entry-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.team-entry-label {
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: var(--accent);
+  font-family: var(--font-ui);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.team-entry-remove {
+  background: none;
+  border: none;
+  color: rgba(255,100,100,0.7);
+  cursor: pointer;
+  font-size: 1rem;
+  padding: 0 4px;
+  line-height: 1;
+}
+.team-entry-remove:hover { color: #ff5555; }
+
+.team-input {
+  appearance: none;
+  width: 100%;
+  padding: 7px 10px;
+  border-radius: 9px;
+  color: var(--form-text);
+  background: rgba(255,255,255,0.9);
+  border: 1px solid var(--form-border);
+  font-family: var(--font-ui);
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.row-btns {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.small-btn {
+  flex: 1;
+  font-size: 0.82rem !important;
+  padding: 9px 10px !important;
+  border-radius: 12px !important;
+  box-shadow: none !important;
+}
+
+.bracket-view { margin-top: 12px; }
+
+.current-match-banner {
+  background: linear-gradient(135deg,rgba(255,211,77,0.13),rgba(255,183,63,0.06));
+  border: 1px solid rgba(255,211,77,0.28);
+  border-radius: 12px;
+  padding: 10px 12px;
+  margin-bottom: 12px;
+  font-size: 0.83rem;
+  color: var(--text-main);
+  font-family: var(--font-ui);
+  line-height: 1.45;
+}
+
+.current-match-banner strong {
+  color: var(--accent);
+  display: block;
+  margin-bottom: 3px;
+  font-size: 0.88rem;
+}
+
+.standings-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+  font-family: var(--font-ui);
+  color: var(--text-soft);
+}
+
+.standings-table th {
+  color: var(--text-soft);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.7rem;
+  padding: 5px 7px;
+  border-bottom: 1px solid rgba(255,255,255,0.14);
+  text-align: left;
+}
+
+.standings-table td {
+  padding: 5px 7px;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+
+.standings-table tr.is-current td { background: rgba(255,211,77,0.07); color: var(--text-main); }
+.standings-table tr.is-leader  td { color: var(--accent); font-weight: 700; }
