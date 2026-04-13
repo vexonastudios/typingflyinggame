@@ -74,6 +74,10 @@ class BrainBridge {
     // Truck testing
     this.truck = { x: 0, y: 0, active: false };
     
+    // Timer
+    this.gameTimer = 0;
+    this.timerActive = false;
+    
     this._bindEvents();
     this._initWorld();
     requestAnimationFrame((ts) => this._loop(ts));
@@ -137,6 +141,8 @@ class BrainBridge {
       this.mathMode = document.getElementById('mathMode').value;
       document.getElementById('gameSetup').style.display = 'none';
       this.state = 'build';
+      this.gameTimer = 0;
+      this.timerActive = true;
       this._generateMath();
       this.mathInput.focus();
       document.getElementById('testBridgeBtn').disabled = false;
@@ -162,6 +168,10 @@ class BrainBridge {
       this._initWorld();
       this.state = 'build';
       this.truck.active = false;
+      this.gameTimer = 0;
+      this.timerActive = true;
+      document.getElementById('gameTimerDisplay').textContent = "00:00";
+      this.mathInput.focus();
     });
 
     // Inventory selection
@@ -176,6 +186,14 @@ class BrainBridge {
     // Math submission
     this.mathInput.addEventListener('keydown', (e) => {
       if(e.key === 'Enter') this._checkMath();
+    });
+
+    // Global Key Listener to Keep Input Focused For Solver
+    window.addEventListener('keydown', (e) => {
+      if (this.state !== 'build' && this.state !== 'test') return;
+      if (document.activeElement !== this.mathInput) {
+         this.mathInput.focus();
+      }
     });
 
     // Canvas Mouse Events
@@ -462,6 +480,13 @@ class BrainBridge {
   _update(dt) {
     if(this.state === 'setup') return;
 
+    if (this.timerActive && this.state !== 'end') {
+      this.gameTimer += dt;
+      let m = Math.floor(this.gameTimer / 60);
+      let s = Math.floor(this.gameTimer % 60);
+      document.getElementById('gameTimerDisplay').textContent = `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+    }
+
     // Sparks
     this.sparks = this.sparks.filter(s => {
       s.life -= dt;
@@ -512,9 +537,24 @@ class BrainBridge {
         }
       } else if(this.truck.x > 850) {
         // Win!
+        this.timerActive = false;
+        let finalTime = document.getElementById('gameTimerDisplay').textContent;
+        
+        let best = localStorage.getItem('bb_best_' + this.mathMode) || 9999;
+        let isNewBest = false;
+        if(this.gameTimer < best) {
+           best = this.gameTimer;
+           localStorage.setItem('bb_best_' + this.mathMode, this.gameTimer);
+           isNewBest = true;
+        }
+        
+        let bm = Math.floor(best / 60);
+        let bs = Math.floor(best % 60);
+        let bestStr = `${bm.toString().padStart(2, '0')}:${bs.toString().padStart(2, '0')}`;
+
         document.getElementById('endTitle').textContent = "Bridge Holds!";
         document.getElementById('endTitle').style.color = "#2ec97a";
-        document.getElementById('endMessage').textContent = "Incredible engineering! The rescue truck crossed safely!";
+        document.getElementById('endMessage').innerHTML = `Incredible engineering! The rescue truck crossed safely!<br><br>Time: <strong style="color:#ffd060">${finalTime}</strong><br>Record: <strong>${bestStr}</strong> <span style="color:#2ec97a">${isNewBest ? '⭐ NEW RECORD!' : ''}</span>`;
         document.getElementById('gameEnd').style.display = 'flex';
         Sfx.win();
         this.state = 'end';
