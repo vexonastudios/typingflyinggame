@@ -110,7 +110,7 @@ class BrainBridge {
   _addNode(x, y, pinned=false) {
     let n = this._getNode(x, y);
     if(n) return n;
-    n = { x, y, ox: x, oy: y, pinned, id: Math.random() };
+    n = { x, y, ox: x, oy: y, targetX: x, targetY: y, pinned, id: Math.random() };
     this.nodes.push(n);
     return n;
   }
@@ -364,27 +364,69 @@ class BrainBridge {
     }
   }
 
+  _calcSupportStrength() {
+    for(let n of this.nodes) { n.connected = false; n.supportDist = 999; }
+    let queue = this.nodes.filter(n => n.pinned);
+    for(let q of queue) { q.connected = true; q.supportDist = 0; }
+    
+    // BFS to find structural path cost to cliffs
+    while(queue.length > 0) {
+      let curr = queue.shift();
+      let neighbors = [];
+      for(let e of this.edges) {
+        if(!e.broken) {
+          let cost = (e.baseLen / GRID) * (e.type==='steel'? 0.5 : e.type==='wood'? 0.9 : 1.4);
+          if(e.n1 === curr) neighbors.push({n: e.n2, dist: cost});
+          if(e.n2 === curr) neighbors.push({n: e.n1, dist: cost});
+        }
+      }
+      for(let edgeInfo of neighbors) {
+        let neighbor = edgeInfo.n;
+        let alt = curr.supportDist + edgeInfo.dist;
+        if(alt < neighbor.supportDist) {
+           neighbor.supportDist = alt;
+           neighbor.connected = true;
+           queue.push(neighbor);
+        }
+      }
+    }
+  }
+
   // ── PHYSICS PHYSICS PHYSICS ──
   _updatePhysics(dt) {
+    this._calcSupportStrength();
+
     // 1. Apply Forces
     for(let n of this.nodes) {
       if(n.pinned) {
-        n.x = n.ox; n.y = n.oy; 
+        n.x = n.targetX; n.y = n.targetY; 
         continue;
       }
       
       let extraG = 0;
-      // Truck weight applied to nearby nodes
-      if(this.truck.active && Math.abs(n.x - this.truck.x) < 60) {
-        extraG = 3.5; // very heavy
+      // Truck weight applied to nearby nodes ONLY DURING TEST
+      if(this.state === 'test' && this.truck.active && Math.abs(n.x - this.truck.x) < 65) {
+        extraG = 4.0; // very heavy load from truck
       }
 
-      let vx = (n.x - n.ox) * 0.96; // damp
-      let vy = (n.y - n.oy) * 0.96;
+      let vx = (n.x - n.ox) * 0.85; // high dampening for stability
+      let vy = (n.y - n.oy) * 0.85;
       n.ox = n.x;
       n.oy = n.y;
-      n.x += vx;
-      n.y += Math.min(vy + 0.3 + extraG, 15); // gravity + cap
+      
+      if(n.connected) {
+         // ARCADE RIGIDITY: The structure holds its shape based on how well it's supported!
+         // A strong support path (low supportDist) means it perfectly holds its target grid spot.
+         let str = Math.max(0, 1.0 - (n.supportDist / 12.0)); 
+         let rigidity = str * 0.35 + 0.05; // Base 5% rigidity so it always somewhat holds shape
+         
+         n.x += vx + (n.targetX - n.x) * rigidity;
+         n.y += vy + (n.targetY - n.y) * rigidity + extraG;
+      } else {
+         // Disconnected pieces fall out of the sky
+         n.x += vx;
+         n.y += vy + 0.8;
+      }
     }
 
     // 2. Solve Constraints
