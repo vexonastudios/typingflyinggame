@@ -84,10 +84,16 @@ function startGame(mode) {
   state.soloTotalTime = 0;
   state.players = [];
   
+  const customNames = [
+    $('p1-name') && $('p1-name').value.trim() ? $('p1-name').value.trim() : PLAYER_COLORS[0].name,
+    $('p2-name') && $('p2-name').value.trim() ? $('p2-name').value.trim() : PLAYER_COLORS[1].name,
+    $('p3-name') && $('p3-name').value.trim() ? $('p3-name').value.trim() : PLAYER_COLORS[2].name
+  ];
+  
   for (let i = 0; i < (mode === 1 ? 1 : mode); i++) {
     state.players.push({
       id: i,
-      name: PLAYER_COLORS[i].name,
+      name: customNames[i],
       cls: PLAYER_COLORS[i].cls,
       score: 0,
       locked: false
