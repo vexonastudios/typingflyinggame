@@ -422,6 +422,7 @@ async function advanceState() {
          // Increase difficulty
          if (difficultyStr === 'Easy') difficultyStr = 'Medium';
          else if (difficultyStr === 'Medium') difficultyStr = 'Hard';
+         else if (difficultyStr === 'Hard') difficultyStr = 'SpellingBee';
          
          let hist = JSON.parse(localStorage.getItem('spellingUsedWords') || '[]');
          remainingWords = DICTIONARY[difficultyStr].filter(ob => !hist.includes(ob.word));
