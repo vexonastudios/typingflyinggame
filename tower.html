@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Math Tower Builder</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="tower.css">
+</head>
+<body>
+  <!-- Animated Background -->
+  <div class="bg-layer bg-sky"></div>
+  <div class="bg-layer bg-clouds"></div>
+  <div class="bg-layer bg-city"></div>
+
+  <!-- Intro / Lobby Screen -->
+  <div id="lobbyScreen" class="screen active">
+    <div class="lobby-card glass-panel">
+      <h1>Math Tower</h1>
+      <p>Race to the sky! Calculate fast and build your tower block by block. First to 20 blocks wins.</p>
+      
+      <div class="player-select">
+        <h2>Select Players</h2>
+        <div class="player-buttons">
+          <button id="btn2p" class="btn btn-primary active">2 Players</button>
+          <button id="btn3p" class="btn btn-primary">3 Players</button>
+        </div>
+      </div>
+
+      <div class="settings-group">
+        <h2>Difficulty</h2>
+        <div class="difficulty-buttons">
+          <button id="btnDiffEasy" class="btn btn-primary active">Easy</button>
+          <button id="btnDiffMedium" class="btn btn-primary">Medium</button>
+          <button id="btnDiffHard" class="btn btn-primary">Hard</button>
+        </div>
+      </div>
+
+      <div class="controls-panel">
+        <div class="controls-col" id="col-p1">
+          <input type="text" id="p1Name" class="player-name-input" value="Player 1" />
+          <div class="key-group">
+            <span class="key">Z</span>
+            <span class="key">X</span>
+            <span class="key">C</span>
+            <span class="key">V</span>
+          </div>
+        </div>
+        <div class="controls-col" id="col-p2">
+          <input type="text" id="p2Name" class="player-name-input" value="Player 2" />
+          <div class="key-group">
+            <span class="key">H</span>
+            <span class="key">J</span>
+            <span class="key">K</span>
+            <span class="key">L</span>
+          </div>
+        </div>
+        <div class="controls-col" id="col-p3" style="display: none;">
+          <input type="text" id="p3Name" class="player-name-input" value="Player 3" />
+          <div class="key-group">
+            <span class="key">4</span>
+            <span class="key">5</span>
+            <span class="key">6</span>
+            <span class="key">+</span>
+          </div>
+          <p class="numpad-note">Numpad</p>
+        </div>
+      </div>
+
+      <button id="btnStart" class="btn btn-start">START GAME</button>
+      <a href="index.html" class="btn-back">← Back to Hub</a>
+    </div>
+  </div>
+
+  <!-- Game Screen -->
+  <div id="gameScreen" class="screen">
+    <!-- Win Overlay -->
+    <div id="winOverlay" class="win-overlay hidden">
+      <div class="win-card glass-panel">
+        <h2 id="winTitle">Results</h2>
+        <div id="winnerText" class="results-container"></div>
+        <button id="btnRestart" class="btn btn-start">Play Again</button>
+        <button id="btnLobby" class="btn btn-primary">Main Menu</button>
+      </div>
+    </div>
+
+    <!-- Live Timer -->
+    <div id="liveTimer" class="live-timer hidden">0.00s</div>
+
+    <!-- Countdown Overlay -->
+    <div id="countdownOverlay" class="countdown-overlay hidden">
+      <div id="countdownText" class="countdown-text">3</div>
+    </div>
+
+    <!-- Game UI Container -->
+    <div id="gameContainer" class="game-container">
+      <!-- Player Columns injected by JS -->
+    </div>
+  </div>
+
+  <!-- Template for a single player column -->
+  <template id="playerColumnTemplate">
+    <div class="player-col">
+      <div class="player-name-display">Player 1</div>
+      <div class="tower-container">
+        <!-- Visual Base -->
+        <div class="tower-base"></div>
+        <!-- Blocks container -->
+        <div class="tower-blocks"></div>
+        <!-- Target Line -->
+        <div class="target-line"></div>
+      </div>
+      <div class="problem-container glass-panel">
+        <div class="problem-text">12 + 8 = ?</div>
+        <div class="answers-grid">
+          <div class="answer-box">
+            <span class="answer-key">Z</span>
+            <span class="answer-value">20</span>
+          </div>
+          <div class="answer-box">
+            <span class="answer-key">X</span>
+            <span class="answer-value">18</span>
+          </div>
+          <div class="answer-box">
+            <span class="answer-key">C</span>
+            <span class="answer-value">15</span>
+          </div>
+          <div class="answer-box">
+            <span class="answer-key">V</span>
+            <span class="answer-value">22</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </template>
+
+  <script src="tower.js"></script>
+</body>
+</html>

@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Spelling Bee Championship</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="icon" type="image/png" href="favicon.png">
+  <link rel="stylesheet" href="spelling.css">
+</head>
+<body>
+  
+  <!-- Thematic Stage Background -->
+  <div class="stage-bg">
+    <div class="spotlight spotlight-left"></div>
+    <div class="spotlight spotlight-right"></div>
+    <div class="stage-curtains"></div>
+    <div class="stage-floor"></div>
+  </div>
+
+  <!-- Scoreboard (always visible in game) -->
+  <div id="scoreboard" class="scoreboard hidden">
+    <h3>Leaderboard</h3>
+    <ul id="scoreList"></ul>
+  </div>
+
+  <!-- Lobby Screen -->
+  <div id="lobbyScreen" class="screen active">
+    <div class="lobby-card glass-panel">
+      <h1>Spelling Bee</h1>
+      <p>Step up to the microphone! Compete in a multi-round spelling championship narrated by our AI judge.</p>
+      
+      <div class="settings-row">
+        <div class="setting-group">
+          <label>Difficulty</label>
+          <select id="difficultySelect" class="input-modern">
+            <option value="Easy">Easy (Ages 6-8)</option>
+            <option value="Medium">Medium (Ages 9-11)</option>
+            <option value="Hard">Hard (Ages 12+)</option>
+          </select>
+        </div>
+        <div class="setting-group">
+          <label>Rounds</label>
+          <select id="roundsSelect" class="input-modern">
+            <option value="3">3 Rounds</option>
+            <option value="5" selected>5 Rounds</option>
+            <option value="10">10 Rounds</option>
+          </select>
+        </div>
+      </div>
+      <div class="settings-row" style="margin-top: -10px;">
+        <div class="setting-group" style="align-items: center; flex-direction: row; justify-content: space-between; background: rgba(0,0,0,0.3); padding: 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1);">
+          <label style="margin:0;">Pressure Clock (30s Timer)</label>
+          <input type="checkbox" id="timerToggle" style="width: 20px; height: 20px; cursor: pointer;">
+        </div>
+      </div>
+
+      <div class="players-setup">
+        <h3>Players (2-6)</h3>
+        <div id="playerInputs" class="player-inputs">
+          <input type="text" class="input-modern p-input" placeholder="Player 1" value="Jimmy">
+          <input type="text" class="input-modern p-input" placeholder="Player 2" value="Sarah">
+        </div>
+        <button id="btnAddPlayer" class="btn btn-secondary">+ Add Player</button>
+      </div>
+
+      <button id="btnStart" class="btn btn-start">START CHAMPIONSHIP</button>
+      <a href="index.html" class="btn-back">← Back to Hub</a>
+      
+      <div class="hall-of-fame hidden" id="hallOfFameContainer">
+        <h3><i class="fa-solid fa-trophy"></i> Hall of Fame (All-Time)</h3>
+        <ul class="hof-list" id="hofList">
+           <!-- Injected by JS -->
+        </ul>
+      </div>
+    </div>
+  </div>
+
+    <!-- Game Screen -->
+  <div id="gameScreen" class="screen">
+    
+    <div class="round-indicator" id="roundIndicator" style="display: flex; flex-direction: column; gap: 15px;">
+      <div style="display: flex; flex-direction: column; gap: 5px;">
+        <div style="display: flex; gap: 15px; align-items: center;">
+          <span>Round 1 / 5</span> 
+          <span id="sdWarning" class="hidden" style="color:red; animation: flash 1s infinite;">SUDDEN DEATH</span>
+        </div>
+        <div id="diffText" style="font-size: 1rem; color: #f97316; font-weight: 700; text-transform: uppercase;">Easy Difficulty</div>
+      </div>
+
+      <div style="display: flex; gap: 10px;">
+        <a href="index.html" class="btn-back-float" style="position: relative; top: 0; right: 0;">← Hub</a>
+        <button onclick="location.reload()" class="btn-back-float" style="position: relative; top: 0; right: 0; cursor: pointer;">↻ Restart</button>
+      </div>
+    </div>
+    
+    <div class="announcer-panel glass-panel" id="announcerPanel">
+      <div class="narrator-icon">🎙️</div>
+      <p id="announcerText">Loading audio engine...</p>
+    </div>
+
+    <!-- The Podium -->
+    <div class="podium-area">
+      <h2 id="activePlayerName" class="active-player-text">Player 1</h2>
+      
+      <div class="podium-desk">
+        <div id="timerContainer" class="timer-container"><div id="timerFill" class="timer-fill"></div></div>
+        <div class="mic-stand"></div>
+        <div class="hint-buttons">
+          <button class="btn-hint" id="btnSayWord" disabled><i class="fa-solid fa-volume-high"></i> Say Word</button>
+          <button class="btn-hint" id="btnSayDef" disabled><i class="fa-solid fa-book"></i> Definition</button>
+          <button class="btn-hint" id="btnSaySent" disabled><i class="fa-solid fa-quote-left"></i> Sentence</button>
+        </div>
+        
+        <form id="spellingForm" autocomplete="off">
+          <input type="text" id="spellingInput" class="spelling-input" placeholder="Type word here..." disabled autocomplete="off" spellcheck="false" autocorrect="off">
+          <button type="submit" id="btnSubmitSpell" class="btn-submit-spell" disabled><i class="fa-solid fa-paper-plane"></i> Submit</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Results Screen -->
+  <div id="winScreen" class="screen">
+    <div class="win-card glass-panel" id="winCard">
+      <!-- Injected by JS -->
+    </div>
+  </div>
+
+  <script src="dictionary.js"></script>
+  <script src="spelling.js"></script>
+</body>
+</html>

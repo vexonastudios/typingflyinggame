@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Math Race - Vexona</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="math-race.css">
+</head>
+<body>
+
+  <!-- Menu Screen -->
+  <div id="menu-screen" class="screen active">
+    <h1>Math Race</h1>
+    <p>Fastest Brain Wins!</p>
+    
+    <div class="menu-options">
+      <button class="btn btn-primary" onclick="startGame(1)">Solo Time-Trial</button>
+      <button class="btn btn-primary" onclick="startGame(2)">2 Players</button>
+      <button class="btn btn-primary" onclick="startGame(3)">3 Players</button>
+    </div>
+
+    <div class="controls-info">
+      <h3>Controls (Multiple Choice 1-4)</h3>
+      <p><strong>Player 1:</strong> A, S, D, F</p>
+      <p><strong>Player 2:</strong> H, J, K, L</p>
+      <p><strong>Player 3:</strong> Numpad 4, 5, 6, +</p>
+    </div>
+    
+    <a href="index.html" class="btn btn-back">Back to Hub</a>
+  </div>
+
+  <!-- Match Screen -->
+  <div id="match-screen" class="screen">
+    <div class="top-bar">
+      <div id="time-display">Time: 0.0s</div>
+      <div id="round-display">Round 1/20</div>
+      <a href="index.html" class="btn-exit" title="Exit to Hub">✕</a>
+    </div>
+    
+    <div class="main-arena">
+      <div id="countdown-display" class="hidden">3</div>
+      
+      <div id="question-container">
+        <div id="math-problem"></div>
+        <div id="options-grid">
+          <div class="option-slot"><span class="opt-label">1</span><div class="opt-val" id="opt-1"></div></div>
+          <div class="option-slot"><span class="opt-label">2</span><div class="opt-val" id="opt-2"></div></div>
+          <div class="option-slot"><span class="opt-label">3</span><div class="opt-val" id="opt-3"></div></div>
+          <div class="option-slot"><span class="opt-label">4</span><div class="opt-val" id="opt-4"></div></div>
+        </div>
+      </div>
+
+      <div id="round-feedback" class="hidden">
+        <h2 id="feedback-text">Correct!</h2>
+      </div>
+    </div>
+
+    <div id="player-cards">
+      <!-- Generated dynamically based on player count -->
+    </div>
+  </div>
+
+  <!-- Results Screen -->
+  <div id="results-screen" class="screen">
+    <h1>Results</h1>
+    <div id="results-content"></div>
+    <div class="menu-options" style="margin-top: 30px;">
+      <button class="btn btn-primary" id="btn-replay">Play Again</button>
+      <a href="index.html" class="btn btn-back">Back to Hub</a>
+    </div>
+  </div>
+
+  <script src="math-race.js"></script>
+</body>
+</html>
