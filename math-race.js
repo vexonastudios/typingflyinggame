@@ -153,23 +153,52 @@ function startNextRound() {
 }
 
 function generateQuestion() {
-  // Simple addition within 20
-  const a = Math.floor(Math.random() * 10) + 1;
-  const b = Math.floor(Math.random() * 10) + 1;
-  const ans = a + b;
+  const diffStr = $('diff-select') ? $('diff-select').value : '1';
+  const diff = parseInt(diffStr) || 1;
+  let a, b, ans, symbol;
+
+  if (diff === 1) {
+    a = Math.floor(Math.random() * 10) + 1;
+    b = Math.floor(Math.random() * 10) + 1;
+    ans = a + b;
+    symbol = '+';
+  } else if (diff === 2) {
+    if (Math.random() > 0.5) {
+      a = Math.floor(Math.random() * 20) + 1;
+      b = Math.floor(Math.random() * 20) + 1;
+      ans = a + b;
+      symbol = '+';
+    } else {
+      a = Math.floor(Math.random() * 15) + 6;
+      b = Math.floor(Math.random() * a) + 1;
+      ans = a - b;
+      symbol = '-';
+    }
+  } else {
+    a = Math.floor(Math.random() * 9) + 2;
+    b = Math.floor(Math.random() * 9) + 2;
+    ans = a * b;
+    symbol = '×';
+  }
   
   state.currentAnswer = ans;
   
   // Generate 3 wrong options
   let opts = new Set([ans]);
   while(opts.size < 4) {
-    let wrong = ans + (Math.floor(Math.random() * 9) - 4);
+    let wrong;
+    if (diff === 1 || diff === 2) {
+      wrong = ans + (Math.floor(Math.random() * 9) - 4);
+    } else {
+      wrong = ans + (Math.floor(Math.random() * 7) - 3) * (Math.random()>0.5?a:b);
+      if (wrong === ans) wrong = ans + (Math.floor(Math.random() * 5) + 1);
+    }
     if (wrong > 0 && wrong !== ans) opts.add(wrong);
   }
   
   state.options = Array.from(opts).sort(() => Math.random() - 0.5);
   
-  $('math-problem').innerText = `${a} + ${b} = ?`;
+  $('math-problem').innerText = `${a} ${symbol} ${b} = ?`;
   for(let i=0; i<4; i++) {
     $(`opt-${i+1}`).innerText = state.options[i];
     $(`opt-${i+1}`).parentElement.className = 'option-slot'; // reset classes
@@ -197,6 +226,10 @@ function startSoloTimer() {
 }
 
 document.addEventListener('keydown', (e) => {
+  if (e.code === 'Escape' || e.code === 'KeyX') {
+    window.location.href = 'index.html';
+  }
+
   if (state.status !== 'active') return;
   
   let pIdx = -1;

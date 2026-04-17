@@ -15,7 +15,16 @@
     <h1>Math Race</h1>
     <p>Fastest Brain Wins!</p>
     
-    <div class="menu-options">
+    <div class="difficulty-select">
+      <label for="diff-select">Difficulty:</label>
+      <select id="diff-select" class="diff-dropdown">
+        <option value="1">Age 5-7 (Simple Add)</option>
+        <option value="2">Age 8-10 (Add/Sub up to 20)</option>
+        <option value="3">Age 11+ (Multiplication)</option>
+      </select>
+    </div>
+
+    <div class="menu-options" style="margin-top: 15px;">
       <button class="btn btn-primary" onclick="startGame(1)">Solo Time-Trial</button>
       <button class="btn btn-primary" onclick="startGame(2)">2 Players</button>
       <button class="btn btn-primary" onclick="startGame(3)">3 Players</button>
