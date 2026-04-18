@@ -832,33 +832,112 @@ class DuckHuntDuel {
 
   _drawShotgun(ctx, p, col) {
     ctx.save(); ctx.translate(p.x, p.y);
-    ctx.fillStyle = 'rgba(0,0,0,0.3)'; ctx.beginPath(); ctx.ellipse(0, 0, 20, 8, 0, 0, Math.PI*2); ctx.fill();
-    
-    ctx.save(); 
-    ctx.translate(0, -10); ctx.rotate(p.angle); ctx.translate(-p.recoil * 1.5, 0);
 
-    // Double barrels
-    ctx.fillStyle = '#444'; 
-    ctx.fillRect(10, -8, 70, 6); 
-    ctx.fillRect(10, -1, 70, 6); 
-    
-    // Pump
-    ctx.fillStyle = '#8b5a2b'; ctx.fillRect(30, -3, 25, 10);
-    ctx.fillStyle = '#3a200a'; for(let i=32; i<52; i+=4) ctx.fillRect(i, -3, 2, 10);
+    // ── Shadow ─────────────────────────────────────────
+    ctx.fillStyle = 'rgba(0,0,0,0.25)';
+    ctx.beginPath(); ctx.ellipse(2, 6, 22, 7, 0, 0, Math.PI*2); ctx.fill();
 
-    // Receiver
-    ctx.fillStyle = col; ctx.fillRect(-15, -10, 30, 20);
-    ctx.fillStyle = '#222'; ctx.fillRect(0, -10, 15, 8);
+    // ── Boots ──────────────────────────────────────────
+    ctx.fillStyle = '#2d1a0e';
+    ctx.beginPath(); ctx.roundRect(-14, -4, 12, 10, 3); ctx.fill();
+    ctx.beginPath(); ctx.roundRect(2, -4, 12, 10, 3); ctx.fill();
 
-    // Stock
-    ctx.fillStyle = '#5c3a21';
-    ctx.beginPath(); ctx.moveTo(-15, -10); ctx.lineTo(-40, -5); ctx.lineTo(-40, 15); ctx.lineTo(-15, 10); ctx.fill();
-    
+    // ── Legs (camo trousers) ────────────────────────────
+    ctx.fillStyle = '#4a5240';
+    ctx.fillRect(-12, -22, 10, 20);
+    ctx.fillRect(2, -22, 10, 20);
+    // camo patches
+    ctx.fillStyle = '#3a4030';
+    ctx.fillRect(-11, -18, 4, 5); ctx.fillRect(3, -15, 5, 4);
+
+    // ── Jacket body (dark olive camo) ──────────────────
+    ctx.fillStyle = '#4b5320';
+    ctx.beginPath(); ctx.roundRect(-16, -46, 32, 26, 4); ctx.fill();
+    // jacket camo patches
+    ctx.fillStyle = '#3b4118'; 
+    ctx.fillRect(-14,-42,8,6); ctx.fillRect(2,-38,10,5); ctx.fillRect(-10,-32,6,5);
+    ctx.fillStyle = '#5a6428'; 
+    ctx.fillRect(-4,-44,6,4); ctx.fillRect(6,-34,7,4);
+    // collar accent (player color)
+    ctx.fillStyle = col; ctx.fillRect(-6, -46, 12, 5);
+
+    // ── Arm holding gun ────────────────────────────────
+    ctx.save();
+    ctx.translate(6, -38);
+    ctx.rotate(p.angle + 0.1);
+    ctx.translate(-p.recoil * 0.8, 0);
+    // upper arm sleeve
+    ctx.fillStyle = '#4b5320'; ctx.beginPath(); ctx.roundRect(0, -5, 28, 10, 4); ctx.fill();
+    // gloved hand
+    ctx.fillStyle = '#2d1a0e'; ctx.beginPath(); ctx.ellipse(32, 0, 8, 6, 0, 0, Math.PI*2); ctx.fill();
     ctx.restore();
-    
-    // Player shoulder / mount base
-    ctx.fillStyle = '#111'; ctx.beginPath(); ctx.arc(0, -5, 18, Math.PI, 0); ctx.fill();
-    ctx.fillStyle = col; ctx.fillRect(-15, -5, 30, 10);
+
+    // ── Gun (aiming from shoulder) ─────────────────────
+    ctx.save();
+    ctx.translate(4, -42);
+    ctx.rotate(p.angle);
+    ctx.translate(-p.recoil * 1.5, 0);
+    // Double barrels
+    ctx.fillStyle = '#2a2a2a';
+    ctx.fillRect(8, -7, 72, 5);
+    ctx.fillRect(8, -1, 72, 5);
+    // barrel highlight
+    ctx.fillStyle = '#555';
+    ctx.fillRect(8, -7, 72, 1);
+    // Pump grip (wood)
+    ctx.fillStyle = '#7c4a1e'; ctx.fillRect(28, -3, 26, 10);
+    ctx.fillStyle = '#5a3210'; for(let i=30; i<52; i+=5) ctx.fillRect(i,-3,2,10);
+    // Receiver (player color accent)
+    ctx.fillStyle = '#333'; ctx.fillRect(-14, -9, 24, 18);
+    ctx.fillStyle = col; ctx.fillRect(-14, -9, 6, 18); // colored stripe on receiver
+    // Stock (wood)
+    ctx.fillStyle = '#7c4a1e';
+    ctx.beginPath(); ctx.moveTo(-14,-9); ctx.lineTo(-40,-5); ctx.lineTo(-40, 13); ctx.lineTo(-14, 9); ctx.fill();
+    ctx.restore();
+
+    // ── Head (hunter face) ─────────────────────────────
+    // Neck
+    ctx.fillStyle = '#c8845a';
+    ctx.fillRect(-5, -58, 10, 14);
+
+    // Face skin
+    ctx.fillStyle = '#d4956a';
+    ctx.beginPath(); ctx.ellipse(0, -64, 13, 15, 0, 0, Math.PI*2); ctx.fill();
+
+    // Stubble / jaw shadow
+    ctx.fillStyle = 'rgba(80,40,20,0.35)';
+    ctx.beginPath(); ctx.ellipse(0, -58, 10, 6, 0, 0, Math.PI*2); ctx.fill();
+
+    // Eyes
+    ctx.fillStyle = '#fff';
+    ctx.beginPath(); ctx.ellipse(-5, -65, 3.5, 2.5, 0, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(5, -65, 3.5, 2.5, 0, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#3a2000';
+    ctx.beginPath(); ctx.arc(-5, -65, 1.8, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(5, -65, 1.8, 0, Math.PI*2); ctx.fill();
+    // eye shine
+    ctx.fillStyle = '#fff';
+    ctx.beginPath(); ctx.arc(-4.2, -65.6, 0.7, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(5.8, -65.6, 0.7, 0, Math.PI*2); ctx.fill();
+
+    // Nose
+    ctx.fillStyle = '#b06040';
+    ctx.beginPath(); ctx.ellipse(0, -62, 2.5, 2, 0, 0, Math.PI*2); ctx.fill();
+
+    // Hunter cap (flat-brim / blaze style — player color tinted)
+    // Cap body
+    ctx.fillStyle = col;
+    ctx.beginPath(); ctx.ellipse(0, -76, 14, 8, 0, 0, Math.PI*2); ctx.fill();
+    // darker cap crown stripe
+    ctx.fillStyle = 'rgba(0,0,0,0.3)';
+    ctx.beginPath(); ctx.ellipse(0, -76, 14, 8, 0, 0, Math.PI*2); ctx.fill();
+    // solid front panel in player color
+    ctx.fillStyle = col;
+    ctx.beginPath(); ctx.ellipse(0, -75, 12, 6, 0, 0, Math.PI*2); ctx.fill();
+    // brim
+    ctx.fillStyle = '#1a1a1a';
+    ctx.beginPath(); ctx.ellipse(4, -69, 16, 4, 0.15, 0, Math.PI); ctx.fill();
+
     ctx.restore();
   }
 }
