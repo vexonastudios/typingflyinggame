@@ -84,7 +84,7 @@ function laneToCar(lane) {       // pixel left-edge so car centred
 
 const OBS_TEMPLATES = [
   // ── Simple single-lane block ──
-  { type:'block',   w:70, h:52. pattern:(n)=>   [[randInt(0,4)]] },
+  { type:'block',   w:70, h:52, pattern:(n)=>   [[randInt(0,4)]] },
   // ── Double block ──
   { type:'block',   w:70, h:52, pattern:(n)=>   [pick([[0,1],[1,2],[2,3],[3,4],[0,2],[2,4]])] },
   // ── Three-wide wall with one gap ──
