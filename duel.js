@@ -479,6 +479,10 @@ class DuckHuntDuel {
     this._updateHUD();
   }
 
+  _floatText(text, x, y, col) {
+    this._floatTexts.push({ text, x, y, col, life: 1.2, vy: -90, alpha: 1 });
+  }
+
   _updateHUD() {
     const timerEl = document.getElementById('waveTimer');
     if (timerEl) {
