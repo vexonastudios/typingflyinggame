@@ -274,6 +274,7 @@ class DuckHuntDuel {
 
   _bindEvents() {
     window.addEventListener('keydown', e => {
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
       if (['Space','Enter','ArrowUp','ArrowDown','ArrowLeft','ArrowRight','KeyW','KeyA','KeyS','KeyD'].includes(e.code)) e.preventDefault();
       this.keys[e.code] = true;
     });
@@ -829,6 +830,57 @@ class DuckHuntDuel {
     }
   }
 
+  _drawCanvasCrow(ctx, bob, flap, claimedBy) {
+    let headC = '#111', bodyC = '#1c1c24', wingC = '#0a0a0f', beakC = '#444';
+    if (claimedBy) {
+      headC = claimedBy==='p1'?'#ff4455':'#00ccff';
+      bodyC = headC; wingC = headC; beakC = '#fff';
+    }
+    
+    ctx.translate(0, bob);
+    ctx.scale(0.9, 0.9); // Crows are slightly smaller
+
+    // Tail Feathers (jagged)
+    ctx.fillStyle = wingC;
+    ctx.beginPath(); ctx.moveTo(-15, 0); ctx.lineTo(-35, -12); ctx.lineTo(-40, 2); ctx.lineTo(-25, 8); ctx.fill();
+
+    // Body Mass (slimmer)
+    ctx.fillStyle = bodyC;
+    ctx.beginPath(); ctx.ellipse(0, 4, 22, 10, 0, 0, Math.PI*2); ctx.fill();
+
+    // Back Wing
+    ctx.save(); ctx.translate(-4, -4); ctx.rotate(-flap * 0.7 * Math.PI/180);
+    ctx.fillStyle = wingC; ctx.beginPath(); ctx.ellipse(0, -8, 8, 22, 0.4, 0, Math.PI*2); ctx.fill();
+    ctx.restore();
+
+    // Head and Neck (hunched)
+    ctx.fillStyle = headC;
+    ctx.beginPath(); ctx.ellipse(14, -4, 8, 6, 0.5, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(20, -10, 9, 7, 0, 0, Math.PI*2); ctx.fill();
+
+    // Beak (sharp, raven-like)
+    ctx.fillStyle = beakC;
+    ctx.beginPath(); ctx.moveTo(28, -12); ctx.lineTo(40, -10); ctx.lineTo(28, -8); ctx.fill();
+
+    // Eye (menacing red)
+    ctx.fillStyle = claimedBy ? '#fff' : '#ef4444';
+    ctx.beginPath(); ctx.arc(22, -12, 2, 0, Math.PI*2); ctx.fill();
+    if (claimedBy) {
+      ctx.strokeStyle = '#fff'; ctx.lineWidth=1.5; 
+      ctx.beginPath(); ctx.moveTo(20,-14); ctx.lineTo(24,-10); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(24,-14); ctx.lineTo(20,-10); ctx.stroke();
+    }
+
+    // Front Wing (sharp)
+    ctx.save(); ctx.translate(0, 0); ctx.rotate(flap * 1.2 * Math.PI/180);
+    ctx.fillStyle = wingC;
+    ctx.beginPath(); ctx.ellipse(0, -10, 8, 24, -0.3, 0, Math.PI*2); ctx.fill();
+    // Inner wing definition
+    ctx.fillStyle = bodyC; 
+    ctx.beginPath(); ctx.ellipse(0, -14, 3, 15, -0.3, 0, Math.PI*2); ctx.fill();
+    ctx.restore();
+  }
+
   _drawTree(ctx, x, y, scale, wind) {
     ctx.save(); ctx.translate(x, y); ctx.scale(scale, scale);
     const sway = Math.sin(performance.now()/(800 + x)) * (wind*0.005);
@@ -884,10 +936,7 @@ class DuckHuntDuel {
       }
     } 
     else { // crow
-      ctx.fillStyle = tgt.claimedBy === 'p1' ? '#ff4455' : tgt.claimedBy === 'p2' ? '#00ccff' : '#111';
-      ctx.beginPath(); ctx.ellipse(0, bob, 22, 14, 0, 0, Math.PI*2); ctx.fill();
-      ctx.save(); ctx.rotate(flap/2 * Math.PI/180); ctx.fillStyle = '#000'; ctx.beginPath(); ctx.ellipse(-4, bob-4, 20, 8, 0.3, 0, Math.PI*2); ctx.fill(); ctx.restore();
-      ctx.fillStyle = '#333'; ctx.beginPath(); ctx.moveTo(26, bob-8); ctx.lineTo(34, bob-6); ctx.lineTo(26, bob-4); ctx.fill();
+      this._drawCanvasCrow(ctx, bob, flap, tgt.claimedBy);
     }
     ctx.restore();
   }
