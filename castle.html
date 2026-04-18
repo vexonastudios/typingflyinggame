@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Castle Duel — Math Siege</title>
+  <meta name="description" content="Do the math, load the catapult, destroy the enemy castle."/>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;900&display=swap"/>
+  <link rel="stylesheet" href="castle.css"/>
+</head>
+<body>
+  <!-- Split-screen divider -->
+  <div class="split-divider">VS</div>
+
+  <canvas id="castleCanvas"></canvas>
+
+  <!-- ── SETUP OVERLAY ── -->
+  <div id="setupOverlay" class="overlay">
+    <div class="overlay-card setup-card">
+      <div class="game-logo">
+        <span class="logo-castle">CASTLE</span><span class="logo-duel">DUEL</span>
+      </div>
+      <p class="game-tagline">Calculate the math. Aim the catapult. Destroy the castle.</p>
+
+      <div class="settings-col settings-col-diff">
+        <div class="settings-label">Math Difficulty</div>
+        <div class="diff-grid">
+          <label class="diff-opt" id="diffEasy">
+            <input type="radio" name="diff" value="easy"/>
+            <span class="diff-name">Easy (Add/Sub)</span>
+          </label>
+          <label class="diff-opt selected" id="diffMedium">
+            <input type="radio" name="diff" value="medium" checked/>
+            <span class="diff-name">Med (Mult)</span>
+          </label>
+          <label class="diff-opt" id="diffHard">
+            <input type="radio" name="diff" value="hard"/>
+            <span class="diff-name">Hard (All)</span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Controls display -->
+      <div class="controls-strip" id="controlsStrip">
+        <div class="ctrl-panel">
+          <div class="ctrl-player" style="color:#ff4466">Player 1 (Left)</div>
+          <div class="ctrl-key-row">Math: <kbd>F</kbd> <kbd>G</kbd> <kbd>H</kbd></div>
+          <div class="ctrl-key-row">Aim: <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> &nbsp; Fire: <kbd>Space</kbd></div>
+        </div>
+        <div class="ctrl-divider">⚙️</div>
+        <div class="ctrl-panel" id="p2ctrl">
+          <div class="ctrl-player" style="color:#00ccff">Player 2 (Right)</div>
+          <div class="ctrl-key-row">Math: <kbd>J</kbd> <kbd>K</kbd> <kbd>L</kbd></div>
+          <div class="ctrl-key-row">Aim: <kbd>▲</kbd><kbd>◀</kbd><kbd>▼</kbd><kbd>▶</kbd> &nbsp; Fire: <kbd>Enter</kbd></div>
+        </div>
+      </div>
+
+      <button id="startBtn" class="btn-primary">⚔️ COMMENCE MOUNTING</button>
+      <a href="index.html" class="back-link">← Back to Hub</a>
+    </div>
+  </div>
+
+  <!-- ── RESULTS OVERLAY ── -->
+  <div id="resultsOverlay" class="overlay" style="display:none">
+    <div class="overlay-card results-card">
+      <div id="resultsEmoji" class="results-emoji">👑</div>
+      <div id="resultsHeadline" class="results-headline">Player 1 Wins!</div>
+      <div id="resultsSub" style="color:#aaa; font-size:14px; margin-bottom: 24px">The enemy castle has crumbled.</div>
+      <div class="result-btns">
+        <button id="playAgainBtn" class="btn-primary">REMATCH</button>
+        <button id="menuBtn" class="btn-secondary">MENU</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Audio load/trick -->
+  <script src="castle.js"></script>
+</body>
+</html>
