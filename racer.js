@@ -15,7 +15,7 @@ const LANE_W         = 96;
 const ROAD_W         = LANE_COUNT * LANE_W;   // 480
 const VIEW_W         = 560;    // each player's viewport width
 const VIEW_H_FRAC    = 1.0;    // fraction of canvas height
-const ROAD_X         = (VIEW_W - ROAD_W) / 2; // 40
+const ROAD_X         = 0;      // track origin
 const CAR_W          = 46;
 const CAR_H          = 72;
 const JUMP_VY        = -880;
@@ -128,6 +128,7 @@ class ObstacleSequencer {
 
   update(scrollDelta, canvasH) {
     this.scrollPos += scrollDelta;
+    this.nextY -= scrollDelta;
 
     // Move obstacles down
     this.obstacles.forEach(o => {
@@ -960,7 +961,7 @@ class LaneBlitz {
         ctx.globalAlpha = e.life * 0.5;
         ctx.fillStyle = e.color;
         ctx.beginPath();
-        ctx.arc(roadL + e.x - (vw - ROAD_W)/2, player.y + (e.y - player.y) + vy + vh - 130, e.r, 0, Math.PI*2);
+        ctx.arc(roadL + e.x, player.y + (e.y - player.y) + vy + vh - 130, e.r, 0, Math.PI*2);
         ctx.fill();
         ctx.restore();
       });
@@ -968,14 +969,14 @@ class LaneBlitz {
       // Trail
       const clr = player.color;
       const trailY0 = vy + vh - 130 + CAR_H;
-      const trailBaseX = roadL - (vw - ROAD_W)/2;
+      const trailBaseX = roadL;
       for (let i = 1; i < player.trail.length; i++) {
         const a = (i / player.trail.length) * 0.22;
         ctx.strokeStyle = clr.replace(')', `,${a})`).replace('rgb','rgba');
         ctx.lineWidth = 5;
         ctx.beginPath();
-        ctx.moveTo(roadL + player.trail[i-1].x - (vw-ROAD_W)/2, vy+vh-130 + CAR_H);
-        ctx.lineTo(roadL + player.trail[i].x - (vw-ROAD_W)/2, vy+vh-130 + CAR_H);
+        ctx.moveTo(roadL + player.trail[i-1].x, vy+vh-130 + CAR_H);
+        ctx.lineTo(roadL + player.trail[i].x, vy+vh-130 + CAR_H);
         ctx.stroke();
       }
 
@@ -985,7 +986,7 @@ class LaneBlitz {
         ctx.globalAlpha = clamp(s.life, 0, 1);
         ctx.fillStyle = s.color;
         ctx.beginPath();
-        ctx.arc(roadL + s.x - (vw-ROAD_W)/2, vy+vh-130 + s.y - (player.groundY - CAR_H/2), 3, 0, Math.PI*2);
+        ctx.arc(roadL + s.x, vy+vh-130 + s.y - (player.groundY - CAR_H/2), 3, 0, Math.PI*2);
         ctx.fill();
         ctx.restore();
       });
@@ -1042,7 +1043,7 @@ class LaneBlitz {
         ctx.fillRect(vx, vy, vw, vh);
         ctx.restore();
         // Stars spinning above car
-        const carScreenX = roadL + player.x + CAR_W/2 - (vw-ROAD_W)/2;
+        const carScreenX = roadL + player.x + CAR_W/2;
         const carScreenY = vy + vh - 130;
         for (let s = 0; s < 4; s++) {
           const sa = this._globalTime * 4 + s * Math.PI / 2;
@@ -1103,36 +1104,36 @@ class LaneBlitz {
       bg.addColorStop(0, '#ffd060');
       bg.addColorStop(1, '#ff8800');
       ctx.fillStyle = bg;
-      this._rRect(ctx, roadL + ox - (vw-ROAD_W)/2, oy, obs.w, obs.h, 8);
+      this._rRect(ctx, roadL + ox, oy, obs.w, obs.h, 8);
       ctx.fill();
       ctx.fillStyle = 'rgba(255,255,255,0.8)';
       ctx.font = 'bold 16px Outfit,sans-serif';
       ctx.textAlign='center'; ctx.textBaseline='middle';
-      ctx.fillText('⚡ BOOST', roadL + ox + obs.w/2 - (vw-ROAD_W)/2, oy + obs.h/2);
+      ctx.fillText('⚡ BOOST', roadL + ox + obs.w/2, oy + obs.h/2);
     } else if (obs.type === 'slow') {
       ctx.fillStyle = 'rgba(40,80,200,0.5)';
-      this._rRect(ctx, roadL + ox - (vw-ROAD_W)/2, oy, obs.w, obs.h, 8);
+      this._rRect(ctx, roadL + ox, oy, obs.w, obs.h, 8);
       ctx.fill();
       ctx.fillStyle = 'rgba(200,220,255,0.85)';
       ctx.font = 'bold 15px Outfit,sans-serif';
       ctx.textAlign='center'; ctx.textBaseline='middle';
-      ctx.fillText('🐢 MUD', roadL + ox + obs.w/2 - (vw-ROAD_W)/2, oy + obs.h/2);
+      ctx.fillText('🐢 MUD', roadL + ox + obs.w/2, oy + obs.h/2);
     } else if (obs.type === 'pit') {
       // Dark pit spanning road
       ctx.fillStyle = '#020408';
-      ctx.fillRect(roadL + obs.x - (vw-ROAD_W)/2, oy, obs.w, obs.h + 6);
+      ctx.fillRect(roadL + obs.x, oy, obs.w, obs.h + 6);
       // Pit edges
       const pg = ctx.createLinearGradient(0, oy, 0, oy+obs.h);
       pg.addColorStop(0, 'rgba(255,80,0,0.6)');
       pg.addColorStop(1, 'rgba(255,0,0,0)');
       ctx.fillStyle = pg;
-      ctx.fillRect(roadL + obs.x - (vw-ROAD_W)/2, oy, obs.w, 6);
+      ctx.fillRect(roadL + obs.x, oy, obs.w, 6);
       ctx.fillStyle='rgba(255,255,255,0.7)';
       ctx.font='bold 14px Outfit,sans-serif';
       ctx.textAlign='center'; ctx.textBaseline='middle';
-      ctx.fillText('⚠ PIT – JUMP!', roadL + obs.x + obs.w/2 - (vw-ROAD_W)/2, oy + obs.h/2);
+      ctx.fillText('⚠ PIT – JUMP!', roadL + obs.x + obs.w/2, oy + obs.h/2);
     } else if (obs.type === 'barrier') {
-      const bx = roadL + obs.mx - (vw-ROAD_W)/2;
+      const bx = roadL + obs.mx;
       // Striped barrier
       const cols = ['#ffcc00','#222'];
       for (let i = 0; i < 4; i++) {
@@ -1144,7 +1145,7 @@ class LaneBlitz {
       ctx.lineWidth=3;
       ctx.strokeRect(bx - 2, oy - obs.h/2 - 2, obs.w+4, obs.h*1.5+4);
     } else if (obs.type === 'debris') {
-      const dx = roadL + obs.x - (vw-ROAD_W)/2;
+      const dx = roadL + obs.x;
       ctx.fillStyle = '#665533';
       this._rRect(ctx, dx, oy, obs.w, obs.h, 6);
       ctx.fill();
@@ -1154,7 +1155,7 @@ class LaneBlitz {
       ctx.font='18px sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
       ctx.fillText('🪨', dx+obs.w/2, oy+obs.h/2);
     } else if (obs.type === 'vehicle') {
-      const vxPos = roadL + obs.x - (vw-ROAD_W)/2;
+      const vxPos = roadL + obs.x;
       ctx.fillStyle = '#99aa88';
       this._rRect(ctx, vxPos, oy, obs.w, obs.h, 6);
       ctx.fill();
@@ -1164,7 +1165,7 @@ class LaneBlitz {
       ctx.fillRect(vxPos + 4, oy + obs.h - 6, 8, 4);
       ctx.fillRect(vxPos + obs.w - 12, oy + obs.h - 6, 8, 4);
     } else if (obs.type === 'shield') {
-      const sx = roadL + obs.x - (vw-ROAD_W)/2;
+      const sx = roadL + obs.x;
       ctx.fillStyle = 'rgba(100,200,255,0.4)';
       ctx.beginPath(); ctx.arc(sx+obs.w/2, oy+obs.h/2, obs.w/2, 0, Math.PI*2); ctx.fill();
       ctx.strokeStyle = '#aaddff'; ctx.lineWidth=2; ctx.stroke();
@@ -1186,7 +1187,7 @@ class LaneBlitz {
       }
     } else {
       // block
-      const bx = roadL + obs.x - (vw-ROAD_W)/2;
+      const bx = roadL + obs.x;
       const blockG = ctx.createLinearGradient(bx, oy, bx, oy+obs.h);
       blockG.addColorStop(0, '#cc2233');
       blockG.addColorStop(1, '#881122');
@@ -1211,7 +1212,7 @@ class LaneBlitz {
 
   _drawCar(ctx, p, roadL, vy, vw, vh) {
     // Car position in viewport space
-    const carX = roadL + p.x - (vw-ROAD_W)/2 + p.shakeX;
+    const carX = roadL + p.x + p.shakeX;
     const groundScreen = vy + vh - 130;
     const carY = groundScreen + (p.y - p.groundY);
 
