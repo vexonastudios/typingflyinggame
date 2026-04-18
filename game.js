@@ -752,10 +752,19 @@ class SkyTyperGame {
     this.sparkleBurst(this.player.x + 42, this.player.y, 3, 220); // Gun barrel sparks
 
     if (target.typedIndex >= target.word.length) {
-      target.completedTyping = true;
-      target.flash = 1.0; // Flash word completed
-      this.activeTargetId = null;
-      this.messageText = `${target.word.toUpperCase()} finished. Watch the plane burst!`;
+      if (target.isBoss && target.bossWords && target.bossWords.length > 0) {
+        target.word = target.bossWords.shift();
+        target.typedIndex = 0;
+        target.completedTyping = false;
+        target.flash = 0.5;
+        this.messageText = `Target ${target.word.toUpperCase()} acquired! Keep firing!`;
+        this.activeTargetId = null;
+      } else {
+        target.completedTyping = true;
+        target.flash = 1.0;
+        this.activeTargetId = null;
+        this.messageText = `${target.word.toUpperCase()} finished. Watch the plane burst!`;
+      }
     }
 
     this.updateUi();
@@ -931,7 +940,9 @@ class SkyTyperGame {
     };
   }
 
-  createBossEnemy(word, waveConfig) {
+  createBossEnemy(wordsArray, waveConfig) {
+    const word = wordsArray[0];
+    const totalHealth = wordsArray.reduce((acc, w) => acc + w.length, 0);
     return {
       id: this.idCounter++,
       x: LOGICAL_WIDTH + 260,
@@ -944,11 +955,13 @@ class SkyTyperGame {
       swayAmount: 22,
       shootCooldown: 1.25,
       word,
+      bossWords: wordsArray.slice(1),
       typedIndex: 0,
-      health: word.length,
+      maxHealth: totalHealth,
+      health: totalHealth,
       flash: 0,
       completedTyping: false,
-      scoreValue: waveConfig.killValue * 4 + word.length * 35,
+      scoreValue: waveConfig.killValue * 4 + totalHealth * 35,
       collisionRadius: 58,
       isBoss: true,
       gunPorts: [
@@ -971,8 +984,17 @@ class SkyTyperGame {
       ? Math.min(2, (waveNumber % 3 === 0 ? 1 : 0) + (waveConfig.isEliteWave ? 1 : 0))
       : 0;
 
+    let bossWordsArray = [];
+    if (waveConfig.isBossWave) {
+      bossWordsArray = [
+        this.pickBossWord(waveConfig.bossMinLength, waveConfig.bossMaxLength),
+        this.pickBossWord(waveConfig.bossMinLength, waveConfig.bossMaxLength),
+        this.pickBossWord(waveConfig.bossMinLength, waveConfig.bossMaxLength)
+      ];
+    }
+
     this.enemies = waveConfig.isBossWave
-      ? [this.createBossEnemy(this.pickBossWord(waveConfig.bossMinLength, waveConfig.bossMaxLength), waveConfig)]
+      ? [this.createBossEnemy(bossWordsArray, waveConfig)]
       : words.map((word, index) => this.createStandardEnemy(word, index, waveConfig));
 
     if (shouldSpawnRepairTarget) {
@@ -2162,7 +2184,7 @@ class SkyTyperGame {
 
     if (this.bossEnemy && this.bossEnemy.health > 0 && !this.victory && !this.gameOver) {
       if (this.ui.bossHealthContainer) this.ui.bossHealthContainer.style.display = "flex";
-      const hpPercent = (this.bossEnemy.health / this.bossEnemy.word.length) * 100;
+      const hpPercent = (this.bossEnemy.health / this.bossEnemy.maxHealth) * 100;
       if (this.ui.bossHealthFill) this.ui.bossHealthFill.style.width = `${hpPercent}%`;
     } else {
       if (this.ui.bossHealthContainer) this.ui.bossHealthContainer.style.display = "none";
