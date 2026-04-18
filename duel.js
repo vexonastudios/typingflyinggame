@@ -83,7 +83,7 @@ const HEAT_PER_SHOT = 22;
 const COOL_RATE    = 42; // heat per second
 const RELOAD_MS    = 2000; // Overheat penalty time
 const BULLET_SPEED = 1400; 
-const HIT_RADIUS = { duck:52, clay:38, golden:40, crow:48, squid:38, goose:62 };
+const HIT_RADIUS = { duck:52, clay:38, golden:40, crow:48, squid:38, goose:62, balloon:50, crate:40 };
 const PTS        = { duck:100, clay:150, golden:500, crow:-200, squid:250, goose:300 };
 const COLORS     = { p1:'#ff4455', p2:'#00ccff', p3:'#a855f7', gold:'#fbbf24', bad:'#ff6600', ink: '#111' };
 
@@ -368,6 +368,7 @@ class Target {
     this.claimedBy = null; 
     this.claimFlash = 0;
     this.id = Math.random();
+    this.fleeing = false;
 
     const W = canvas.width, H = canvas.height - 72;
     const hitR = HIT_RADIUS[type];
@@ -394,7 +395,16 @@ class Target {
     const tx_dir = side === 'left' ? 1 : -1;
 
     const speeds = { duck: rnd(140,240), clay: rnd(200,340), golden: rnd(300,480), crow: rnd(80,160), squid: rnd(180,300), goose: rnd(100,180) };
-    const spd = speeds[type];
+    
+    if (type === 'balloon') {
+       return { px: W * rnd(0.2, 0.8), py: H + 80, vx: rnd(-20, 20), vy: -rnd(30, 60), ax:0, ay:0, sine:true, sineAmp:20, sineFreq:1.5 };
+    }
+    if (type === 'crate') {
+       // crate falls down from the spawner
+       return { px: 0, py: 0, vx: 0, vy: 180, ax:0, ay:0 };
+    }
+
+    const spd = speeds[type] || 200;
 
     const style = (type === 'squid') ? 2 : rndI(0,2); // squids always sine wave
     if (style === 0) {
@@ -448,6 +458,7 @@ function makePlayer(id, name) {
     angle: -Math.PI / 2, 
     recoil: 0,
     inkTimer: 0, // Blinds the player when inked!
+    buff: null, buffTimer: 0,
   };
 }
 
@@ -749,12 +760,21 @@ class DuckHuntDuel {
       Sfx.reload();
     }
 
-    const vx = Math.cos(p.angle) * BULLET_SPEED;
-    const vy = Math.sin(p.angle) * BULLET_SPEED;
     const bx = p.x + Math.cos(p.angle) * 50;
     const by = p.y - 12 + Math.sin(p.angle) * 50;
-    this.bullets.push(new Bullet(bx, by, vx, vy, who, COLORS[who]));
-    spawnBurst(this.particles, bx, by, '#fff', 3, 100);
+    
+    let angles = [p.angle];
+    if (p.buff === 'spread') {
+      angles = [p.angle - 0.15, p.angle, p.angle + 0.15];
+    }
+    
+    for (let ang of angles) {
+      const vx = Math.cos(ang) * BULLET_SPEED;
+      const vy = Math.sin(ang) * BULLET_SPEED;
+      this.bullets.push(new Bullet(bx, by, vx, vy, who, COLORS[who]));
+    }
+    
+    spawnBurst(this.particles, bx, by, '#fff', p.buff === 'spread' ? 10 : 3, 100);
   }
 
   _claimTarget(target, who) {
@@ -776,6 +796,30 @@ class DuckHuntDuel {
       return;
     }
 
+    // Balloon Drops Crate
+    if (target.type === 'balloon') {
+      target.dead = true; target.claimedBy = who;
+      Sfx._tone(400, 'sine', 0.2, 0.4);
+      spawnBurst(this.particles, target.px, target.py, '#fff', 15, 100);
+      const crate = new Target('crate', this.canvas);
+      crate.px = target.px; crate.py = target.py;
+      this.targets.push(crate);
+      return;
+    }
+
+    // Crate Buffs
+    if (target.type === 'crate') {
+      target.dead = true; target.claimedBy = who;
+      Sfx._tone(800, 'square', 0.15, 0.2);
+      spawnBurst(this.particles, target.px, target.py, '#0f0', 20, 250);
+      const buffTypes = ['spread', 'laser', 'slowmo'];
+      const buffIcons = { spread: '💥', laser: '🔴', slowmo: '⏳' };
+      p.buff = buffTypes[Math.floor(Math.random() * buffTypes.length)];
+      p.buffTimer = 6; // Buff lasts 6 seconds
+      this._floatText(`${buffIcons[p.buff]} POWER UP!`, target.px, target.py, COLORS[who]);
+      return;
+    }
+
     // Sabotage Squids ink the opponents!
     if (target.type === 'squid' && (this.mode === 'versus' || this.mode === 'trio')) {
       [this.p1, this.p2, this.p3].filter(other => other && other.id !== who).forEach(other => other.inkTimer = 4.0);
@@ -794,10 +838,17 @@ class DuckHuntDuel {
     p.score += bonus; p.hits++; target.dead = true; target.claimedBy = who;
     const col = who === 'p1' ? COLORS.p1 : COLORS.p2;
     
-    if (target.type === 'golden') { Sfx.hitBig(); this.shake = 20; } 
+    if (target.type === 'golden') { Sfx.hitBig(); this.shake = 20; this.hitStopTimer = 0.12; } 
     else if (target.type === 'squid') { Sfx.hitBig(); }
     else { Sfx.hit(); }
     
+    // Combo milestones hit stop
+    if (p.combo > 0 && p.combo % 5 === 0) {
+       this.hitStopTimer = 0.12;
+       const ce = document.getElementById('comboP' + who.slice(1));
+       if (ce) { ce.classList.remove('combo-pop'); void ce.offsetWidth; ce.classList.add('combo-pop'); }
+    }
+
     spawnBurst(this.particles, target.px, target.py, col, 14, target.type==='golden'?360:(target.type==='squid'?300:240));
     if (target.type === 'squid') spawnBurst(this.particles, target.px, target.py, COLORS.ink, 30, 400); // Black ink splash
 
@@ -844,6 +895,19 @@ class DuckHuntDuel {
 
   _update(dt) {
     if (this.state === 'playing') {
+      
+      // Hit Stop (Freeze everything but particles and float text for a visceral punch)
+      if (this.hitStopTimer && this.hitStopTimer > 0) {
+          this.hitStopTimer -= dt;
+          for (const pt of this.particles) pt.update(dt);
+          this.particles = this.particles.filter(pt => pt.life > 0);
+          for (const ft of this._floatTexts) { ft.y += ft.vy*dt; ft.life -= dt; }
+          this._floatTexts = this._floatTexts.filter(ft => ft.life > 0);
+          this._prevKeys = Object.assign({}, this.keys);
+          this._updateHUD();
+          return;
+      }
+
       // Tournament 120-second match clock
       if (this.tourn && this.tourn.timerActive) {
         this.tourn.matchTimeLeft -= dt;
@@ -893,10 +957,16 @@ class DuckHuntDuel {
         if (this.spawnTimer <= 0) { this._spawnTarget(); this.spawnTimer = this.waveConf.spawnInterval; }
       }
 
+      // Global Slowmo / Time Dilation buff check
+      let targetDtMulti = 1.0;
+      if ([this.p1, this.p2, this.p3].some(p => p && p.buff === 'slowmo')) {
+          targetDtMulti = 0.4;
+      }
+
       for (const t of this.targets) {
-         t.update(dt, this.canvas.width, this.canvas.height);
+         t.update(dt * targetDtMulti, this.canvas.width, this.canvas.height);
          // Targets get blown safely off screen by wind too slightly
-         t.px += this.wind * dt * 0.15;
+         t.px += this.wind * (dt * targetDtMulti) * 0.15;
       }
       this.targets = this.targets.filter(t => !t.isExpired());
 
@@ -932,6 +1002,14 @@ class DuckHuntDuel {
         const ownerP = b.owner === 'p1' ? this.p1 : (b.owner === 'p2' ? this.p2 : this.p3);
         ownerP.misses++; ownerP.combo = 0;
         this._bullet_miss_voice(b.owner);
+        // Startle nearby targets
+        for (const t of this.targets) {
+           if (!t.dead && !t.fleeing && t.type !== 'kite' && dist(b.x, b.y, t.px, t.py) < 180) {
+               t.fleeing = true;
+               t.vx *= 1.6;
+               t.vy += (Math.random() > 0.5 ? 80 : -80);
+           }
+        }
       }
       this.bullets = this.bullets.filter(b => !b.dead);
 
@@ -942,6 +1020,10 @@ class DuckHuntDuel {
         else { p.heat = Math.max(0, p.heat - COOL_RATE * dt); }
         if (p.recoil > 0) p.recoil -= dt * 90; else p.recoil = 0;
         if (p.inkTimer > 0) p.inkTimer -= dt;
+        if (p.buffTimer > 0) {
+            p.buffTimer -= dt;
+            if (p.buffTimer <= 0) { p.buff = null; p.buffTimer = 0; }
+        }
       });
 
       for (const pt of this.particles) pt.update(dt);
@@ -1287,6 +1369,17 @@ class DuckHuntDuel {
         
         el.innerHTML = `<div class="heat-fill ${statusClass}" style="width: ${perc}%"></div>`;
       }
+
+      const buffEl = document.getElementById(`buff${uID}`);
+      if (buffEl) {
+          if (p.buff) {
+              const buffIcons = { spread: '💥', laser: '🔴', slowmo: '⏳' };
+              buffEl.textContent = `${buffIcons[p.buff]} ${Math.ceil(p.buffTimer)}s`;
+              if (!buffEl.classList.contains('active')) buffEl.classList.add('active');
+          } else {
+              buffEl.classList.remove('active');
+          }
+      }
     });
   }
 
@@ -1342,6 +1435,28 @@ class DuckHuntDuel {
       [this.p1, this.p2, this.p3].forEach(p => {
         if (!p || (this.mode === 'solo' && p.id !== 'p1') || (this.mode === 'versus' && p.id === 'p3')) return;
         this._drawShotgun(ctx, p, COLORS[p.id], p.id === 'p3' ? 'female' : 'male');
+        
+        // Laser Sight logic
+        if (p.buff === 'laser' && !p.reloading) {
+            ctx.beginPath();
+            let lx = p.x + Math.cos(p.angle) * 50;
+            let ly = p.y - 12 + Math.sin(p.angle) * 50;
+            ctx.moveTo(lx, ly);
+            let velX = Math.cos(p.angle) * BULLET_SPEED;
+            let velY = Math.sin(p.angle) * BULLET_SPEED;
+            for(let i=0; i<30; i++) {
+                velX += this.wind * 0.016;
+                lx += velX * 0.016;
+                ly += velY * 0.016;
+                ctx.lineTo(lx, ly);
+            }
+            ctx.strokeStyle = `rgba(${p.id==='p1'?'255,50,50':(p.id==='p2'?'50,200,255':'200,50,255')}, 0.5)`;
+            ctx.lineWidth = 2;
+            ctx.setLineDash([10, 15]);
+            ctx.stroke();
+            ctx.setLineDash([]);
+        }
+
         this._drawInk(ctx, p, W, H);
       });
     }
@@ -1564,6 +1679,18 @@ class DuckHuntDuel {
     } 
     else if (tgt.type === 'goose') {
         this._drawCanvasGoose(ctx, bob, flap, tgt.claimedBy);
+    }
+    else if (tgt.type === 'balloon') {
+        ctx.fillStyle = '#ef4444'; ctx.beginPath(); ctx.arc(0, bob-10, 24, 0, Math.PI*2); ctx.fill();
+        ctx.fillStyle = '#b91c1c'; ctx.beginPath(); ctx.moveTo(-6, bob+12); ctx.lineTo(6, bob+12); ctx.lineTo(0, bob-10); ctx.fill();
+        ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(0, bob+12); ctx.lineTo(0, bob+30); ctx.stroke();
+        ctx.fillStyle = '#fff'; ctx.font = '20px serif'; ctx.fillText('🎁', 0, bob-4);
+    }
+    else if (tgt.type === 'crate') {
+        ctx.fillStyle = '#8b5a2b'; ctx.fillRect(-20, -20+bob, 40, 40);
+        ctx.strokeStyle = '#3e2723'; ctx.lineWidth = 2; ctx.strokeRect(-20, -20+bob, 40, 40);
+        ctx.beginPath(); ctx.moveTo(-20, -20+bob); ctx.lineTo(20, 20+bob); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(20, -20+bob); ctx.lineTo(-20, 20+bob); ctx.stroke();
     }
     else if (tgt.type === 'squid') {
       // Orient squid correctly: body forward, tentacles trail behind
