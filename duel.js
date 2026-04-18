@@ -41,26 +41,8 @@ const Sfx = {
     } catch(e){}
   },
   buffers: {},
-  sprites: {},
   async loadFiles() {
     try {
-      const imgUrls = { 
-        duck: 'images/duck_standard_anim.png',
-        white: 'images/duck_white_anim.png',
-        golden: 'images/duck_golden_anim.png' 
-      };
-      for(const [k, url] of Object.entries(imgUrls)) {
-        const i = new Image(); i.src = url;
-        await new Promise(r => { i.onload=r; i.onerror=r; });
-        const c = document.createElement('canvas'); c.width = i.width; c.height = i.height;
-        const cx = c.getContext('2d'); cx.drawImage(i,0,0);
-        const d = cx.getImageData(0,0,c.width,c.height);
-        for(let j=0; j<d.data.length; j+=4) {
-          if(d.data[j]>240 && d.data[j+1]>240 && d.data[j+2]>240) d.data[j+3] = 0;
-        }
-        cx.putImageData(d,0,0);
-        this.sprites[k] = c;
-      }
       const p = { shoot: 'sounds/shotgun-fire.mp3', reload: 'sounds/shotgun-reload.mp3' };
       for (const [k, url] of Object.entries(p)) {
         const res = await fetch(url);
@@ -739,6 +721,54 @@ class DuckHuntDuel {
       ctx.restore();
   }
 
+  _drawCanvasDuck(ctx, bob, flap, variant, claimedBy) {
+    let headC = '#064e3b', bodyC = '#a8a29e', chestC = '#78350f', wingC = '#44403c', beakC = '#fbbf24';
+    if (variant === 'white') {
+      headC = '#ffffff'; bodyC = '#f5f5f5'; chestC = '#e5e5e5'; wingC = '#d4d4d8'; beakC = '#f97316';
+    } else if (variant === 'golden') {
+      headC = '#fbbf24'; bodyC = '#fcd34d'; chestC = '#f59e0b'; wingC = '#d97706'; beakC = '#fef3c7';
+    }
+    if (claimedBy) { 
+        headC = claimedBy==='p1'?'#ff4455':'#00ccff'; 
+        bodyC = headC; chestC = headC; wingC = headC; beakC = '#fff';
+    }
+
+    ctx.translate(0, bob);
+    ctx.scale(1.1, 1.1); 
+
+    ctx.save(); ctx.translate(-4, -6); ctx.rotate(-flap * 0.6 * Math.PI/180);
+    ctx.fillStyle = chestC; ctx.beginPath(); ctx.ellipse(0, -10, 8, 20, 0.3, 0, Math.PI*2); ctx.fill();
+    ctx.restore();
+
+    ctx.fillStyle = wingC; ctx.beginPath(); ctx.moveTo(-20, 0); ctx.lineTo(-40, -8); ctx.lineTo(-30, 8); ctx.fill();
+    ctx.fillStyle = bodyC; ctx.beginPath(); ctx.ellipse(0, 4, 26, 14, 0, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = chestC; ctx.beginPath(); ctx.ellipse(15, 6, 12, 10, -0.2, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = headC; ctx.beginPath(); ctx.ellipse(20, -6, 8, 12, 0.4, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(26, -18, 12, 9, 0, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = beakC; ctx.beginPath(); ctx.ellipse(38, -16, 10, 4, -0.1, 0, Math.PI*2); ctx.fill();
+    
+    ctx.fillStyle = claimedBy ? '#fff' : '#000';
+    if (claimedBy) {
+      ctx.strokeStyle = '#fff'; ctx.lineWidth=2; 
+      ctx.beginPath(); ctx.moveTo(27,-22); ctx.lineTo(31,-18); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(31,-22); ctx.lineTo(27,-18); ctx.stroke();
+    } else {
+      ctx.beginPath(); ctx.arc(29, -20, 2.5, 0, Math.PI*2); ctx.fill();
+      ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(30, -21, 0.8, 0, Math.PI*2); ctx.fill();
+    }
+
+    ctx.save(); ctx.translate(0, 2); ctx.rotate(flap * Math.PI/180);
+    ctx.fillStyle = wingC; ctx.beginPath(); ctx.ellipse(0, -12, 10, 24, -0.2, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = headC; ctx.beginPath(); ctx.ellipse(0, -16, 4, 12, -0.2, 0, Math.PI*2); ctx.fill();
+    ctx.restore();
+
+    if (variant === 'golden' && !claimedBy) {
+      ctx.shadowColor = '#fbbf24'; ctx.shadowBlur = 20;
+      ctx.strokeStyle = 'rgba(255,255,255,0.8)'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.ellipse(0, 4, 26, 14, 0, 0, Math.PI*2); ctx.stroke();
+    }
+  }
+
   _drawTree(ctx, x, y, scale, wind) {
     ctx.save(); ctx.translate(x, y); ctx.scale(scale, scale);
     const sway = Math.sin(performance.now()/(800 + x)) * (wind*0.005);
@@ -757,49 +787,32 @@ class DuckHuntDuel {
 
   _drawTarget(ctx, tgt, t) {
     const x = tgt.px, y = tgt.py; ctx.save(); ctx.translate(x, y); if (tgt.vx < 0) ctx.scale(-1,1);
-    const bob = Math.sin(tgt.anim * 5) * 3; const flap = Math.sin(tgt.anim * 9) * 12;
-    const animFrame = Math.floor((performance.now() / 100 + tgt.id * 10) % 4);
+    const bob = Math.sin(tgt.anim * 5) * 4; 
+    const flap = Math.sin(tgt.anim * 18) * 45; // Intense wing flapping!
 
-    if (tgt.type === 'duck' && Sfx.sprites && Sfx.sprites.duck) { 
-        const fw = Sfx.sprites.duck.width / 4;
-        const cropY = Math.max(0, (Sfx.sprites.duck.height - fw) / 2);
-        ctx.drawImage(Sfx.sprites.duck, animFrame*fw, cropY, fw, fw, -70, bob-70, 140, 140); 
-    }
-    else if (tgt.type === 'duck') {
-      ctx.fillStyle = tgt.claimedBy === 'p1' ? '#ff4455' : tgt.claimedBy === 'p2' ? '#00ccff' : '#4ade80';
-      ctx.beginPath(); ctx.ellipse(0, bob, 22, 14, 0, 0, Math.PI*2); ctx.fill(); ctx.fillStyle = '#22c55e'; ctx.beginPath(); ctx.ellipse(18, bob-8, 10, 9, 0.2, 0, Math.PI*2); ctx.fill();
-      ctx.save(); ctx.rotate(flap * Math.PI/180); ctx.fillStyle = '#166534'; ctx.beginPath(); ctx.ellipse(-4, bob-4, 20, 8, 0.3, 0, Math.PI*2); ctx.fill(); ctx.restore();
-      ctx.fillStyle = '#fbbf24'; ctx.beginPath(); ctx.moveTo(26, bob-8); ctx.lineTo(34, bob-6); ctx.lineTo(26, bob-4); ctx.fill();
-      ctx.fillStyle = '#000'; ctx.beginPath(); ctx.arc(20, bob-11, 2.5, 0, Math.PI*2); ctx.fill();
-    } else if (tgt.type === 'clay' && Sfx.sprites && Sfx.sprites.white) { 
-        const fw = Sfx.sprites.white.width / 4;
-        const cropY = Math.max(0, (Sfx.sprites.white.height - fw) / 2);
-        ctx.drawImage(Sfx.sprites.white, animFrame*fw, cropY, fw, fw, -60, bob-60, 120, 120); 
-    }
-    else if (tgt.type === 'clay') {
-      const col = tgt.claimedBy ? (tgt.claimedBy==='p1'?'#ff4455':'#00ccff') : '#f97316';
-      ctx.fillStyle = col; ctx.beginPath(); ctx.ellipse(0, bob, 20, 9, 0.2, 0, Math.PI*2); ctx.fill();
-    } else if (tgt.type === 'golden' && Sfx.sprites && Sfx.sprites.golden) { 
-        const fw = Sfx.sprites.golden.width / 4;
-        const cropY = Math.max(0, (Sfx.sprites.golden.height - fw) / 2);
-        ctx.drawImage(Sfx.sprites.golden, animFrame*fw, cropY, fw, fw, -70, bob-70, 140, 140); 
-    }
-    else if (tgt.type === 'golden') {
-      ctx.fillStyle = '#fbbf24'; ctx.beginPath(); ctx.ellipse(0, bob, 18, 11, 0, 0, Math.PI*2); ctx.fill();
-    } else if (tgt.type === 'squid') {
-      // Ink Squid - distinct purple/black body with tentacles
-      ctx.fillStyle = '#3b0764'; ctx.beginPath(); ctx.ellipse(0, bob, 16, 20, 0, 0, Math.PI*2); ctx.fill(); // mantle
-      ctx.fillStyle = '#ef4444'; ctx.beginPath(); ctx.arc(6, bob-4, 4, 0, Math.PI*2); ctx.fill(); // eye
-      // tentacles
-      ctx.strokeStyle = '#581c87'; ctx.lineWidth = 4; ctx.lineCap = 'round';
-      [-10, 0, 10].forEach(tx => {
-        ctx.beginPath(); ctx.moveTo(tx, bob+15);
-        ctx.quadraticCurveTo(tx + flap * 0.5, bob + 30, tx + (flap<0?-15:15), bob + 40); ctx.stroke();
-      });
-    } else if (tgt.type === 'crow') {
-      ctx.fillStyle = '#1e1e2e'; ctx.beginPath(); ctx.ellipse(0, bob, 20, 12, 0, 0, Math.PI*2); ctx.fill();
-      ctx.fillStyle = '#ef4444'; ctx.beginPath(); ctx.arc(19, bob-10, 3, 0, Math.PI*2); ctx.fill();
-      ctx.strokeStyle = 'rgba(255,100,0,0.25)'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(0, bob, 36, 0, Math.PI*2); ctx.stroke();
+    if (tgt.type === 'duck' || tgt.type === 'clay' || tgt.type === 'golden') {
+        const variant = tgt.type === 'duck' ? 'mallard' : (tgt.type === 'clay' ? 'white' : 'golden');
+        this._drawCanvasDuck(ctx, bob, flap, variant, tgt.claimedBy);
+    } 
+    else if (tgt.type === 'squid') {
+      const squish = Math.sin(tgt.anim * 8) * 3;
+      ctx.fillStyle = tgt.claimedBy==='p1'?'#ff4455':tgt.claimedBy==='p2'?'#00ccff':'#4c1d95';
+      ctx.beginPath(); ctx.ellipse(0, bob, 24 + squish, 18 - squish, 0, 0, Math.PI*2); ctx.fill();
+      ctx.fillStyle = '#000'; ctx.beginPath(); ctx.moveTo(20, bob+5); ctx.lineTo(35, bob+squish); ctx.lineTo(20, bob-5); ctx.fill();
+      ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(10, bob-5, 4, 0, Math.PI*2); ctx.fill();
+      ctx.fillStyle = '#ff0044'; ctx.beginPath(); ctx.arc(11, bob-5, 2, 0, Math.PI*2); ctx.fill(); 
+      ctx.strokeStyle = '#3b0764'; ctx.lineWidth = 4; ctx.lineCap = 'round';
+      for(let i=0; i<4; i++) {
+        ctx.beginPath(); ctx.moveTo(-15, bob - 10 + i * 6);
+        ctx.quadraticCurveTo(-35, bob - 10 + i * 6 + squish*2, -45 - Math.random()*10, bob - 10 + i * 6 - squish*2);
+        ctx.stroke();
+      }
+    } 
+    else { // crow
+      ctx.fillStyle = tgt.claimedBy === 'p1' ? '#ff4455' : tgt.claimedBy === 'p2' ? '#00ccff' : '#111';
+      ctx.beginPath(); ctx.ellipse(0, bob, 22, 14, 0, 0, Math.PI*2); ctx.fill();
+      ctx.save(); ctx.rotate(flap/2 * Math.PI/180); ctx.fillStyle = '#000'; ctx.beginPath(); ctx.ellipse(-4, bob-4, 20, 8, 0.3, 0, Math.PI*2); ctx.fill(); ctx.restore();
+      ctx.fillStyle = '#333'; ctx.beginPath(); ctx.moveTo(26, bob-8); ctx.lineTo(34, bob-6); ctx.lineTo(26, bob-4); ctx.fill();
     }
     ctx.restore();
   }
