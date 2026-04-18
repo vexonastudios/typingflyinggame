@@ -3,52 +3,81 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Pixel Racer – Vexona</title>
+  <title>Lane Blitz – Split Screen Arcade Racer</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="racer.css">
 </head>
 <body>
 
-  <!-- Canvas fills the whole screen -->
-  <canvas id="raceCanvas" width="1440" height="810"></canvas>
+  <!-- Full-screen canvas -->
+  <canvas id="raceCanvas"></canvas>
 
   <!-- ── Setup overlay ── -->
   <div id="raceSetup" class="overlay">
     <div class="setup-box">
-      <a href="index.html" class="r-back-btn">← Hub</a>
+      <a href="index.html" class="r-back-btn" style="position:absolute;top:18px;left:22px;">← Hub</a>
       <div class="setup-logo">🏎️</div>
-      <h1 class="setup-title">Pixel Racer</h1>
-      <p class="setup-sub">Split-keyboard family racing · 2–4 players · 3 laps</p>
+      <h1 class="setup-title">Lane Blitz</h1>
+      <p class="setup-sub">Split-screen arcade racer · dodge, jump &amp; blitz to the finish</p>
 
-      <div class="player-count-row">
-        <span class="count-label">Players:</span>
-        <button id="p2Btn" class="count-btn active" type="button">2</button>
-        <button id="p3Btn" class="count-btn" type="button">3</button>
-        <button id="p4Btn" class="count-btn" type="button">4</button>
+      <div class="mode-row">
+        <span class="mode-label">MODE</span>
+        <div class="mode-options">
+          <label class="mode-opt selected" id="modeVsLabel">
+            <input type="radio" name="mode" value="versus" checked> ⚔️ Versus
+            <small>2 players · head-to-head</small>
+          </label>
+          <label class="mode-opt" id="modeSoloLabel">
+            <input type="radio" name="mode" value="solo"> 👤 Solo
+            <small>Time trial · beat your best</small>
+          </label>
+          <label class="mode-opt" id="modeSurvivalLabel">
+            <input type="radio" name="mode" value="survival"> 💀 Survival
+            <small>2 players · last one alive wins</small>
+          </label>
+        </div>
       </div>
 
-      <div class="controls-grid" id="controlsGrid">
-        <!-- filled by JS -->
+      <div class="difficulty-row">
+        <span class="diff-label">DIFFICULTY</span>
+        <div class="diff-options">
+          <label class="diff-opt"><input type="radio" name="diff" value="easy"> <span>🟢 Easy</span><small>Relaxed pace</small></label>
+          <label class="diff-opt selected"><input type="radio" name="diff" value="medium" checked> <span>🟡 Medium</span><small>Arcade sweet spot</small></label>
+          <label class="diff-opt"><input type="radio" name="diff" value="hard"> <span>🔴 Hard</span><small>Relentless</small></label>
+        </div>
+      </div>
+
+      <div class="controls-display">
+        <div class="ctrl-block p1-ctrl">
+          <div class="ctrl-badge p1-badge">P1</div>
+          <div class="ctrl-keys-list">
+            <span class="k">←</span><span class="k">→</span> Move &nbsp; <span class="k">↑</span> Jump
+          </div>
+        </div>
+        <div class="ctrl-divider">VS</div>
+        <div class="ctrl-block p2-ctrl">
+          <div class="ctrl-badge p2-badge">P2</div>
+          <div class="ctrl-keys-list">
+            <span class="k">A</span><span class="k">D</span> Move &nbsp; <span class="k">W</span> Jump
+          </div>
+        </div>
       </div>
 
       <button id="startRaceBtn" class="start-btn" type="button">🚦 Start Race!</button>
     </div>
   </div>
 
-  <!-- ── HUD (shown during race) ── -->
-  <div id="raceHUD" class="race-hud" style="display:none">
-    <div class="hud-players" id="hudPlayers">
-      <!-- per-player cards filled by JS -->
-    </div>
-    <div class="hud-timer" id="raceTimerDisplay">0:00.00</div>
-    <a href="index.html" class="r-back-btn r-back-overlay">← Hub</a>
+  <!-- ── HUD overlay (shown during race) ── -->
+  <div id="raceHUD" style="display:none; pointer-events:none; position:fixed; inset:0; z-index:50;">
+    <!-- filled by JS split-screen per-player HUDs, drawn on canvas -->
   </div>
 
   <!-- ── Results overlay ── -->
   <div id="raceResults" class="overlay" style="display:none">
     <div class="results-box">
-      <h2 class="results-title">🏆 Race Results</h2>
+      <div class="results-icon" id="resultsIcon">🏆</div>
+      <h2 class="results-title" id="resultsTitle">Race Results</h2>
       <div id="resultsList" class="results-list"></div>
       <div class="results-actions">
         <button id="restartBtn" class="start-btn" type="button">🔄 Race Again</button>
