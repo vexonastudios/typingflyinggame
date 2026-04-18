@@ -3,8 +3,9 @@ const $ = id => document.getElementById(id);
 let state = {
   mode: 1, // 1=solo, 2=2p, 3=3p
   players: [],
-  round: 0,
-  maxWins: 1,
+  questionCount: 0,
+  maxWins: 1, // e.g. best of X (requires x round wins)
+  targetScore: 20, // Questions needed to win one round
   status: 'menu', // menu, countdown, active, transition, results
   currentAnswer: null,
   options: [],
@@ -80,10 +81,9 @@ function playSound(type) {
 
 function startGame(mode) {
   state.mode = mode;
-  state.round = 0;
+  state.questionCount = 0;
   state.maxWins = parseInt($('rounds-select') ? $('rounds-select').value : 1) || 1;
-  // If solo mode, we might want them to answer more questions to make it a race, e.g. 5x the rounds.
-  if (state.mode === 1 && state.maxWins < 10) state.maxWins = state.maxWins * 5;
+  // Solo mode scales target score directly
   
   state.soloTotalTime = 0;
   state.players = [];
@@ -100,6 +100,7 @@ function startGame(mode) {
       name: customNames[i],
       cls: PLAYER_COLORS[i].cls,
       score: 0,
+      matchWins: 0,
       locked: false
     });
   }
@@ -118,7 +119,7 @@ function renderPlayerCards() {
   state.players.forEach(p => {
     container.innerHTML += `
       <div id="card-p${p.id}" class="player-card ${p.cls}">
-        <h3>${p.name}</h3>
+        <h3>${p.name} <span id="wins-p${p.id}" style="font-size:0.5em; opacity:0.8;">(${p.matchWins} W)</span></h3>
         <div class="player-score" id="score-p${p.id}">0</div>
         <div class="player-status" id="status-p${p.id}">Ready</div>
         <div class="player-hotkeys">${PLAYER_COLORS[p.id].keys}</div>
@@ -128,19 +129,20 @@ function renderPlayerCards() {
 }
 
 function startNextRound() {
-  state.round++;
-  // Determine if anyone has won
-  const winner = state.players.find(p => p.score >= state.maxWins);
-  if (winner) {
-    endGame();
-    return;
-  }
+  state.questionCount++;
   
   state.status = 'countdown';
   state.players.forEach(p => p.locked = false);
   updatePlayerUI();
   
-  $('round-display').innerText = state.mode === 1 ? `Questions: ${state.players[0].score}/${state.maxWins}` : `Race to ${state.maxWins}! (R${state.round})`;
+  if (state.mode === 1) {
+    $('round-display').innerText = `Questions: ${state.players[0].score}/${state.targetScore * state.maxWins}`;
+  } else {
+    // Show match series score
+    const series = state.players.map(p => p.matchWins).join(' - ');
+    $('round-display').innerText = `First to ${state.targetScore} (Series: ${series})`;
+  }
+  
   $('question-container').classList.add('hidden');
   $('round-feedback').classList.add('hidden');
   
@@ -269,13 +271,42 @@ function handleAnswer(pIdx, optIdx) {
     state.status = 'transition';
     p.score++;
     slot.classList.add('correct-flash');
-    showFeedback(`${p.name} got it!`, 'rgba(46,201,122,0.9)');
     
     $(`card-p${p.id}`).classList.add('won');
     $(`status-p${p.id}`).innerText = 'WINNER';
     $(`score-p${p.id}`).innerText = p.score;
     
-    setTimeout(() => startNextRound(), 1500);
+    if (state.mode === 1) {
+      if (p.score >= state.targetScore * state.maxWins) {
+        showFeedback(`Completed!`, 'rgba(46,201,122,0.9)');
+        setTimeout(() => endGame(), 1500);
+      } else {
+        showFeedback(`${p.name} got it!`, 'rgba(46,201,122,0.9)');
+        setTimeout(() => startNextRound(), 1000);
+      }
+    } else {
+      if (p.score >= state.targetScore) {
+        p.matchWins++;
+        $(`wins-p${p.id}`).innerText = `(${p.matchWins} W)`;
+        if (p.matchWins >= state.maxWins) {
+            showFeedback(`${p.name} WINS THE MATCH!`, 'rgba(255,215,0,0.9)');
+            setTimeout(() => endGame(), 2500);
+        } else {
+            showFeedback(`${p.name} wins the Round!`, 'rgba(46,201,122,0.9)');
+            setTimeout(() => {
+                state.players.forEach(pl => {
+                    pl.score = 0;
+                    $(`score-p${pl.id}`).innerText = pl.score;
+                    $(`card-p${pl.id}`).classList.remove('won');
+                });
+                startNextRound();
+            }, 2500);
+        }
+      } else {
+        showFeedback(`${p.name} got it!`, 'rgba(46,201,122,0.9)');
+        setTimeout(() => startNextRound(), 1000); // Usually transitioning to next question
+      }
+    }
   } else {
     playSound('wrong');
     p.locked = true;
@@ -288,7 +319,7 @@ function handleAnswer(pIdx, optIdx) {
       $('time-display').innerText = `Time: ${(state.soloTotalTime/1000).toFixed(1)}s`;
       showFeedback('-2s & -1 Pt Penalty', 'rgba(255,77,77,0.8)');
       $(`score-p${p.id}`).innerText = p.score;
-      $('round-display').innerText = `Questions: ${p.score}/${state.maxWins}`;
+      $('round-display').innerText = `Questions: ${p.score}/${state.targetScore * state.maxWins}`;
       setTimeout(() => { if(state.status==='active') $('round-feedback').classList.add('hidden'); }, 800);
     } else {
       $(`score-p${p.id}`).innerText = p.score;
@@ -337,11 +368,11 @@ function endGame() {
   if (state.mode === 1) {
     rc.innerHTML = `<div class="result-row rank-1"><span>Total Time</span><span>${(state.soloTotalTime/1000).toFixed(1)}s</span></div>`;
   } else {
-    const sorted = [...state.players].sort((a,b) => b.score - a.score);
+    const sorted = [...state.players].sort((a,b) => (b.matchWins * 100 + b.score) - (a.matchWins * 100 + a.score));
     rc.innerHTML = sorted.map((p, i) => `
       <div class="result-row ${i===0?'rank-1':''}">
         <span>#${i+1} ${p.name}</span>
-        <span>${p.score} pts</span>
+        <span>${p.matchWins} Round Wins (${p.score} pts)</span>
       </div>
     `).join('');
   }
