@@ -369,7 +369,7 @@ class RacerPlayer {
     if (this.boostTimer > 0) spd *= 1.45;
     if (this.slowTimer  > 0) spd *= 0.52;
     this.distance += spd * dt;
-    this.score    += Math.floor(spd * dt * 0.08);
+    this.score    += spd * dt * 0.08;
 
     // Exhaust particles
     if (Math.random() < 0.4) {
