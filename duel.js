@@ -94,6 +94,13 @@ const HUNTER_VOICES = {
   p3: 'sIiRahyxBt2egNH9gWXf',
 };
 
+// Per-voice volume gain (1.0 = normal; >1.0 boosts via Web Audio GainNode)
+const HUNTER_VOICE_GAIN = {
+  [HUNTER_VOICES.p1]: 1.0,
+  [HUNTER_VOICES.p2]: 1.0,
+  [HUNTER_VOICES.p3]: 1.65,  // girl voice is naturally quieter — boost it
+};
+
 const hunterVoiceLines = {
   hit: [
     "Now that was a clean one!", "Nice shot, partner!", "You clipped that one like a pro.",
@@ -227,8 +234,8 @@ const HunterVoice = (() => {
   let _current = null;
   let _busy = false;
 
-  async function speak(text, voiceId) {
-    if (_busy) return;           // don't queue; hunterVoice is ambient, not critical
+  async function speak(text, voiceId, gain = 1.0) {
+    if (_busy) return;
     _busy = true;
     try {
       const cacheKey = `${voiceId}:${text}`;
@@ -244,14 +251,34 @@ const HunterVoice = (() => {
       if (_current) { _current.pause(); _current = null; }
 
       const url = URL.createObjectURL(blob);
-      _current   = new Audio(url);
-      _current.volume = 0.85;
-      await _current.play().catch(() => {});
-      await new Promise(resolve => {
-        _current.onended = resolve;
-        _current.onerror = resolve;
-        setTimeout(resolve, 8000); // hard timeout safety
-      });
+
+      if (gain > 1.0) {
+        // Route through Web Audio GainNode to exceed the normal 1.0 ceiling
+        const audioCtx = typeof AC !== 'undefined' ? AC : new AudioContext();
+        const audioEl  = new Audio(url);
+        audioEl.crossOrigin = 'anonymous';
+        const src  = audioCtx.createMediaElementSource(audioEl);
+        const node = audioCtx.createGain();
+        node.gain.value = gain;
+        src.connect(node);
+        node.connect(audioCtx.destination);
+        _current = audioEl;
+        await audioEl.play().catch(() => {});
+        await new Promise(resolve => {
+          audioEl.onended = resolve;
+          audioEl.onerror = resolve;
+          setTimeout(resolve, 8000);
+        });
+      } else {
+        _current = new Audio(url);
+        _current.volume = 0.85 * gain;
+        await _current.play().catch(() => {});
+        await new Promise(resolve => {
+          _current.onended = resolve;
+          _current.onerror = resolve;
+          setTimeout(resolve, 8000);
+        });
+      }
     } catch(e) {
       console.warn('[HunterVoice] TTS failed:', e.message);
     } finally {
@@ -261,12 +288,13 @@ const HunterVoice = (() => {
 
   function _pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
 
-  // Public: fire-and-forget a voice line for a given category + ownership
+  // Public: fire-and-forget a voice line for a given category + voiceId
   function maybeSpeak(category, voiceId, chance = 0.5) {
     if (Math.random() > chance) return;
     const lines = hunterVoiceLines[category];
     if (!lines || !lines.length) return;
-    speak(_pick(lines), voiceId);
+    const gain = HUNTER_VOICE_GAIN[voiceId] || 1.0;
+    speak(_pick(lines), voiceId, gain);
   }
 
   return { speak, maybeSpeak };
