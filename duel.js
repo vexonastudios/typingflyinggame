@@ -692,7 +692,7 @@ class DuckHuntDuel {
 
     for (const b of this.bullets) this._drawBullet(ctx, b);
     ctx.save(); ctx.textAlign = 'center';
-    for (const ft of this._floatTexts) { ctx.globalAlpha = clamp(ft.life * 1.5, 0, 1); ctx.fillStyle = ft.col; ctx.strokeStyle = 'rgba(0,0,0,0.7)'; ctx.lineWidth = 4; ctx.font = '900 20px Outfit'; ctx.strokeText(ft.text, ft.x, ft.y); ctx.fillText(ft.text, ft.x, ft.y); }
+    for (const ft of this._floatTexts) { ctx.globalAlpha = clamp(ft.life * 1.5, 0, 1); ctx.fillStyle = ft.col; ctx.strokeStyle = 'rgba(0,0,0,0.7)'; ctx.lineWidth = 4; ctx.font = '900 20px "Outfit", sans-serif'; ctx.strokeText(ft.text, ft.x, ft.y); ctx.fillText(ft.text, ft.x, ft.y); }
     ctx.restore();
 
     if (this.state === 'playing' || this.state === 'waveclear') { 
