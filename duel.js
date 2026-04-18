@@ -1,4 +1,4 @@
-﻿'use strict';
+'use strict';
 // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 //  DUCK HUNT DUEL â€” Arcade Shooter Engine
 //  Keyboard Aiming & Bullet Physics
@@ -91,6 +91,7 @@ const COLORS     = { p1:'#ff4455', p2:'#00ccff', p3:'#a855f7', gold:'#fbbf24', b
 const HUNTER_VOICES = {
   p1: 'ruirxsoakN0GWmGNIo04',
   p2: 'aOcS60CY8CoaVaZfqqb5',
+  p3: 'sIiRahyxBt2egNH9gWXf',
 };
 
 const hunterVoiceLines = {
@@ -165,6 +166,24 @@ const hunterVoiceLines = {
   shortCalls: [
     "Got him!", "Nice!", "There he goes!", "Close one!", "Good eye!",
     "Clean shot!", "Too high!", "Too slow!", "Right there!", "What a hit!"
+  ],
+  // Lines specifically voiced by / about the female hunter (P3)
+  girlBanter: [
+    "Don't let her fool you, she can shoot.",
+    "I didn't come out here just to watch.",
+    "You boys better keep up.",
+    "That one had my name on it.",
+    "I've been watching both of you.",
+    "Eyes up, fellas.",
+    "Don't blink.",
+    "I'm just getting warmed up.",
+    "You should've seen that coming.",
+    "My aim is just fine, thank you.",
+    "I came here to hunt, not watch.",
+    "Next one's mine, just you wait.",
+    "I see it. Don't worry.",
+    "Don't underestimate the quiet one.",
+    "You're going to have to do better than that."
   ]
 };
 
@@ -253,14 +272,22 @@ const HunterVoice = (() => {
   return { speak, maybeSpeak };
 })();
 
-// Gated wrapper â€” respects the user's voice toggle preference
+// Gated wrapper — respects the user's voice toggle preference
 function _voiceMaybe(category, voiceId, chance = 0.5) {
   const toggle = document.getElementById('voiceToggle');
   if (toggle && !toggle.checked) return;
-  _voiceMaybe(category, voiceId, chance);
+  HunterVoice.maybeSpeak(category, voiceId, chance);
 }
 
-// â”€â”€ Particle system â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// Pick a random voice from a match that doesn't belong to `excludeWho`
+// Works for both versus (2 players) and trio (3 players)
+function _otherVoice(excludeWho, activePlayers) {
+  const others = activePlayers.filter(id => id !== excludeWho && id in HUNTER_VOICES);
+  if (!others.length) return null;
+  return HUNTER_VOICES[others[Math.floor(Math.random() * others.length)]];
+}
+
+// ── Particle system ──────────────────────────────────────────────────────────
 class Particle {
   constructor(x,y,col,vx,vy,life,r) {
     this.x=x; this.y=y; this.col=col;
@@ -276,7 +303,7 @@ function spawnBurst(particles, x, y, col, n=12, speed=280) {
   }
 }
 
-// â”€â”€ Bullet â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Bullet ──────────────────────────────────────────────────────────────────
 class Bullet {
   constructor(x, y, vx, vy, owner, col) {
     this.x = x; this.y = y; 
@@ -304,7 +331,7 @@ class Bullet {
   }
 }
 
-// â”€â”€ Target â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Target ──────────────────────────────────────────────────────────────────
 class Target {
   constructor(type, canvas) {
     this.type = type;
@@ -382,7 +409,7 @@ class Target {
   isExpired() { return this.dead && this.deadTimer > (this.claimedBy ? 0.7 : 0.1); }
 }
 
-// â”€â”€ Player State â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Player State ─────────────────────────────────────────────────────────────
 function makePlayer(id, name) {
   return {
     id, name, score: 0,
@@ -396,7 +423,7 @@ function makePlayer(id, name) {
   };
 }
 
-// â”€â”€ Main Game â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Main Game ────────────────────────────────────────────────────────────────
 class DuckHuntDuel {
   constructor() {
     this.canvas = document.getElementById('gameCanvas');
@@ -492,9 +519,9 @@ class DuckHuntDuel {
     [n1, n2, ...(this.mode === 'trio' ? [n3] : [])].forEach(_addSavedName);
     _refreshDatalist();
     
-    document.getElementById('nameLabelP1').textContent = `ðŸ”´ ${this.p1.name}`;
-    document.getElementById('nameLabelP2').textContent = `ðŸ”µ ${this.p2.name}`;
-    if (this.p3) document.getElementById('nameLabelP3').textContent = `ðŸŸ£ ${this.p3.name}`;
+    document.getElementById('nameLabelP1').textContent = `🔴 ${this.p1.name}`;
+    document.getElementById('nameLabelP2').textContent = `🔵 ${this.p2.name}`;
+    if (this.p3) document.getElementById('nameLabelP3').textContent = `🟣 ${this.p3.name}`;
 
     this.wind = 0; this.windTarget = 0;
     this._resize();
@@ -527,17 +554,22 @@ class DuckHuntDuel {
       else { clearInterval(cd); overlay.classList.add('hidden'); this.state = 'playing'; }
     }, 900);
     // Voice: round start banter (Wave 1 or random subsequent waves)
-    if (this.mode === 'versus') {
-      const starterVoice = Math.random() < 0.5 ? HUNTER_VOICES.p1 : HUNTER_VOICES.p2;
-      // ~40% chance on wave 1, ~25% on later waves
+    if (this.mode === 'versus' || this.mode === 'trio') {
+      const voicePool = Object.keys(HUNTER_VOICES).filter(id => {
+        if (this.mode === 'versus') return id !== 'p3';
+        return true; // trio: all three
+      });
+      const starterVoice = HUNTER_VOICES[voicePool[Math.floor(Math.random() * voicePool.length)]];
       _voiceMaybe('roundStart', starterVoice, this.wave === 1 ? 0.8 : 0.25);
 
-      // Idle chatter timer â€” random whispers during play
+      // Idle chatter — random player speaks every 18-30s
       if (this._idleInterval) clearInterval(this._idleInterval);
       this._idleInterval = setInterval(() => {
         if (this.state !== 'playing') return;
-        const v = Math.random() < 0.5 ? HUNTER_VOICES.p1 : HUNTER_VOICES.p2;
-        _voiceMaybe('idleChatter', v, 0.5);
+        const v = HUNTER_VOICES[voicePool[Math.floor(Math.random() * voicePool.length)]];
+        // P3 gets girl-banter flavour occasionally
+        const cat = (v === HUNTER_VOICES.p3 && Math.random() < 0.4) ? 'girlBanter' : 'idleChatter';
+        _voiceMaybe(cat, v, 0.5);
       }, rnd(18, 30) * 1000);
     }
   }
@@ -564,7 +596,7 @@ class DuckHuntDuel {
     Sfx.wave();
 
     if (this.wave >= this.maxWaves) {
-      text.textContent = 'ðŸŽ¯ Final Wave Done!';
+      text.textContent = '🎯 Final Wave Done!';
     } else {
       text.textContent = `Wave ${this.wave} Clear! `;
     }
@@ -589,16 +621,16 @@ class DuckHuntDuel {
     const title = document.getElementById('resultsTitle');
 
     if (this.mode === 'solo') {
-      emoji.textContent = 'ðŸŽ¯';
+      emoji.textContent = '🎯';
       title.textContent = `Score: ${this.p1.score}`;
       Sfx.win();
     } else {
       const highest = Math.max(...players.map(p => p.score));
       const winners = players.filter(p => p.score === highest);
       if (winners.length > 1) {
-         emoji.textContent = 'ðŸ¤'; title.textContent = "It's a Draw!"; Sfx.draw();
+         emoji.textContent = '🤝'; title.textContent = "It's a Draw!"; Sfx.draw();
       } else {
-         emoji.textContent = 'ðŸ†'; title.textContent = `${winners[0].name} Wins!`; Sfx.win();
+         emoji.textContent = '🏆'; title.textContent = `${winners[0].name} Wins!`; Sfx.win();
       }
     }
 
@@ -607,7 +639,7 @@ class DuckHuntDuel {
 
     statsEl.innerHTML = players.map(p => {
       const acc = p.hits + p.misses > 0 ? Math.round(100*p.hits/(p.hits+p.misses)) : 0;
-      const emojiName = p.id === 'p1' ? 'ðŸ”´' : (p.id === 'p2' ? 'ðŸ”µ' : 'ðŸŸ£');
+      const emojiName = p.id === 'p1' ? '🔴' : (p.id === 'p2' ? '🔵' : '🟣');
       if (this.mode === 'solo') {
         return `
           <div class="stat-block" style="grid-column:1/-1">
@@ -635,10 +667,11 @@ class DuckHuntDuel {
     const p = who === 'p1' ? this.p1 : (who === 'p2' ? this.p2 : this.p3);
     if (p.reloading || p.heat >= MAX_HEAT) {
       Sfx.miss();
-      // Taunt the reloading player from the opponent
-      if (this.mode === 'versus' && who in HUNTER_VOICES) {
-        const otherVoice = HUNTER_VOICES[who === 'p1' ? 'p2' : 'p1'];
-        _voiceMaybe('rivalry', otherVoice, 0.4);
+      // Taunt the reloading player from one of the opponents
+      if ((this.mode === 'versus' || this.mode === 'trio') && who in HUNTER_VOICES) {
+        const activePlayers = this.mode === 'trio' ? ['p1','p2','p3'] : ['p1','p2'];
+        const ov = _otherVoice(who, activePlayers);
+        if (ov) _voiceMaybe('rivalry', ov, 0.4);
       }
       return;
     }
@@ -671,10 +704,11 @@ class DuckHuntDuel {
       Sfx.crow(); this.shake = 15;
       spawnBurst(this.particles, target.px, target.py, COLORS.bad, 14, 200);
       this._floatText(`${PTS.crow}`, target.px, target.py, COLORS.bad);
-      // Crow is a penalty â€” the OTHER player trash-talks (rival voice)
-      if (this.mode === 'versus') {
-        const otherVoice = HUNTER_VOICES[who === 'p1' ? 'p2' : 'p1'];
-        _voiceMaybe('rivalry', otherVoice, 0.55);
+      // Crow is a penalty — one of the OTHER players trash-talks (rival voice)
+      if (this.mode === 'versus' || this.mode === 'trio') {
+        const activePlayers = this.mode === 'trio' ? ['p1','p2','p3'] : ['p1','p2'];
+        const ov = _otherVoice(who, activePlayers);
+        if (ov) _voiceMaybe('rivalry', ov, 0.55);
       }
       return;
     }
@@ -709,35 +743,39 @@ class DuckHuntDuel {
     if (target.type === 'squid' && this.mode === 'versus') label = "INK ATTACK!";
     this._floatText(label, target.px, target.py - 20, col);
 
-    // â”€â”€ Hunter voice on hit (versus only) â”€â”€
-    if (this.mode === 'versus' && who in HUNTER_VOICES) {
+    // -- Hunter voice on hit (versus and trio) --
+    if ((this.mode === 'versus' || this.mode === 'trio') && who in HUNTER_VOICES) {
+      const activePlayers = this.mode === 'trio' ? ['p1','p2','p3'] : ['p1','p2'];
       const voice = HUNTER_VOICES[who];
-      const otherVoice = HUNTER_VOICES[who === 'p1' ? 'p2' : 'p1'];
+      const ov = _otherVoice(who, activePlayers);
       if (isSteal) {
         _voiceMaybe('rivalry', voice, 0.7);
       } else if (p.combo >= 4) {
         _voiceMaybe('streak', voice, 0.65);
       } else if (target.type === 'golden') {
-        _voiceMaybe('roundWin', otherVoice, 0.75); // opponent reacts to a golden bird
+        if (ov) _voiceMaybe('roundWin', ov, 0.75);
       } else {
-        // alternate between shooter praising themselves and short calls
-        _voiceMaybe(Math.random() < 0.5 ? 'hit' : 'shortCalls', voice, 0.35);
+        const isGirl = (who === 'p3');
+        const cat = isGirl && Math.random() < 0.4 ? 'girlBanter' : (Math.random() < 0.5 ? 'hit' : 'shortCalls');
+        _voiceMaybe(cat, voice, 0.35);
       }
     }
   }
 
   _bullet_miss_voice(who) {
-    // Called when a bullet dies without hitting anything in versus mode
-    if (this.mode !== 'versus' || !(who in HUNTER_VOICES)) return;
-    const voice = HUNTER_VOICES[who];
-    const otherVoice = HUNTER_VOICES[who === 'p1' ? 'p2' : 'p1'];
-    const p = who === 'p1' ? this.p1 : this.p2;
-    // If the player is behind by a big margin, offer a comeback line from the opponent
-    const other = who === 'p1' ? this.p2 : this.p1;
-    if (other.score - p.score > 400) {
-      _voiceMaybe('comeback', otherVoice, 0.35); // sympathetic from opponent
+    // Works in both versus and trio
+    const isMulti = this.mode === 'versus' || this.mode === 'trio';
+    if (!isMulti || !(who in HUNTER_VOICES)) return;
+    const activePlayers = this.mode === 'trio' ? ['p1','p2','p3'] : ['p1','p2'];
+    const ov = _otherVoice(who, activePlayers);
+    if (!ov) return;
+    const p     = this[who];
+    const other = activePlayers.filter(id => id !== who).map(id => this[id]).filter(Boolean);
+    const maxOtherScore = Math.max(...other.map(o => o.score));
+    if (maxOtherScore - p.score > 400) {
+      _voiceMaybe('comeback', ov, 0.35);
     } else {
-      _voiceMaybe('miss', otherVoice, 0.25);     // taunt
+      _voiceMaybe('miss', ov, 0.25);
     }
   }
 
