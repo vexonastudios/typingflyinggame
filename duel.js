@@ -231,6 +231,7 @@ class DuckHuntDuel {
     this.keys  = {};
     this._prevKeys = {};
     this.shake = 0;
+    this._floatTexts = [];
 
     this._bindEvents();
     this._bindUI();
@@ -277,6 +278,7 @@ class DuckHuntDuel {
     this.maxWaves   = parseInt(document.getElementById('waveSelect').value) || 10;
     this.difficulty = document.getElementById('diffSelect').value || 'normal';
     this.wave = 0; this.targets = []; this.bullets = []; this.particles = [];
+    this._floatTexts = [];
     this.p1 = makePlayer('p1'); this.p2 = makePlayer('p2');
     this.wind = 0; this.windTarget = 0;
     this._resize();
