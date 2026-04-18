@@ -16,7 +16,7 @@ export default async function handler(req) {
       return new Response('API Key not configured on server', { status: 500 });
     }
 
-    const voiceId = 'fnYMz3F5gMEDGMWcH1ex';
+    const voiceId = searchParams.get('voiceId') || 'fnYMz3F5gMEDGMWcH1ex';
     const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}?output_format=mp3_44100_128`, {
       method: 'POST',
       headers: {

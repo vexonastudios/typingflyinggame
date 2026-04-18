@@ -87,6 +87,172 @@ const HIT_RADIUS = { duck:52, clay:38, golden:40, crow:48, squid:38, goose:62 };
 const PTS        = { duck:100, clay:150, golden:500, crow:-200, squid:250, goose:300 };
 const COLORS     = { p1:'#ff4455', p2:'#00ccff', p3:'#a855f7', gold:'#fbbf24', bad:'#ff6600', ink: '#111' };
 
+// ── Hunter Voice Lines ────────────────────────────────────────
+const HUNTER_VOICES = {
+  p1: 'ruirxsoakN0GWmGNIo04',
+  p2: 'aOcS60CY8CoaVaZfqqb5',
+};
+
+const hunterVoiceLines = {
+  hit: [
+    "Now that was a clean one!", "Nice shot, partner!", "You clipped that one like a pro.",
+    "Well, look at you!", "That duck never saw it coming.", "You're heating up now.",
+    "That was smoother than gravy.", "You're on target today.", "Bullseye with feathers.",
+    "That's how it's done."
+  ],
+  nearMiss: [
+    "Ooh, that was close!", "Just a feather off.", "You almost had him.",
+    "That one was right there!", "Next shot's yours.", "You're dialed in now.",
+    "That duck got lucky.", "Just needed a pinch more lead.", "Almost sent him tumbling.",
+    "You're warming up."
+  ],
+  miss: [
+    "That duck's still laughing.", "You were aiming at the clouds.", "I think you scared the breeze.",
+    "That shot needed a map.", "You missed him by a Sunday nap.", "That one was more hope than aim.",
+    "You sure you saw the same duck I saw?", "That duck owes you a thank-you note.",
+    "You're being generous with your ammo.", "That was a warning shot."
+  ],
+  streak: [
+    "Somebody's in the zone.", "Save a few for the rest of us!", "You brought your sharp eyes today.",
+    "You're stacking them up now.", "He can't miss!", "That shotgun's singing for you.",
+    "You're making this look easy.", "Somebody practiced.", "You're on a roll now.", "I better catch up quick."
+  ],
+  comeback: [
+    "Don't worry, the next flock's yours.", "Plenty of sky left.",
+    "You're one good shot away from a comeback.", "You've still got game.", "The tide can turn fast.",
+    "One hot streak changes everything.", "You're due for a big one.", "There's time yet, partner.",
+    "Your moment's coming.", "I've seen slower starts win matches."
+  ],
+  rivalry: [
+    "Try to keep up now.", "You chasing ducks or daydreams?", "I might need to lend you my lucky hat.",
+    "You watching me shoot for lessons?", "Careful, I'm pulling ahead.",
+    "You better start swinging that barrel.", "This scoreboard's getting lopsided.",
+    "I'm putting on a clinic out here.", "Don't blink, you'll miss my next one too.",
+    "I hope you packed some comeback."
+  ],
+  partnerBanter: [
+    "You watch the left, I'll watch the winners.", "I'll handle the ducks, you handle the cheering.",
+    "Good thing one of us came ready.", "You bring the shells, I'll bring the aim.",
+    "We make a pretty fine team.", "Between your jokes and my shooting, we're set.",
+    "Let's keep those ducks guessing.", "You spot 'em, I'll drop 'em.",
+    "I'll admit it, that was a nice shot.", "All right, that one even impressed me."
+  ],
+  bothMiss: [
+    "Well... we sure let that one fly.", "That duck just got a free pass.",
+    "Good thing we're better company than marksmen.", "We hit everything except the duck.",
+    "That was a team miss.", "Two shots, zero feathers.", "We gave him a real scare, at least.",
+    "That one slipped through both of us.", "We'll call that a practice round.",
+    "Nobody talk about that one."
+  ],
+  roundWin: [
+    "That may seal it!", "You picked the perfect time for that one.", "That's the shot of the round!",
+    "What a finish!", "Now that's how you close it out.", "That one put you on top!",
+    "Big shot at the right time.", "That'll be hard to beat.", "You ended strong there.",
+    "That's one for the highlight reel."
+  ],
+  roundStart: [
+    "All right, let's see who's sharp today.", "Eyes up, here they come.",
+    "Let's make this a good round.", "Ready up, partner.", "Time to fill the sky with feathers.",
+    "Let's see who strikes first.", "Stay quick and stay steady.", "This ought to be fun.",
+    "Here comes the first flock.", "Let's get after it."
+  ],
+  idleChatter: [
+    "Quiet now, I hear wings.", "Keep your eyes moving.", "Sky's too calm... won't stay that way.",
+    "This next one's ours.", "Stay loose, don't rush it.", "You take high, I'll take low.",
+    "Looks like more are coming.", "We're due for a busy stretch.",
+    "Don't let the easy ones fool you.", "Something's about to break across the sky."
+  ],
+  shortCalls: [
+    "Got him!", "Nice!", "There he goes!", "Close one!", "Good eye!",
+    "Clean shot!", "Too high!", "Too slow!", "Right there!", "What a hit!"
+  ]
+};
+
+// ── Hunter TTS Engine ─────────────────────────────────────────
+const HunterVoice = (() => {
+  // Per-voice IndexedDB cache (keyed "voiceId:text")
+  const DB_NAME = 'DuckHuntVoiceDB';
+  const STORE   = 'voiceAudio';
+  let _db = null;
+
+  async function _getDB() {
+    if (_db) return _db;
+    return new Promise((resolve, reject) => {
+      const req = indexedDB.open(DB_NAME, 1);
+      req.onupgradeneeded = e => e.target.result.createObjectStore(STORE);
+      req.onsuccess = e => { _db = e.target.result; resolve(_db); };
+      req.onerror   = e => reject(e);
+    });
+  }
+
+  async function _cacheGet(key) {
+    try {
+      const db = await _getDB();
+      return new Promise(resolve => {
+        const tx = db.transaction([STORE], 'readonly');
+        const req = tx.objectStore(STORE).get(key);
+        req.onsuccess = () => resolve(req.result || null);
+        req.onerror   = () => resolve(null);
+      });
+    } catch(e) { return null; }
+  }
+
+  async function _cachePut(key, blob) {
+    try {
+      const db = await _getDB();
+      const tx = db.transaction([STORE], 'readwrite');
+      tx.objectStore(STORE).put(blob, key);
+    } catch(e) {}
+  }
+
+  let _current = null;
+  let _busy = false;
+
+  async function speak(text, voiceId) {
+    if (_busy) return;           // don't queue; hunterVoice is ambient, not critical
+    _busy = true;
+    try {
+      const cacheKey = `${voiceId}:${text}`;
+      let blob = await _cacheGet(cacheKey);
+
+      if (!blob) {
+        const res = await fetch(`/api/tts?text=${encodeURIComponent(text)}&voiceId=${voiceId}`);
+        if (!res.ok) throw new Error(`TTS ${res.status}`);
+        blob = await res.blob();
+        _cachePut(cacheKey, blob);
+      }
+
+      if (_current) { _current.pause(); _current = null; }
+
+      const url = URL.createObjectURL(blob);
+      _current   = new Audio(url);
+      _current.volume = 0.85;
+      await _current.play().catch(() => {});
+      await new Promise(resolve => {
+        _current.onended = resolve;
+        _current.onerror = resolve;
+        setTimeout(resolve, 8000); // hard timeout safety
+      });
+    } catch(e) {
+      console.warn('[HunterVoice] TTS failed:', e.message);
+    } finally {
+      _busy = false;
+    }
+  }
+
+  function _pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+
+  // Public: fire-and-forget a voice line for a given category + ownership
+  function maybeSpeak(category, voiceId, chance = 0.5) {
+    if (Math.random() > chance) return;
+    const lines = hunterVoiceLines[category];
+    if (!lines || !lines.length) return;
+    speak(_pick(lines), voiceId);
+  }
+
+  return { speak, maybeSpeak };
+})();
+
 // ── Particle system ────────────────────────────────────────────
 class Particle {
   constructor(x,y,col,vx,vy,life,r) {
@@ -349,6 +515,20 @@ class DuckHuntDuel {
       if (n > 0) { num.textContent = n; Sfx._tone(440,'square',0.1,0.05); } 
       else { clearInterval(cd); overlay.classList.add('hidden'); this.state = 'playing'; }
     }, 900);
+    // Voice: round start banter (Wave 1 or random subsequent waves)
+    if (this.mode === 'versus') {
+      const starterVoice = Math.random() < 0.5 ? HUNTER_VOICES.p1 : HUNTER_VOICES.p2;
+      // ~40% chance on wave 1, ~25% on later waves
+      HunterVoice.maybeSpeak('roundStart', starterVoice, this.wave === 1 ? 0.8 : 0.25);
+
+      // Idle chatter timer — random whispers during play
+      if (this._idleInterval) clearInterval(this._idleInterval);
+      this._idleInterval = setInterval(() => {
+        if (this.state !== 'playing') return;
+        const v = Math.random() < 0.5 ? HUNTER_VOICES.p1 : HUNTER_VOICES.p2;
+        HunterVoice.maybeSpeak('idleChatter', v, 0.5);
+      }, rnd(18, 30) * 1000);
+    }
   }
 
   _spawnTarget() {
@@ -367,6 +547,7 @@ class DuckHuntDuel {
 
   _endWave() {
     this.state = 'waveclear';
+    if (this._idleInterval) { clearInterval(this._idleInterval); this._idleInterval = null; }
     const banner = document.getElementById('waveBanner');
     const text   = document.getElementById('waveBannerText');
     Sfx.wave();
@@ -441,7 +622,15 @@ class DuckHuntDuel {
 
   _shoot(who) {
     const p = who === 'p1' ? this.p1 : (who === 'p2' ? this.p2 : this.p3);
-    if (p.reloading || p.heat >= MAX_HEAT) { Sfx.miss(); return; }
+    if (p.reloading || p.heat >= MAX_HEAT) {
+      Sfx.miss();
+      // Taunt the reloading player from the opponent
+      if (this.mode === 'versus' && who in HUNTER_VOICES) {
+        const otherVoice = HUNTER_VOICES[who === 'p1' ? 'p2' : 'p1'];
+        HunterVoice.maybeSpeak('rivalry', otherVoice, 0.4);
+      }
+      return;
+    }
 
     p.heat += HEAT_PER_SHOT;
     p.recoil = 24;
@@ -471,6 +660,11 @@ class DuckHuntDuel {
       Sfx.crow(); this.shake = 15;
       spawnBurst(this.particles, target.px, target.py, COLORS.bad, 14, 200);
       this._floatText(`${PTS.crow}`, target.px, target.py, COLORS.bad);
+      // Crow is a penalty — the OTHER player trash-talks (rival voice)
+      if (this.mode === 'versus') {
+        const otherVoice = HUNTER_VOICES[who === 'p1' ? 'p2' : 'p1'];
+        HunterVoice.maybeSpeak('rivalry', otherVoice, 0.55);
+      }
       return;
     }
 
@@ -503,6 +697,37 @@ class DuckHuntDuel {
     if (isSteal) label = `STEAL! +${bonus}`;
     if (target.type === 'squid' && this.mode === 'versus') label = "INK ATTACK!";
     this._floatText(label, target.px, target.py - 20, col);
+
+    // ── Hunter voice on hit (versus only) ──
+    if (this.mode === 'versus' && who in HUNTER_VOICES) {
+      const voice = HUNTER_VOICES[who];
+      const otherVoice = HUNTER_VOICES[who === 'p1' ? 'p2' : 'p1'];
+      if (isSteal) {
+        HunterVoice.maybeSpeak('rivalry', voice, 0.7);
+      } else if (p.combo >= 4) {
+        HunterVoice.maybeSpeak('streak', voice, 0.65);
+      } else if (target.type === 'golden') {
+        HunterVoice.maybeSpeak('roundWin', otherVoice, 0.75); // opponent reacts to a golden bird
+      } else {
+        // alternate between shooter praising themselves and short calls
+        HunterVoice.maybeSpeak(Math.random() < 0.5 ? 'hit' : 'shortCalls', voice, 0.35);
+      }
+    }
+  }
+
+  _bullet_miss_voice(who) {
+    // Called when a bullet dies without hitting anything in versus mode
+    if (this.mode !== 'versus' || !(who in HUNTER_VOICES)) return;
+    const voice = HUNTER_VOICES[who];
+    const otherVoice = HUNTER_VOICES[who === 'p1' ? 'p2' : 'p1'];
+    const p = who === 'p1' ? this.p1 : this.p2;
+    // If the player is behind by a big margin, offer a comeback line from the opponent
+    const other = who === 'p1' ? this.p2 : this.p1;
+    if (other.score - p.score > 400) {
+      HunterVoice.maybeSpeak('comeback', otherVoice, 0.35); // sympathetic from opponent
+    } else {
+      HunterVoice.maybeSpeak('miss', otherVoice, 0.25);     // taunt
+    }
   }
 
   _update(dt) {
@@ -577,7 +802,11 @@ class DuckHuntDuel {
         }
       }
 
-      for (const b of this.bullets) if (b.dead && !b.hitSomething) { const ownerP = b.owner === 'p1' ? this.p1 : (b.owner === 'p2' ? this.p2 : this.p3); ownerP.misses++; ownerP.combo = 0; }
+      for (const b of this.bullets) if (b.dead && !b.hitSomething) {
+        const ownerP = b.owner === 'p1' ? this.p1 : (b.owner === 'p2' ? this.p2 : this.p3);
+        ownerP.misses++; ownerP.combo = 0;
+        this._bullet_miss_voice(b.owner);
+      }
       this.bullets = this.bullets.filter(b => !b.dead);
 
       if ((this.targetsLeft <= 0 && this.targets.every(t => t.dead)) || this.waveTimer <= 0) this._endWave();
