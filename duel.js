@@ -1,8 +1,9 @@
 'use strict';
 // ═══════════════════════════════════════════════════════════════
 //  DUCK HUNT DUEL — Arcade Shooter Engine
-//  P1: Mouse aim + Click to shoot
-//  P2: WASD / Arrow Keys to move crosshair + Space/Enter to shoot
+//  Keyboard Aiming & Bullet Physics
+//  P1: A/D to rotate barrel, W to shoot
+//  P2: Left/Right to rotate barrel, Up to shoot
 // ═══════════════════════════════════════════════════════════════
 
 // ── Math helpers ─────────────────────────────────────────────
@@ -54,7 +55,7 @@ const Sfx = {
 // ── Constants ─────────────────────────────────────────────────
 const MAX_AMMO   = 6;
 const RELOAD_MS  = 1400;
-const P2_SPEED   = 620; // px/s for keyboard cursor
+const BULLET_SPEED = 1200; // px/s
 const HIT_RADIUS = { duck:38, clay:30, golden:26, crow:44 };
 const PTS        = { duck:100, clay:150, golden:500, crow:-200 };
 const COLORS     = { p1:'#ff4455', p2:'#00ccff', gold:'#fbbf24', bad:'#ff6600' };
@@ -75,6 +76,28 @@ function spawnBurst(particles, x, y, col, n=12, speed=280) {
   }
 }
 
+// ── Bullet ────────────────────────────────────────────────────
+class Bullet {
+  constructor(x, y, vx, vy, owner, col) {
+    this.x = x; this.y = y; 
+    this.vx = vx; this.vy = vy; 
+    this.owner = owner; 
+    this.col = col;
+    this.dead = false;
+    this.hitSomething = false;
+    this.r = 6;
+  }
+  update(dt, W, H) {
+    this.x += this.vx * dt;
+    this.y += this.vy * dt;
+    
+    // Die if offscreen
+    if (this.y < -50 || this.x < -100 || this.x > W + 100) {
+      this.dead = true;
+    }
+  }
+}
+
 // ── Target ────────────────────────────────────────────────────
 class Target {
   constructor(type, canvas) {
@@ -85,10 +108,9 @@ class Target {
     this.claimFlash = 0;
     this.id = Math.random();
 
-    const W = canvas.width, H = canvas.height - 72; // playfield height (minus HUD)
+    const W = canvas.width, H = canvas.height - 72;
     const hitR = HIT_RADIUS[type];
 
-    // Pick arc pattern
     const pattern = this._pickPattern(type, W, H);
     this.px = pattern.px;
     this.py = pattern.py;
@@ -97,7 +119,6 @@ class Target {
     this.ax = pattern.ax || 0;
     this.ay = pattern.ay || 0;
 
-    // Visual
     this.r = hitR;
     this.wobble = 0;
     this.anim = rnd(0, Math.PI*2);
@@ -111,14 +132,13 @@ class Target {
     const speeds = { duck: rnd(140,240), clay: rnd(200,340), golden: rnd(300,480), crow: rnd(80,160) };
     const spd = speeds[type];
 
-    // Various trajectory styles
     const style = rndI(0,3);
-    if (style === 0) { // Linear diagonal
+    if (style === 0) {
       return { px: sx, py: rnd(H*0.15, H*0.65), vx: tx_dir*spd, vy: rnd(-40,40), ax:0, ay:0 };
-    } else if (style === 1) { // Arc (gravity)
+    } else if (style === 1) {
       const gy = type==='clay' ? rnd(60,120) : rnd(20,60);
       return { px: sx, py: rnd(H*0.5, H*0.7), vx: tx_dir*spd, vy: rnd(-200,-80), ax:0, ay:gy };
-    } else { // Sine wave movement — handled by special flag
+    } else {
       return { px: sx, py: rnd(H*0.2, H*0.6), vx: tx_dir*spd, vy: 0, ax:0, ay:0, sine: true, sineAmp: rnd(40,90), sineFreq: rnd(1.2,2.5) };
     }
   }
@@ -140,12 +160,10 @@ class Target {
 
     this.wobble = Math.sin(this.anim * 6) * 5;
 
-    // Clamp crow — bounces vertically to stay on screen
     if (this.type === 'crow') {
       if (this.py < 30 || this.py > H - 30) { this.vy *= -1; }
     }
 
-    // Out of bounds → dead (miss)
     if (this.px < -120 || this.px > W + 120 || this.py > H + 100) {
       this.dead = true;
       this.deadTimer = 99; // immediate cleanup
@@ -161,8 +179,10 @@ function makePlayer(id, ammo=MAX_AMMO) {
     id, score: 0, ammo,
     reloading: false, reloadTimer: 0,
     combo: 0, hits: 0, misses: 0, steals: 0,
-    cx: id==='p1' ? 200 : 600, cy: 300,  // crosshair pos
-    shooting: false, justShot: false, shotFlash: 0,
+    x: 0, y: 0, // Turret position
+    angle: -Math.PI / 2, // Aim straight up
+    recoil: 0, // Visual barrel kick
+    justShot: false,
   };
 }
 
@@ -186,8 +206,8 @@ class DuckHuntDuel {
     this.canvas = document.getElementById('gameCanvas');
     this.ctx    = this.canvas.getContext('2d');
 
-    this.mode   = 'solo';   // 'solo' | 'versus'
-    this.state  = 'title';  // 'title' | 'countdown' | 'playing' | 'waveclear' | 'results'
+    this.mode   = 'solo';
+    this.state  = 'title';
     this.maxWaves = 10;
     this.difficulty = 'normal';
 
@@ -198,54 +218,45 @@ class DuckHuntDuel {
     this.waveConf = null;
 
     this.targets   = [];
+    this.bullets   = [];
     this.particles = [];
     this.p1 = makePlayer('p1');
     this.p2 = makePlayer('p2');
 
-    this.mouse = { x: 0, y: 0 };
     this.keys  = {};
     this._prevKeys = {};
 
     this._bindEvents();
     this._bindUI();
-    this._resize();
     window.addEventListener('resize', ()=>this._resize());
+    this._resize();
 
     this._lastTs = 0;
     requestAnimationFrame(ts => this._loop(ts));
   }
 
-  // ── Boot ───────────────────────────────────────────────────
   _resize() {
     this.canvas.width  = window.innerWidth;
     this.canvas.height = window.innerHeight - 72; // subtract HUD
+    if (this.p1) {
+      this.p1.x = this.canvas.width * 0.3;
+      this.p1.y = this.canvas.height;
+    }
     if (this.p2) {
-      this.p2.cx = clamp(this.p2.cx, 0, this.canvas.width);
-      this.p2.cy = clamp(this.p2.cy, 0, this.canvas.height);
+      this.p2.x = this.canvas.width * 0.7;
+      this.p2.y = this.canvas.height;
+    }
+    
+    if (this.mode === 'solo' && this.p1) {
+      this.p1.x = this.canvas.width * 0.5;
     }
   }
 
   _bindEvents() {
-    const cvs = this.canvas;
-
-    // P1 mouse
-    cvs.addEventListener('mousemove', e => {
-      const r  = cvs.getBoundingClientRect();
-      this.mouse.x = e.clientX - r.left;
-      this.mouse.y = e.clientY - r.top;
-      if (this.state === 'playing') {
-        this.p1.cx = this.mouse.x;
-        this.p1.cy = this.mouse.y;
-      }
-    });
-
-    cvs.addEventListener('mousedown', e => {
-      if (e.button === 0 && this.state === 'playing') this._shoot('p1');
-    });
-
-    // Keyboard
     window.addEventListener('keydown', e => {
-      if (['Space','Enter','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code)) e.preventDefault();
+      if (['Space','Enter','ArrowUp','ArrowDown','ArrowLeft','ArrowRight','KeyW','KeyA','KeyS','KeyD'].includes(e.code)) {
+        e.preventDefault();
+      }
       this.keys[e.code] = true;
     });
     window.addEventListener('keyup', e => { this.keys[e.code] = false; });
@@ -278,20 +289,18 @@ class DuckHuntDuel {
     document.getElementById(id).classList.add('active');
   }
 
-  // ── Game flow ──────────────────────────────────────────────
   _startGame() {
     this.maxWaves   = parseInt(document.getElementById('waveSelect').value) || 10;
     this.difficulty = document.getElementById('diffSelect').value || 'normal';
 
     this.wave     = 0;
     this.targets  = [];
+    this.bullets  = [];
     this.particles= [];
     this.p1 = makePlayer('p1');
     this.p2 = makePlayer('p2');
-    this.p1.cx = this.canvas.width  * 0.25;
-    this.p1.cy = this.canvas.height * 0.5;
-    this.p2.cx = this.canvas.width  * 0.75;
-    this.p2.cy = this.canvas.height * 0.5;
+    
+    this._resize();
 
     document.getElementById('hudP2').style.display = this.mode === 'solo' ? 'none' : 'flex';
 
@@ -306,12 +315,11 @@ class DuckHuntDuel {
     this.spawnTimer  = 0;
     this.targetsLeft = this.waveConf.targetCount;
     this.targets     = [];
+    this.bullets     = [];
     this.state       = 'countdown';
 
-    // Update HUD
     document.getElementById('waveDisplay').textContent = `Wave ${this.wave}/${this.maxWaves}`;
 
-    // Countdown 3-2-1
     const overlay = document.getElementById('countdownOverlay');
     const num     = document.getElementById('countdownNum');
     overlay.classList.remove('hidden');
@@ -429,8 +437,7 @@ class DuckHuntDuel {
     if (p.reloading || p.ammo <= 0) { Sfx.miss(); return; }
 
     p.ammo--;
-    p.shotFlash = 0.12;
-    p.justShot  = true;
+    p.recoil = 20; // Visual barrel kick
     Sfx.shoot();
     this._updateAmmoHUD();
 
@@ -441,36 +448,23 @@ class DuckHuntDuel {
       Sfx.reload();
     }
 
-    // Hit detection — closest target in range
-    let bestTarget = null;
-    let bestDist   = Infinity;
-    for (const t of this.targets) {
-      if (t.dead) continue;
-      const d = dist(p.cx, p.cy, t.px, t.py);
-      if (d <= t.r * 1.4 && d < bestDist) { bestDist = d; bestTarget = t; }
-    }
-
-    if (bestTarget) {
-      this._claimTarget(bestTarget, who);
-    } else {
-      p.misses++;
-      p.combo = 0;
-      spawnBurst(this.particles, p.cx, p.cy, 'rgba(255,255,255,0.4)', 5, 120);
-      this._updateComboHUD(who);
-    }
+    // Spawn physical bullet
+    const vx = Math.cos(p.angle) * BULLET_SPEED;
+    const vy = Math.sin(p.angle) * BULLET_SPEED;
+    // Offset slightly ahead of the barrel
+    const bx = p.x + Math.cos(p.angle) * 50;
+    const by = p.y - 12 + Math.sin(p.angle) * 50;
+    
+    this.bullets.push(new Bullet(bx, by, vx, vy, who, COLORS[who]));
+    
+    // Muzzle flash particle
+    spawnBurst(this.particles, bx, by, '#fff', 3, 100);
   }
 
   _claimTarget(target, who) {
-    const p    = who === 'p1' ? this.p1 : this.p2;
-    const wasAlreadyDead = target.dead;
+    const p = who === 'p1' ? this.p1 : this.p2;
+    if (target.dead) return;
 
-    if (wasAlreadyDead && target.claimedBy && target.claimedBy !== who) {
-      // Another player already got it — fire into empty air
-      p.misses++; p.combo = 0; Sfx.miss();
-      return;
-    }
-
-    // Crow penalty
     if (target.type === 'crow') {
       p.score = Math.max(0, p.score + PTS.crow);
       p.hits++; p.combo = 0;
@@ -482,11 +476,17 @@ class DuckHuntDuel {
       return;
     }
 
-    // Check steal — target was also being aimed at by other player
-    const otherWho = who === 'p1' ? 'p2' : 'p1';
-    const other    = otherWho === 'p1' ? this.p1 : this.p2;
-    const otherDist = dist(other.cx, other.cy, target.px, target.py);
-    const isSteal  = this.mode === 'versus' && !target.dead && otherDist <= target.r * 2.2;
+    // Steal detection (other player has a bullet very close to this target)
+    let isSteal = false;
+    if (this.mode === 'versus') {
+      const otherWho = who === 'p1' ? 'p2' : 'p1';
+      for (const b of this.bullets) {
+        if (b.owner === otherWho && !b.dead && dist(b.x, b.y, target.px, target.py) < target.r + 150) {
+          isSteal = true;
+          break;
+        }
+      }
+    }
 
     if (isSteal) { p.steals++; Sfx.steal(); }
 
@@ -563,20 +563,26 @@ class DuckHuntDuel {
 
   _update(dt) {
     if (this.state === 'playing') {
-      // P2 keyboard cursor
-      if (this.mode === 'versus') {
-        const spd = P2_SPEED * dt;
-        if (this.keys['KeyW']||this.keys['ArrowUp'])    this.p2.cy -= spd;
-        if (this.keys['KeyS']||this.keys['ArrowDown'])  this.p2.cy += spd;
-        if (this.keys['KeyA']||this.keys['ArrowLeft'])  this.p2.cx -= spd;
-        if (this.keys['KeyD']||this.keys['ArrowRight']) this.p2.cx += spd;
-        this.p2.cx = clamp(this.p2.cx, 0, this.canvas.width);
-        this.p2.cy = clamp(this.p2.cy, 0, this.canvas.height);
+      
+      const turnSpd = 3.5 * dt;
 
-        // P2 shoot on keypress (debounced)
-        const p2ShootKey = this.keys['Space'] || this.keys['Enter'];
-        const p2ShootPrev = this._prevKeys['Space'] || this._prevKeys['Enter'];
-        if (p2ShootKey && !p2ShootPrev) this._shoot('p2');
+      // P1 Keyboard Controls (A/D to aim, W to shoot)
+      if (this.keys['KeyA']) this.p1.angle -= turnSpd;
+      if (this.keys['KeyD']) this.p1.angle += turnSpd;
+      // Clamp between almost flat left and flat right
+      this.p1.angle = clamp(this.p1.angle, -Math.PI + 0.15, -0.15);
+      
+      const p1Shoot = this.keys['KeyW'];
+      if (p1Shoot && !this._prevKeys['KeyW']) this._shoot('p1');
+
+      // P2 Keyboard Controls (Left/Right to aim, Up to shoot)
+      if (this.mode === 'versus') {
+        if (this.keys['ArrowLeft']) this.p2.angle -= turnSpd;
+        if (this.keys['ArrowRight']) this.p2.angle += turnSpd;
+        this.p2.angle = clamp(this.p2.angle, -Math.PI + 0.15, -0.15);
+
+        const p2Shoot = this.keys['ArrowUp'];
+        if (p2Shoot && !this._prevKeys['ArrowUp']) this._shoot('p2');
       }
 
       // Wave timer
@@ -591,7 +597,6 @@ class DuckHuntDuel {
         if (this.spawnTimer <= 0) {
           this._spawnTarget();
           this.spawnTimer = this.waveConf.spawnInterval;
-          // Occasionally launch doubles
           if (Math.random() < 0.25 && this.targetsLeft > 0) {
             this._spawnTarget();
           }
@@ -602,13 +607,41 @@ class DuckHuntDuel {
       for (const t of this.targets) t.update(dt, this.canvas.width, this.canvas.height);
       this.targets = this.targets.filter(t => !t.isExpired());
 
+      // Update bullets
+      for (const b of this.bullets) {
+        b.update(dt, this.canvas.width, this.canvas.height);
+        if (b.dead) continue;
+        
+        // target collision
+        for (const t of this.targets) {
+          if (t.dead) continue;
+          if (dist(b.x, b.y, t.px, t.py) <= t.r + b.r) {
+            b.dead = true;
+            b.hitSomething = true;
+            this._claimTarget(t, b.owner);
+            break;
+          }
+        }
+      }
+      
+      // Process dead bullets for misses
+      for (const b of this.bullets) {
+        if (b.dead && !b.hitSomething) {
+           const ownerP = b.owner === 'p1' ? this.p1 : this.p2;
+           ownerP.misses++;
+           ownerP.combo = 0;
+           this._updateComboHUD(b.owner);
+        }
+      }
+      this.bullets = this.bullets.filter(b => !b.dead);
+
       // Wave end condition
       const allDone = this.targetsLeft <= 0 && this.targets.every(t => t.dead);
       if (allDone || this.waveTimer <= 0) {
         this._endWave();
       }
 
-      // Reload timers
+      // Reload & Recoil
       [this.p1, this.p2].forEach(p => {
         if (p.reloading) {
           p.reloadTimer -= dt;
@@ -619,7 +652,8 @@ class DuckHuntDuel {
             document.getElementById(p.id==='p1'?'reloadP1':'reloadP2').style.display='none';
           }
         }
-        if (p.shotFlash > 0) p.shotFlash -= dt;
+        if (p.recoil > 0) p.recoil -= dt * 60; // Spring back quickly
+        else p.recoil = 0;
       });
 
       // Particles
@@ -643,19 +677,18 @@ class DuckHuntDuel {
     const W   = this.canvas.width;
     const H   = this.canvas.height;
 
-    // ── Background ──────────────────────────────────────────
+    // Background
     const sky = ctx.createLinearGradient(0,0,0,H);
     sky.addColorStop(0,'#0a1e0a'); sky.addColorStop(0.6,'#143d14'); sky.addColorStop(1,'#1a5520');
     ctx.fillStyle = sky;
     ctx.fillRect(0,0,W,H);
 
-    // Ground strip
+    // Ground 
     ctx.fillStyle = '#0e2a0e';
     ctx.fillRect(0, H*0.82, W, H*0.18);
     ctx.fillStyle = '#1a4020';
     ctx.fillRect(0, H*0.82, W, 8);
 
-    // Distant trees (parallax feel)
     ctx.fillStyle = '#0d2a10';
     for (let x = 0; x < W + 100; x += 70) {
       const h = 80 + ((x * 37) % 50);
@@ -666,7 +699,7 @@ class DuckHuntDuel {
       ctx.fill();
     }
 
-    // ── Particles ────────────────────────────────────────────
+    // Particles
     for (const pt of this.particles) {
       ctx.globalAlpha = clamp(pt.life / pt.maxLife, 0, 1);
       ctx.fillStyle = pt.col;
@@ -674,17 +707,22 @@ class DuckHuntDuel {
     }
     ctx.globalAlpha = 1;
 
-    // ── Targets ──────────────────────────────────────────────
+    // Targets
     const t = performance.now() / 1000;
     for (const tgt of this.targets) {
-      if (tgt.deadTimer > 0.35) continue; // faded out
+      if (tgt.deadTimer > 0.35) continue;
       const alpha = tgt.dead ? Math.max(0, 1 - tgt.deadTimer * 4) : 1;
       ctx.globalAlpha = alpha;
       this._drawTarget(ctx, tgt, t);
     }
     ctx.globalAlpha = 1;
 
-    // ── Float texts ──────────────────────────────────────────
+    // Bullets
+    for (const b of this.bullets) {
+      this._drawBullet(ctx, b);
+    }
+
+    // Float texts
     ctx.save();
     ctx.textAlign = 'center';
     for (const ft of this._floatTexts) {
@@ -700,12 +738,11 @@ class DuckHuntDuel {
     ctx.globalAlpha = 1;
     ctx.restore();
 
-    // ── Crosshairs ───────────────────────────────────────────
-    // P1 (always shown if playing on canvas)
+    // Turrets
     if (this.state === 'playing' || this.state === 'waveclear') {
-      this._drawCrosshair(ctx, this.p1.cx, this.p1.cy, COLORS.p1, this.p1.reloading, this.p1.shotFlash, 'P1');
+      this._drawTurret(ctx, this.p1, COLORS.p1);
       if (this.mode === 'versus') {
-        this._drawCrosshair(ctx, this.p2.cx, this.p2.cy, COLORS.p2, this.p2.reloading, this.p2.shotFlash, 'P2');
+        this._drawTurret(ctx, this.p2, COLORS.p2);
       }
     }
   }
@@ -716,51 +753,41 @@ class DuckHuntDuel {
     ctx.save();
     ctx.translate(x, y);
 
-    // Flip based on movement direction
     if (tgt.vx < 0) ctx.scale(-1,1);
 
     const bob = Math.sin(tgt.anim * 5) * 3;
     const flap = Math.sin(tgt.anim * 9) * 12;
 
     if (tgt.type === 'duck') {
-      // Body
       ctx.fillStyle = tgt.claimedBy === 'p1' ? '#ff4455' : tgt.claimedBy === 'p2' ? '#00ccff' : '#4ade80';
       ctx.beginPath(); ctx.ellipse(0, bob, 22, 14, 0, 0, Math.PI*2); ctx.fill();
-      // Head
       ctx.fillStyle = '#22c55e';
       ctx.beginPath(); ctx.ellipse(18, bob-8, 10, 9, 0.2, 0, Math.PI*2); ctx.fill();
-      // Wing
       ctx.save(); ctx.rotate(flap * Math.PI/180);
       ctx.fillStyle = '#166534';
       ctx.beginPath(); ctx.ellipse(-4, bob-4, 20, 8, 0.3, 0, Math.PI*2); ctx.fill();
       ctx.restore();
-      // Beak
       ctx.fillStyle = '#fbbf24';
       ctx.beginPath(); ctx.moveTo(26, bob-8); ctx.lineTo(34, bob-6); ctx.lineTo(26, bob-4); ctx.fill();
-      // Eye
       ctx.fillStyle = '#000';
       ctx.beginPath(); ctx.arc(20, bob-11, 2.5, 0, Math.PI*2); ctx.fill();
       ctx.fillStyle = '#fff';
       ctx.beginPath(); ctx.arc(21, bob-12, 1, 0, Math.PI*2); ctx.fill();
 
     } else if (tgt.type === 'clay') {
-      // Clay pigeon disc
       const col = tgt.claimedBy ? (tgt.claimedBy==='p1'?'#ff4455':'#00ccff') : '#f97316';
       ctx.fillStyle = col;
       ctx.beginPath(); ctx.ellipse(0, bob, 20, 9, 0.2, 0, Math.PI*2); ctx.fill();
       ctx.fillStyle = 'rgba(255,255,255,0.3)';
       ctx.beginPath(); ctx.ellipse(-4, bob-2, 10, 4, 0.2, 0, Math.PI*2); ctx.fill();
-      // Rim
       ctx.strokeStyle = 'rgba(0,0,0,0.3)'; ctx.lineWidth = 1.5;
       ctx.beginPath(); ctx.ellipse(0, bob, 20, 9, 0.2, 0, Math.PI*2); ctx.stroke();
 
     } else if (tgt.type === 'golden') {
-      // Golden bird — glowing, fast
       const glow = ctx.createRadialGradient(0, bob, 0, 0, bob, 30);
       glow.addColorStop(0,'rgba(251,191,36,0.4)'); glow.addColorStop(1,'transparent');
       ctx.fillStyle = glow;
       ctx.beginPath(); ctx.arc(0, bob, 30, 0, Math.PI*2); ctx.fill();
-
       ctx.fillStyle = '#fbbf24';
       ctx.beginPath(); ctx.ellipse(0, bob, 18, 11, 0, 0, Math.PI*2); ctx.fill();
       ctx.save(); ctx.rotate(flap * Math.PI/180);
@@ -769,23 +796,15 @@ class DuckHuntDuel {
       ctx.restore();
       ctx.fillStyle = '#fef08a';
       ctx.beginPath(); ctx.ellipse(16, bob-7, 8, 7, 0.2, 0, Math.PI*2); ctx.fill();
-      // Star sparkle
       ctx.fillStyle = '#fff';
       [[-14,-14],[14,-18],[-5,-22]].forEach(([sx,sy]) => {
-        ctx.save();
-        ctx.translate(sx,sy+bob);
-        ctx.rotate(tgt.anim*2);
-        ctx.beginPath();
-        for(let i=0;i<4;i++){
-          ctx.rotate(Math.PI/2);
-          ctx.moveTo(0,0); ctx.lineTo(5,0);
-        }
+        ctx.save(); ctx.translate(sx,sy+bob); ctx.rotate(tgt.anim*2); ctx.beginPath();
+        for(let i=0;i<4;i++){ ctx.rotate(Math.PI/2); ctx.moveTo(0,0); ctx.lineTo(5,0); }
         ctx.strokeStyle='rgba(255,255,200,0.7)'; ctx.lineWidth=1.5; ctx.stroke();
         ctx.restore();
       });
 
     } else if (tgt.type === 'crow') {
-      // Penalty crow — ominous dark bird
       ctx.fillStyle = '#1e1e2e';
       ctx.beginPath(); ctx.ellipse(0, bob, 20, 12, 0, 0, Math.PI*2); ctx.fill();
       ctx.save(); ctx.rotate((flap*1.3) * Math.PI/180);
@@ -794,13 +813,10 @@ class DuckHuntDuel {
       ctx.restore();
       ctx.fillStyle = '#0f0f1a';
       ctx.beginPath(); ctx.ellipse(16, bob-8, 9, 8, 0.2, 0, Math.PI*2); ctx.fill();
-      // Red eye
       ctx.fillStyle = '#ef4444';
       ctx.beginPath(); ctx.arc(19, bob-10, 3, 0, Math.PI*2); ctx.fill();
-      // Warning halo
       ctx.strokeStyle = 'rgba(255,100,0,0.25)'; ctx.lineWidth = 3;
       ctx.beginPath(); ctx.arc(0, bob, 36, 0, Math.PI*2); ctx.stroke();
-      // Red X
       ctx.strokeStyle = 'rgba(255,60,60,0.7)'; ctx.lineWidth = 2.5;
       ctx.beginPath(); ctx.moveTo(-32, bob-20); ctx.lineTo(-18, bob-8); ctx.moveTo(-18,bob-20); ctx.lineTo(-32,bob-8); ctx.stroke();
     }
@@ -808,48 +824,84 @@ class DuckHuntDuel {
     ctx.restore();
   }
 
-  _drawCrosshair(ctx, cx, cy, col, reloading, shotFlash, label) {
+  _drawBullet(ctx, b) {
     ctx.save();
-    const alpha = reloading ? 0.45 : 1;
-    const size  = 22 + (shotFlash > 0 ? 6 * (shotFlash / 0.12) : 0);
-    ctx.globalAlpha = alpha;
-    ctx.strokeStyle = col;
-    ctx.lineWidth = 2.5;
-    ctx.shadowBlur = shotFlash > 0 ? 16 : 8;
-    ctx.shadowColor = col;
-
-    // Outer ring
-    ctx.beginPath(); ctx.arc(cx, cy, size, 0, Math.PI*2); ctx.stroke();
-    // Inner dot
-    ctx.fillStyle = col; ctx.beginPath(); ctx.arc(cx, cy, 2.5, 0, Math.PI*2); ctx.fill();
-    // Cross lines
-    const gap = size + 6;
+    ctx.translate(b.x, b.y);
+    ctx.rotate(Math.atan2(b.vy, b.vx));
+    
+    // Simple glowing laser bullet
+    ctx.fillStyle = b.col;
     ctx.beginPath();
-    ctx.moveTo(cx - gap - 10, cy); ctx.lineTo(cx - size - 2, cy);
-    ctx.moveTo(cx + size + 2, cy); ctx.lineTo(cx + gap + 10, cy);
-    ctx.moveTo(cx, cy - gap - 10); ctx.lineTo(cx, cy - size - 2);
-    ctx.moveTo(cx, cy + size + 2); ctx.lineTo(cx, cy + gap + 10);
-    ctx.stroke();
+    ctx.ellipse(0, 0, 12, 4, 0, 0, Math.PI*2);
+    ctx.fill();
+    ctx.fillStyle = '#fff';
+    ctx.beginPath();
+    ctx.ellipse(4, 0, 4, 1.5, 0, 0, Math.PI*2);
+    ctx.fill();
+    ctx.restore();
+  }
 
-    // Reload arc fill
-    if (reloading && this.p1.reloadTimer) {
-      const p = reloading ? (this.mode === 'versus' && label==='P2' ? this.p2 : this.p1) : null;
-      if (p) {
-        const prog = 1 - (p.reloadTimer / (RELOAD_MS/1000));
-        ctx.strokeStyle = col;
-        ctx.lineWidth = 4;
-        ctx.beginPath();
-        ctx.arc(cx, cy, size + 10, -Math.PI/2, -Math.PI/2 + prog * Math.PI*2);
-        ctx.stroke();
-      }
+  _drawTurret(ctx, p, col) {
+    ctx.save();
+    ctx.translate(p.x, p.y);
+    
+    // Reload UI overlay
+    if (p.reloading) {
+      ctx.strokeStyle = col;
+      ctx.lineWidth = 6;
+      ctx.beginPath();
+      const prog = 1 - (p.reloadTimer / (RELOAD_MS/1000));
+      ctx.arc(0, -50, 20, -Math.PI/2, -Math.PI/2 + prog * Math.PI*2);
+      ctx.stroke();
     }
 
-    // Label
+    // Shadow below
+    ctx.fillStyle = 'rgba(0,0,0,0.3)';
+    ctx.beginPath();
+    ctx.ellipse(0, 0, 35, 12, 0, 0, Math.PI*2);
+    ctx.fill();
+
+    // The Barrel (rotates)
+    ctx.save();
+    // Move up slightly so it revolves around a higher pivot
+    ctx.translate(0, -12);
+    ctx.rotate(p.angle);
+    // Recoil (kickback)
+    ctx.translate(-p.recoil, 0);
+
+    // Main tube
     ctx.fillStyle = col;
-    ctx.font = '700 11px Outfit';
-    ctx.textAlign = 'center';
-    ctx.shadowBlur = 0;
-    ctx.fillText(reloading ? '⟳' : label, cx, cy + size + 18);
+    ctx.fillRect(0, -10, 60, 20);
+    // Highlight
+    ctx.fillStyle = 'rgba(255,255,255,0.2)';
+    ctx.fillRect(0, -10, 60, 6);
+    // Barrel grip/details
+    ctx.fillStyle = '#222';
+    ctx.fillRect(35, -11, 20, 22);
+    // Muzzle tip
+    ctx.fillStyle = '#111';
+    ctx.fillRect(60, -12, 8, 24);
+
+    ctx.restore();
+
+    // The Base (static)
+    // Dome top
+    ctx.fillStyle = '#1a1a1a';
+    ctx.beginPath();
+    ctx.arc(0, -5, 30, Math.PI, 0); 
+    ctx.fill();
+    // Main block
+    ctx.fillStyle = col;
+    ctx.beginPath();
+    ctx.moveTo(-35, 0);
+    ctx.lineTo(-25, -18);
+    ctx.lineTo(25, -18);
+    ctx.lineTo(35, 0);
+    ctx.fill();
+    // Base detail
+    ctx.fillStyle = '#000';
+    ctx.fillRect(-28, -6, 56, 6);
+    
     ctx.restore();
   }
 }
@@ -857,8 +909,6 @@ class DuckHuntDuel {
 // ── Boot ─────────────────────────────────────────────────────
 window.addEventListener('DOMContentLoaded', () => {
   const game = new DuckHuntDuel();
-
-  // Initial HUD render
   document.getElementById('hudP2').style.display = 'none';
   game._updateAmmoHUD();
 });
