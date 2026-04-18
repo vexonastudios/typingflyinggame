@@ -1467,6 +1467,26 @@ class SkyTyperGame {
     requestAnimationFrame((nextTimestamp) => this.loop(nextTimestamp));
   }
 
+  draw() {
+    this.ctx.save();
+    if (this.screenShake > 0) {
+       const intensity = this.screenShake * 35;
+       const dx = (Math.random() - 0.5) * intensity;
+       const dy = (Math.random() - 0.5) * intensity;
+       this.ctx.translate(dx, dy);
+    }
+  
+    this.ctx.clearRect(0, 0, LOGICAL_WIDTH, LOGICAL_HEIGHT);
+    this.drawBackground();
+    this.drawPlayer();
+    this.drawBullets();
+    this.drawEnemies();
+    this.drawEffects();
+    this.drawCrewBadge();
+    
+    this.ctx.restore();
+  }
+
   drawPlayer() {
     if (this.gameOver) {
       return;
@@ -1497,22 +1517,10 @@ class SkyTyperGame {
       this.ctx.stroke();
       this.ctx.shadowBlur = 0;
     }
-    if (this.screenShake > 0) {
-       const intensity = this.screenShake * 35;
-       const dx = (Math.random() - 0.5) * intensity;
-       const dy = (Math.random() - 0.5) * intensity;
-       this.ctx.translate(dx, dy);
-    }
-  
-    this.ctx.clearRect(0, 0, LOGICAL_WIDTH, LOGICAL_HEIGHT);
-    this.drawBackground();
-    this.drawPlayer();
-    this.drawBullets();
-    this.drawEnemies();
-    this.drawEffects();
-    this.drawCrewBadge();
     
     this.ctx.restore();
+
+    this.drawPlane(this.player.x, this.player.y, "#ffb63f", "#f04f54", 1, this.player.flash, this.player.level);
   }
 
   drawBackground() {
