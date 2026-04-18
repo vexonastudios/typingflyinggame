@@ -5,6 +5,7 @@
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
+:root {
   --p1: #ff4455;
   --p2: #00ccff;
   --p3: #a855f7;
