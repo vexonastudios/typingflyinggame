@@ -181,12 +181,14 @@ body {
   overflow: hidden;
   box-shadow: 0 0 0 1px rgba(255,255,255,0.05), 0 24px 60px rgba(0,0,0,0.8);
   background: #0a0f1e;
+  transform: translateZ(0);
 }
 
 #runnerCanvas {
   display: block;
   width: 100%;
   height: auto;
+  border-radius: inherit;
 }
 
 /* ── Overlays ── */

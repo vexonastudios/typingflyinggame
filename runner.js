@@ -121,6 +121,48 @@ const PROMPTS = {
   ]
 };
 
+// Expand Question Pool
+[
+  { q: "4 + 4 = ?", a: "8", w: ["7", "9"] },
+  { q: "10 − 5 = ?", a: "5", w: ["6", "4"] },
+  { q: "Rhymes with 'star'", a: "car", w: ["moon", "sky"] },
+  { q: "Rhymes with 'play'", a: "day", w: ["fun", "game"] },
+  { q: "Opposite of 'fast'", a: "slow", w: ["quick", "run"] },
+  { q: "Plural of 'dog'", a: "dogs", w: ["doges", "dog"] },
+  { q: "Synonym for 'happy'", a: "glad", w: ["sad", "mad"] },
+  { q: "Rhymes with 'light'", a: "night", w: ["dark", "day"] },
+  { q: "Opposite of 'up'", a: "down", w: ["high", "low"] },
+  { q: "15 + 5 = ?", a: "20", w: ["10", "25"] }
+].forEach(p => PROMPTS.Easy.push(p));
+
+[
+  { q: "7 × 6 = ?", a: "42", w: ["40", "44"] },
+  { q: "81 ÷ 9 = ?", a: "9", w: ["8", "7"] },
+  { q: "Synonym for 'scared'", a: "afraid", w: ["brave", "bold"] },
+  { q: "Antonym for 'arrive'", a: "depart", w: ["come", "stay"] },
+  { q: "Past tense of 'go'", a: "went", w: ["goed", "gone"] },
+  { q: "Plural of 'city'", a: "cities", w: ["citys", "cites"] },
+  { q: "Synonym for 'center'", a: "middle", w: ["edge", "side"] },
+  { q: "Antonym for 'expand'", a: "shrink", w: ["grow", "stretch"] },
+  { q: "12 × 5 = ?", a: "60", w: ["55", "65"] },
+  { q: "Plural of 'knife'", a: "knives", w: ["knifes", "knive"] }
+].forEach(p => PROMPTS.Medium.push(p));
+
+[
+  { q: "5x − 10 = 20, x = ?", a: "6", w: ["5", "7"] },
+  { q: "x² = 100, x = ?", a: "10", w: ["9", "11"] },
+  { q: "Synonym for 'obsolete'", a: "outdated", w: ["new", "fresh"] },
+  { q: "Antonym for 'generous'", a: "selfish", w: ["kind", "giving"] },
+  { q: "Prefix 'sub-' means...", a: "under", w: ["over", "with"] },
+  { q: "Suffix '-less' means...", a: "without", w: ["full of", "like"] },
+  { q: "Which is a pronoun?", a: "they", w: ["quickly", "run"] },
+  { q: "Homophone for 'piece'", a: "peace", w: ["peas", "peice"] },
+  { q: "Meaning of 'meticulous'", a: "careful", w: ["messy", "fast"] },
+  { q: "8x = 72, x = ?", a: "9", w: ["8", "7"] },
+  { q: "Antonym for 'benevolent'", a: "cruel", w: ["kind", "good"] },
+  { q: "Synonym for 'lucid'", a: "clear", w: ["dark", "murky"] }
+].forEach(p => PROMPTS.Hard.push(p));
+
 // ─────────────────────────────────────────────────────────────
 // Utility
 // ─────────────────────────────────────────────────────────────
@@ -177,6 +219,20 @@ class WordRunner {
       this.keys[e.key] = false;
     });
 
+    document.getElementById('fullscreenBtn')?.addEventListener('click', () => {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().then(() => {
+          document.body.classList.add("fs-mode");
+          document.getElementById('fullscreenBtn').textContent = "\u2715 Exit Fullscreen";
+        }).catch(() => {});
+      } else {
+        document.exitFullscreen().then(() => {
+          document.body.classList.remove("fs-mode");
+          document.getElementById('fullscreenBtn').textContent = "\u26F6 Fullscreen";
+        });
+      }
+    });
+
     // Radio button UI handling
     document.querySelectorAll('.diff-opt input').forEach(inp => {
       inp.addEventListener('change', () => {
@@ -224,6 +280,14 @@ class WordRunner {
     this._clearWorld();
 
     requestAnimationFrame((ts) => this._loop(ts));
+  }
+
+  _getPrompt(difficulty) {
+    if (!this.availablePrompts) this.availablePrompts = { Easy: [], Medium: [], Hard: [] };
+    if (!this.availablePrompts[difficulty] || this.availablePrompts[difficulty].length === 0) {
+      this.availablePrompts[difficulty] = [...PROMPTS[difficulty]].sort(() => Math.random() - 0.5);
+    }
+    return this.availablePrompts[difficulty].pop();
   }
 
   // ─── World State ───
@@ -315,8 +379,6 @@ class WordRunner {
     // Starting platform
     this.platforms.push({ x: -300, y: 500, w: 700, h: 120, active: true, type: 'grass' });
     px += 400;
-
-    const allPrompts = [...PROMPTS[this.currentDifficulty]].sort(() => Math.random() - 0.5);
 
     for (let i = 0; i < gateCount; i++) {
       // ── 1. Navigation gap ──
@@ -417,7 +479,7 @@ class WordRunner {
       // Safety pad + gate
       const safeX = px + 80 + numIslands * iSpacing;
       const safeY = 460;
-      const prompt = allPrompts[i % allPrompts.length];
+      const prompt = this._getPrompt(this.currentDifficulty);
       const answers = [prompt.a, prompt.w[0], prompt.w[1]].sort(() => Math.random() - 0.5);
       const gateWallX = safeX + 570;
 
@@ -453,8 +515,7 @@ class WordRunner {
         walkX: landPad + 900, walkDir: -1, walkSpeed: 60,
         anim: 0
       };
-      const bPrompts = [...PROMPTS[this.currentDifficulty]].sort(() => Math.random() - 0.5);
-      const bp = bPrompts[0];
+      const bp = this._getPrompt(this.currentDifficulty);
       const ba = [bp.a, bp.w[0], bp.w[1]].sort(() => Math.random() - 0.5);
       this.bossGate = {
         prompt: bp.q,
@@ -524,8 +585,7 @@ class WordRunner {
         this.goalFlag = { x: this.bossEntity.x + 60, y: 130, w: 18, h: 380, wave: 0 };
       } else {
         // New question
-        const prompts = [...PROMPTS[this.currentDifficulty]].sort(() => Math.random() - 0.5);
-        const bp = prompts[0];
+        const bp = this._getPrompt(this.currentDifficulty);
         const ba = [bp.a, bp.w[0], bp.w[1]].sort(() => Math.random() - 0.5);
         this.bossGate.prompt = bp.q;
         for (let i = 0; i < 3; i++) {
@@ -678,10 +738,12 @@ class WordRunner {
       const pxPrev = plat.x, pyPrev = plat.y;
       if (plat.moveY) {
         plat.y += plat.vy * dt;
-        if (plat.y < plat.endY || plat.y > plat.startY) plat.vy *= -1;
+        if (plat.y < plat.endY) { plat.y = plat.endY; plat.vy = Math.abs(plat.vy); }
+        else if (plat.y > plat.startY) { plat.y = plat.startY; plat.vy = -Math.abs(plat.vy); }
       } else {
         plat.x += plat.vx * dt;
-        if (plat.x > plat.endX || plat.x < plat.startX) plat.vx *= -1;
+        if (plat.x < plat.startX) { plat.x = plat.startX; plat.vx = Math.abs(plat.vx); }
+        else if (plat.x > plat.endX) { plat.x = plat.endX; plat.vx = -Math.abs(plat.vx); }
       }
       const dx = plat.x - pxPrev, dy = plat.y - pyPrev;
       for (const p of this.players) {
