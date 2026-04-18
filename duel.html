@@ -35,12 +35,19 @@
           <p>Race for the same targets! Overheating jams your gun.</p>
           <span class="mode-keys">P1: A/D & W · P2: ←/→ & ↑</span>
         </button>
+        <button class="mode-card mode-card--trio" id="btnTrio">
+          <div class="mode-icon">🔥</div>
+          <h2>3-Player Trio</h2>
+          <p>Utter chaos. Three players fighting for the sky!</p>
+          <span class="mode-keys">P1: A/D · P2: ←/→ · P3: H/K</span>
+        </button>
       </div>
 
       <div class="title-settings">
-        <div class="name-inputs" style="display:flex; gap:10px; justify-content:center; margin-bottom:15px;">
-          <input type="text" id="p1Name" placeholder="Player 1 Name" class="setting-input" style="text-align:center; flex:1; max-width:140px; background:rgba(0,0,0,0.4); border:1px solid #ff4455; color:#fff; border-radius:4px; padding:6px; font-family:inherit;">
-          <input type="text" id="p2Name" placeholder="Player 2 Name" class="setting-input" style="text-align:center; flex:1; max-width:140px; background:rgba(0,0,0,0.4); border:1px solid #00ccff; color:#fff; border-radius:4px; padding:6px; font-family:inherit;">
+        <div class="name-inputs" style="display:flex; gap:10px; justify-content:center; margin-bottom:15px; width: 100%; max-width: 600px;">
+          <input type="text" id="p1Name" placeholder="Player 1 Name" class="setting-input" style="text-align:center; flex:1; min-width:80px; background:rgba(0,0,0,0.4); border:1px solid #ff4455; color:#fff; border-radius:4px; padding:6px; font-family:inherit;">
+          <input type="text" id="p2Name" placeholder="Player 2 Name" class="setting-input" style="text-align:center; flex:1; min-width:80px; background:rgba(0,0,0,0.4); border:1px solid #00ccff; color:#fff; border-radius:4px; padding:6px; font-family:inherit;">
+          <input type="text" id="p3Name" placeholder="Player 3 Name" class="setting-input" style="text-align:center; flex:1; min-width:80px; background:rgba(0,0,0,0.4); border:1px solid #a855f7; color:#fff; border-radius:4px; padding:6px; font-family:inherit;">
         </div>
         <div class="game-settings-row">
         <label for="waveSelect">Waves:</label>
@@ -87,6 +94,13 @@
         <div class="hud-score" id="scoreP2">0</div>
         <div class="hud-name" id="nameLabelP2">🔵 Player 2</div>
       </div>
+      
+      <div class="hud-player hud-p3" id="hudP3" style="display: none;">
+        <div class="hud-combo" id="comboP3"></div>
+        <div class="hud-ammo" id="ammoP3"></div>
+        <div class="hud-score" id="scoreP3">0</div>
+        <div class="hud-name" id="nameLabelP3">🟣 Player 3</div>
+      </div>
     </div>
 
     <!-- Canvas -->
@@ -105,6 +119,7 @@
     <!-- Reload flash (per player) -->
     <div class="reload-toast" id="reloadP1">RELOADING…</div>
     <div class="reload-toast reload-toast--p2" id="reloadP2">RELOADING…</div>
+    <div class="reload-toast reload-toast--p3" id="reloadP3">RELOADING…</div>
   </div>
 
   <!-- ═══════════════════════════════════════════════════════

@@ -5,9 +5,9 @@
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-:root {
   --p1: #ff4455;
   --p2: #00ccff;
+  --p3: #a855f7;
   --gold: #fbbf24;
   --bg: #0a1a12;
   --dark: #071009;
@@ -127,6 +127,14 @@ html, body {
   box-shadow: 0 12px 40px rgba(0,204,255,0.2);
 }
 
+.mode-card--trio {
+  border-color: rgba(168,85,247,0.25);
+}
+.mode-card--trio:hover {
+  border-color: rgba(168,85,247,0.6);
+  box-shadow: 0 12px 40px rgba(168,85,247,0.2);
+}
+
 .mode-icon { font-size: 40px; margin-bottom: 10px; }
 .mode-card h2 { font-size: 22px; font-weight: 800; margin-bottom: 8px; }
 .mode-card p { font-size: 13px; color: rgba(255,255,255,0.6); margin-bottom: 12px; }
@@ -180,23 +188,28 @@ html, body {
 }
 
 .hud-player {
-  flex: 1; display: flex; align-items: center;
-  gap: 12px; padding: 0 20px;
+  flex: 1; display: flex; align-items: center; justify-content: center;
+  gap: 10px; padding: 0 12px;
 }
 
 .hud-p2 { flex-direction: row-reverse; }
+/* P3 acts as a second right-aligned or purely center block depending on layout, we'll keep it row-reversed for symmetry on the right */
+.hud-p3 { flex-direction: row-reverse; }
 
 .hud-name { font-size: 13px; font-weight: 700; white-space: nowrap; }
 .hud-p1 .hud-name { color: var(--p1); }
 .hud-p2 .hud-name { color: var(--p2); }
+.hud-p3 .hud-name { color: var(--p3); }
 
 .hud-score {
   font-size: 32px; font-weight: 900;
   font-variant-numeric: tabular-nums;
   min-width: 80px;
+  text-align: center;
 }
 .hud-p1 .hud-score { color: var(--p1); }
 .hud-p2 .hud-score { color: var(--p2); }
+.hud-p3 .hud-score { color: var(--p3); }
 
 .hud-ammo { 
   width: 120px;
@@ -216,6 +229,7 @@ html, body {
 }
 
 .hud-p2 .heat-fill { background-color: var(--p2); }
+.hud-p3 .heat-fill { background-color: var(--p3); }
 
 .heat-fill.hot { background-color: #fbbf24; box-shadow: 0 0 10px #fbbf24; }
 .heat-fill.overheated { background-color: #ff0000; animation: blink 0.2s infinite; }
@@ -300,6 +314,10 @@ html, body {
   left: auto; right: 20px;
   background: rgba(0,204,255,0.8); border-color: rgba(0,204,255,0.5);
 }
+.reload-toast--p3 {
+  left: 50%; transform: translateX(-50%);
+  background: rgba(168,85,247,0.8); border-color: rgba(168,85,247,0.5);
+}
 @keyframes slideUp {
   from { transform: translateY(12px); opacity: 0; }
   to   { transform: translateY(0);    opacity: 1; }
@@ -344,6 +362,7 @@ html, body {
 .stat-val { font-weight: 700; color: #fff; }
 .stat-block.p1-block { border-color: rgba(255,68,85,0.3); }
 .stat-block.p2-block { border-color: rgba(0,204,255,0.3); }
+.stat-block.p3-block { border-color: rgba(168,85,247,0.3); }
 
 .results-btns { display: flex; gap: 16px; flex-wrap: wrap; justify-content: center; }
 
