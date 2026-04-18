@@ -434,6 +434,9 @@ class DuckHuntDuel {
     this.maxWaves = 10;
     this.difficulty = 'normal';
 
+    // Tournament state
+    this.tourn = this._makeTournState();
+
     this.wave = 0;
     this.waveTimer = 0;
     this.spawnTimer = 0;
@@ -486,22 +489,32 @@ class DuckHuntDuel {
     document.getElementById('btnSolo').addEventListener('click', () => { if (AC.state==='suspended') AC.resume(); this.mode = 'solo'; this._startGame(); });
     document.getElementById('btnVersus').addEventListener('click', () => { if (AC.state==='suspended') AC.resume(); this.mode = 'versus'; this._startGame(); });
     document.getElementById('btnTrio').addEventListener('click', () => { if (AC.state==='suspended') AC.resume(); this.mode = 'trio'; this._startGame(); });
-    document.getElementById('btnPlayAgain').addEventListener('click', () => this._startGame());
+    document.getElementById('btnTournament').addEventListener('click', () => { if (AC.state==='suspended') AC.resume(); this._showTournamentSetup(); });
+    document.getElementById('btnAddHunter').addEventListener('click', () => this._addHunterEntry());
+    document.getElementById('btnStartTournament').addEventListener('click', () => this._startTournament());
+    document.getElementById('btnTournBack').addEventListener('click', () => this._showScreen('titleScreen'));
+    document.getElementById('btnBrackStart').addEventListener('click', () => { if (AC.state==='suspended') AC.resume(); this._launchTournamentMatch(); });
+    document.getElementById('btnBrackChamp').addEventListener('click', () => this._showChampionScreen());
+    document.getElementById('btnPlayAgain').addEventListener('click', () => {
+      if (this.tourn && this.tourn.active) { this._showBracketScreen(); return; }
+      this._startGame();
+    });
     document.getElementById('btnMenu').addEventListener('click', () => {
-      document.getElementById('resultsScreen').classList.remove('active');
-      document.getElementById('gameScreen').classList.remove('active');
+      this.tourn = this._makeTournState(); // reset tournament
+      ['resultsScreen','gameScreen'].forEach(s => document.getElementById(s).classList.remove('active'));
       document.getElementById('titleScreen').classList.add('active');
       this.state = 'title';
     });
   }
 
   _showScreen(id) {
-    ['titleScreen','gameScreen','resultsScreen'].forEach(s => document.getElementById(s).classList.remove('active'));
+    ['titleScreen','gameScreen','resultsScreen','tournamentScreen','bracketScreen']
+      .forEach(s => document.getElementById(s).classList.remove('active'));
     document.getElementById(id).classList.add('active');
   }
 
   _startGame() {
-    this.maxWaves   = parseInt(document.getElementById('waveSelect').value) || 10;
+    this.maxWaves = this.tourn.active ? 999 : (parseInt(document.getElementById('waveSelect').value) || 10);
     this.difficulty = document.getElementById('diffSelect').value || 'normal';
     this.wave = 0; this.targets = []; this.bullets = []; this.particles = [];
     this._floatTexts = [];
@@ -614,6 +627,11 @@ class DuckHuntDuel {
 
   _showResults() {
     this.state = 'results';
+    // Tournament intercept — record score and go to bracket screen instead
+    if (this.tourn && this.tourn.active) {
+      this._recordTournamentResult(this.p1.score, this.p2.score);
+      return;
+    }
     this._showScreen('resultsScreen');
 
     const players = [this.p1, this.p2, this.p3].filter(p => p);
@@ -781,6 +799,17 @@ class DuckHuntDuel {
 
   _update(dt) {
     if (this.state === 'playing') {
+      // Tournament 120-second match clock
+      if (this.tourn && this.tourn.timerActive) {
+        this.tourn.matchTimeLeft -= dt;
+        if (this.tourn.matchTimeLeft <= 0) {
+          this.tourn.matchTimeLeft = 0;
+          this.tourn.timerActive = false;
+          // Force end the current wave → triggers _showResults → intercepted by tournament engine
+          this._endWave();
+        }
+      }
+
       // Wind dynamics
       this.windChangeTimer -= dt;
       if (this.windChangeTimer <= 0) {
@@ -877,6 +906,279 @@ class DuckHuntDuel {
     this._updateHUD();
   }
 
+  // ── Tournament Engine ─────────────────────────────────
+
+  _makeTournState() {
+    return {
+      active: false, phase: 'idle',
+      hunters: [],   // [{name, wins, losses, totalScore, matches}]
+      schedule: [],  // [{h1Idx, h2Idx, p1Score, p2Score, done, winner}]
+      matchIdx: 0,
+      elimBracket: [], // 3 matches: SF1, SF2, Final
+      elimSeeds: [],
+      matchTimeLeft: 0, timerActive: false,
+      matchDuration: 120,
+      lastMatchResult: null,
+    };
+  }
+
+  _showTournamentSetup() {
+    document.getElementById('tournHunterList').innerHTML = '';
+    for (let i = 0; i < 3; i++) this._addHunterEntry();
+    // Pre-fill from saved names
+    const saved = _savedNames();
+    document.querySelectorAll('#tournHunterList .tourn-hunter-entry input')
+      .forEach((inp, i) => { if (saved[i]) inp.value = saved[i]; });
+    this._showScreen('tournamentScreen');
+  }
+
+  _addHunterEntry(defaultName = '') {
+    const list = document.getElementById('tournHunterList');
+    if (!list || list.children.length >= 8) return;
+    const n = list.children.length + 1;
+    const div = document.createElement('div');
+    div.className = 'tourn-hunter-entry';
+    div.innerHTML = `
+      <span class="hunter-num">${n}.</span>
+      <input type="text" placeholder="Hunter ${n}" maxlength="20" autocomplete="off"
+             list="savedNames" value="${defaultName.replace(/"/g,'&quot;')}">
+      <button class="btn-remove-hunter" title="Remove">✕</button>`;
+    div.querySelector('.btn-remove-hunter').addEventListener('click', () => {
+      if (list.children.length <= 3) return; // keep minimum 3
+      div.remove();
+      list.querySelectorAll('.hunter-num').forEach((el, i) => el.textContent = `${i+1}.`);
+    });
+    list.appendChild(div);
+  }
+
+  _startTournament() {
+    const inputs = document.querySelectorAll('#tournHunterList .tourn-hunter-entry input');
+    const names = Array.from(inputs).map(i => i.value.trim()).filter(Boolean);
+    if (names.length < 3) {
+      inputs[0].focus();
+      return;
+    }
+    names.forEach(_addSavedName);
+    _refreshDatalist();
+    const t = this.tourn = this._makeTournState();
+    t.hunters = names.map(name => ({ name, wins: 0, losses: 0, totalScore: 0, matches: 0 }));
+    t.schedule = this._generateRRSchedule(t.hunters.length);
+    t.matchIdx = 0;
+    t.phase = 'roundRobin';
+    t.active = true;
+    this._showBracketScreen();
+  }
+
+  _generateRRSchedule(n) {
+    const pairs = [];
+    for (let i = 0; i < n; i++)
+      for (let j = i+1; j < n; j++)
+        pairs.push({ h1Idx: i, h2Idx: j, p1Score: null, p2Score: null, done: false, winner: -1 });
+    // Greedy sort: no hunter plays in consecutive matches
+    const sorted = [], remaining = [...pairs];
+    let last = new Set();
+    while (remaining.length) {
+      const idx = remaining.findIndex(p => !last.has(p.h1Idx) && !last.has(p.h2Idx));
+      const m = idx === -1 ? remaining.shift() : remaining.splice(idx, 1)[0];
+      sorted.push(m);
+      last = idx === -1 ? new Set() : new Set([m.h1Idx, m.h2Idx]);
+    }
+    return sorted;
+  }
+
+  _showBracketScreen() {
+    const t = this.tourn;
+    const isRR = t.phase === 'roundRobin';
+    const schedule = isRR ? t.schedule : t.elimBracket;
+    const total = schedule.length;
+    const isDone = t.phase === 'done';
+
+    // Phase badge
+    const phaseLabels = { roundRobin: 'Round Robin', elimination: t.matchIdx < 2 ? 'Semi Finals' : 'The Final', done: 'Tournament Over' };
+    document.getElementById('brackPhaseBadge').textContent = phaseLabels[t.phase] || 'Round Robin';
+    document.getElementById('brackMatchCounter').textContent = isDone
+      ? '🏆 Tournament Complete!'
+      : `Match ${Math.min(t.matchIdx + 1, total)} of ${total}`;
+
+    // Last result banner
+    const lastRes = document.getElementById('brackLastResult');
+    const lastLine = document.getElementById('brackResultLine');
+    if (t.lastMatchResult) {
+      const lr = t.lastMatchResult;
+      const winner = t.hunters[lr.winner];
+      const loser  = t.hunters[lr.loser];
+      lastLine.innerHTML = `⭐ <strong>${winner.name}</strong> defeated ${loser.name} &nbsp;<span style="color:rgba(255,255,255,.35)">${lr.winScore} – ${lr.loseScore}</span>`;
+      lastRes.classList.remove('hidden');
+    } else {
+      lastRes.classList.add('hidden');
+    }
+
+    const startBtn = document.getElementById('btnBrackStart');
+    const champBtn = document.getElementById('btnBrackChamp');
+    const standingsWrap = document.getElementById('brackStandingsWrap');
+    const elimTree = document.getElementById('brackElimTree');
+    const nextMatch = document.getElementById('brackNextMatch');
+
+    if (isDone) {
+      nextMatch.style.display = 'none';
+      startBtn.style.display = 'none';
+      champBtn.style.display = '';
+      standingsWrap.style.display = 'none';
+      elimTree.style.display = '';
+      this._renderElimTree();
+    } else {
+      nextMatch.style.display = 'flex';
+      startBtn.style.display = '';
+      champBtn.style.display = 'none';
+      const match = schedule[t.matchIdx];
+      const h1 = t.hunters[match.h1Idx];
+      const h2 = t.hunters[match.h2Idx];
+      document.getElementById('brackH1Name').textContent = h1.name;
+      document.getElementById('brackH1Record').textContent = `${h1.wins}W · ${h1.losses}L`;
+      document.getElementById('brackH1Pts').textContent = `${h1.totalScore} pts`;
+      document.getElementById('brackH2Name').textContent = h2.name;
+      document.getElementById('brackH2Record').textContent = `${h2.wins}W · ${h2.losses}L`;
+      document.getElementById('brackH2Pts').textContent = `${h2.totalScore} pts`;
+      if (isRR) {
+        standingsWrap.style.display = '';
+        elimTree.style.display = 'none';
+        this._renderStandings();
+      } else {
+        standingsWrap.style.display = 'none';
+        elimTree.style.display = '';
+        this._renderElimTree();
+      }
+    }
+    this._showScreen('bracketScreen');
+  }
+
+  _renderStandings() {
+    const t = this.tourn;
+    const sorted = [...t.hunters].map((h,i) => ({...h,_i:i})).sort((a,b) => (b.wins-a.wins)||(b.totalScore-a.totalScore));
+    const rrDone = t.phase !== 'roundRobin';
+    document.getElementById('brackStandingsBody').innerHTML = sorted.map((h, rank) => {
+      let cls = '';
+      if (rrDone) cls = rank < 4 ? 'is-advancing' : 'is-eliminated';
+      else if (h.matches > 0 && rank === 0) cls = 'is-leader';
+      const medals = ['🥇','🥈','🥉','4️⃣'];
+      return `<tr class="${cls}"><td>${medals[rank]||rank+1}</td><td>${h.name}</td><td>${h.wins}</td><td>${h.losses}</td><td>${h.totalScore}</td></tr>`;
+    }).join('');
+  }
+
+  _renderElimTree() {
+    const t = this.tourn;
+    if (!t.elimBracket || !t.elimBracket.length) return;
+    const el = document.getElementById('brackElimTree');
+    const sfMatches  = t.elimBracket.slice(0, 2);
+    const finalMatch = t.elimBracket[2];
+    const slot = (hIdx, score, winner) => {
+      if (hIdx < 0) return `<div class="elim-slot is-tbd"><span class="elim-seed">—</span><span>TBD</span></div>`;
+      const h = t.hunters[hIdx];
+      const seed = (t.elimSeeds || []).indexOf(hIdx);
+      const isW = winner === hIdx && winner >= 0;
+      return `<div class="elim-slot ${isW ? 'is-winner' : ''}"><span class="elim-seed">S${seed+1}</span><span>${h.name}</span>${score!==null?`<span class="elim-score">${score}</span>`:''}</div>`;
+    };
+    const matchBox = (m, isCurrent) => `<div class="elim-match ${isCurrent?'is-current':''}">${ slot(m.h1Idx, m.p1Score, m.winner) }${ slot(m.h2Idx, m.p2Score, m.winner) }</div>`;
+    const curIdx = t.matchIdx;
+    el.innerHTML = `
+      <div class="elim-round">
+        <div class="elim-round-label">Semi Finals</div>
+        ${matchBox(sfMatches[0], curIdx===0)}
+        <div style="height:12px"></div>
+        ${matchBox(sfMatches[1], curIdx===1)}
+      </div>
+      <div class="elim-connector">→</div>
+      <div class="elim-round">
+        <div class="elim-round-label">Final</div>
+        ${matchBox(finalMatch, curIdx===2)}
+      </div>`;
+  }
+
+  _launchTournamentMatch() {
+    const t = this.tourn;
+    const schedule = t.phase === 'roundRobin' ? t.schedule : t.elimBracket;
+    const match = schedule[t.matchIdx];
+    const h1 = t.hunters[match.h1Idx];
+    const h2 = t.hunters[match.h2Idx];
+    // Wire names into the existing inputs
+    document.getElementById('p1Name').value = h1.name;
+    document.getElementById('p2Name').value = h2.name;
+    this.mode = 'versus';
+    t.matchTimeLeft = t.matchDuration;
+    t.timerActive = true;
+    this._startGame();
+  }
+
+  _recordTournamentResult(p1Score, p2Score) {
+    const t = this.tourn;
+    const schedule = t.phase === 'roundRobin' ? t.schedule : t.elimBracket;
+    const match = schedule[t.matchIdx];
+    match.p1Score = p1Score; match.p2Score = p2Score; match.done = true;
+    const t1Wins = p1Score >= p2Score;
+    match.winner = t1Wins ? match.h1Idx : match.h2Idx;
+    const wIdx = match.winner, lIdx = t1Wins ? match.h2Idx : match.h1Idx;
+    const wScore = Math.max(p1Score,p2Score), lScore = Math.min(p1Score,p2Score);
+    const winner = t.hunters[wIdx], loser  = t.hunters[lIdx];
+    winner.wins++; loser.losses++;
+    winner.totalScore += wScore; loser.totalScore += lScore;
+    winner.matches++;  loser.matches++;
+    t.lastMatchResult = { winner: wIdx, loser: lIdx, winScore: wScore, loseScore: lScore };
+    t.matchIdx++;
+    // Advance phase
+    if (t.phase === 'roundRobin' && t.matchIdx >= t.schedule.length) {
+      this._buildElimBracket();
+    } else if (t.phase === 'elimination') {
+      if (t.matchIdx === 2) {
+        // Both SFs done — wire up the Final
+        t.elimBracket[2].h1Idx = t.elimBracket[0].winner;
+        t.elimBracket[2].h2Idx = t.elimBracket[1].winner;
+      } else if (t.matchIdx > 2) {
+        t.phase = 'done';
+      }
+    }
+    Sfx.wave();
+    this._showBracketScreen();
+  }
+
+  _buildElimBracket() {
+    const t = this.tourn;
+    const ranked = [...t.hunters].map((h,i) => ({...h,_i:i}))
+      .sort((a,b) => (b.wins-a.wins)||(b.totalScore-a.totalScore));
+    const top4 = ranked.slice(0, 4);
+    while (top4.length < 4) top4.push({_i:-1}); // bye
+    t.elimSeeds = top4.map(h => h._i);
+    t.elimBracket = [
+      { h1Idx: top4[0]._i, h2Idx: top4[3]._i, p1Score: null, p2Score: null, done: false, winner: -1 },
+      { h1Idx: top4[1]._i, h2Idx: top4[2]._i, p1Score: null, p2Score: null, done: false, winner: -1 },
+      { h1Idx: -1, h2Idx: -1, p1Score: null, p2Score: null, done: false, winner: -1 },
+    ];
+    t.matchIdx = 0;
+    t.phase = 'elimination';
+  }
+
+  _showChampionScreen() {
+    const t = this.tourn;
+    const sorted = [...t.hunters].sort((a,b) => (b.wins-a.wins)||(b.totalScore-a.totalScore));
+    const champ = sorted[0];
+    document.getElementById('resultsEmoji').textContent = '🏆';
+    document.getElementById('resultsTitle').textContent = `${champ.name} is Champion!`;
+    const medals = ['🥇','🥈','🥉','4️⃣'];
+    document.getElementById('resultsStats').style.gridTemplateColumns = sorted.length <= 2 ? '1fr 1fr' : 'repeat(auto-fit,minmax(130px,1fr))';
+    document.getElementById('resultsStats').innerHTML = sorted.map((h,i) => `
+      <div class="stat-block ${i===0?'p1-block':''}">
+        <h3>${medals[i]||`${i+1}th`} ${h.name}</h3>
+        <div class="stat-line"><span>Wins</span><span class="stat-val">${h.wins}</span></div>
+        <div class="stat-line"><span>Total Score</span><span class="stat-val">${h.totalScore}</span></div>
+        <div class="stat-line"><span>Matches</span><span class="stat-val">${h.matches}</span></div>
+      </div>`).join('');
+    document.getElementById('btnPlayAgain').textContent = 'Play Again';
+    document.getElementById('btnMenu').textContent = '← Main Menu';
+    Sfx.win();
+    this._showScreen('resultsScreen');
+    // Reset tournament when they leave
+    t.active = false; t.phase = 'done';
+  }
+
   _floatText(text, x, y, col) {
     this._floatTexts.push({ text, x, y, col, life: 1.2, vy: -90, alpha: 1 });
   }
@@ -886,6 +1188,21 @@ class DuckHuntDuel {
     if (timerEl) {
         timerEl.textContent = Math.max(0, Math.ceil(this.waveTimer));
         timerEl.classList.toggle('urgent', this.waveTimer <= 5);
+    }
+    // Tournament match clock
+    const tmtEl = document.getElementById('tournMatchTimer');
+    if (tmtEl) {
+      const t = this.tourn;
+      if (t && t.active) {
+        const secs = Math.ceil(t.matchTimeLeft);
+        const m = Math.floor(secs / 60);
+        const s = secs % 60;
+        tmtEl.textContent = `⏱ ${m}:${s.toString().padStart(2,'0')}`;
+        tmtEl.className = secs <= 20 ? 'urgent' : '';
+        tmtEl.style.display = '';
+      } else {
+        tmtEl.style.display = 'none';
+      }
     }
     
     // Wind indicator

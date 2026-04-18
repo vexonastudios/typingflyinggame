@@ -44,6 +44,10 @@
         </button>
       </div>
 
+      <button id="btnTournament" class="btn-tournament-launch">
+        🏆 Tournament Mode
+      </button>
+
       <div class="title-settings">
         <datalist id="savedNames"></datalist>
         <div class="name-inputs" style="display:flex; gap:10px; justify-content:center; margin-bottom:15px; width: 100%; max-width: 600px;">
@@ -97,6 +101,7 @@
         <div class="hud-wind" id="windIndicator">🌬️ Wind: 0</div>
         <div class="hud-wave" id="waveDisplay">Wave 1/10</div>
         <div class="hud-timer" id="waveTimer">20</div>
+        <div id="tournMatchTimer" style="display:none">2:00</div>
       </div>
 
       <div class="hud-player hud-p2" id="hudP2">
@@ -144,6 +149,80 @@
       <div class="results-btns">
         <button class="btn-results" id="btnPlayAgain">Play Again</button>
         <button class="btn-results btn-results--ghost" id="btnMenu">Main Menu</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════
+    TOURNAMENT SETUP SCREEN
+  ═══════════════════════════════════════════════════════ -->
+  <div id="tournamentScreen" class="screen">
+    <div class="title-bg"></div>
+    <div class="title-content">
+      <div class="title-eyebrow">Vexona Studios</div>
+      <h1 class="title-logo">🏆 Hunter Tournament</h1>
+      <p class="title-tagline">Round Robin · Top 4 Elimination · 2-min matches</p>
+
+      <div class="tourn-setup-panel">
+        <p class="tourn-hint">Enter 3–8 hunters. Each faces every other hunter once in a 2-minute 1v1 duel. Top 4 advance to the elimination bracket.</p>
+        <div id="tournHunterList" class="tourn-hunter-list"></div>
+        <button id="btnAddHunter" class="btn-add-hunter">+ Add Hunter</button>
+      </div>
+
+      <div class="results-btns" style="margin-top:20px;">
+        <button id="btnStartTournament" class="btn-results">🎯 Lock &amp; Load</button>
+        <button id="btnTournBack" class="btn-results btn-results--ghost">← Back</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════
+    BRACKET / INTERSTITIAL SCREEN
+  ═══════════════════════════════════════════════════════ -->
+  <div id="bracketScreen" class="screen">
+    <div class="title-bg"></div>
+    <div class="bracket-wrap">
+
+      <div class="bracket-header">
+        <div class="bracket-phase-badge" id="brackPhaseBadge">Round Robin</div>
+        <div class="bracket-match-counter" id="brackMatchCounter">Match 1 of 6</div>
+      </div>
+
+      <div id="brackLastResult" class="bracket-last-result hidden">
+        <div class="bracket-result-line" id="brackResultLine"></div>
+      </div>
+
+      <div id="brackNextMatch" class="bracket-next-match">
+        <div class="bracket-h-card bracket-h-card--p1">
+          <div class="bracket-h-name" id="brackH1Name">—</div>
+          <div class="bracket-h-record" id="brackH1Record">0W · 0L</div>
+          <div class="bracket-h-pts" id="brackH1Pts">0 pts</div>
+        </div>
+        <div class="bracket-vs-label">VS</div>
+        <div class="bracket-h-card bracket-h-card--p2">
+          <div class="bracket-h-name" id="brackH2Name">—</div>
+          <div class="bracket-h-record" id="brackH2Record">0W · 0L</div>
+          <div class="bracket-h-pts" id="brackH2Pts">0 pts</div>
+        </div>
+      </div>
+
+      <div id="brackStandingsWrap" class="bracket-standings-wrap">
+        <div class="bracket-section-title">Standings</div>
+        <table class="tourn-table">
+          <thead><tr><th>#</th><th>Hunter</th><th>W</th><th>L</th><th>Total Score</th></tr></thead>
+          <tbody id="brackStandingsBody"></tbody>
+        </table>
+      </div>
+
+      <div id="brackElimTree" class="bracket-elim-tree" style="display:none"></div>
+
+      <div class="bracket-controls-hint" id="brackControlsHint">
+        🔴 P1: A/D · W to Shoot &nbsp;&nbsp;&nbsp; 🔵 P2: ←/→ · ↑ to Shoot
+      </div>
+
+      <div class="bracket-actions">
+        <button id="btnBrackStart" class="btn-results">🎯 Start Match</button>
+        <button id="btnBrackChamp" class="btn-results" style="display:none;">🏆 View Champion</button>
       </div>
     </div>
   </div>

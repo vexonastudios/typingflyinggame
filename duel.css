@@ -171,6 +171,174 @@ html, body {
 }
 .btn-back:hover { color: rgba(255,255,255,0.8); }
 
+/* ── Tournament Launch Button ─────────────────────────── */
+.btn-tournament-launch {
+  background: linear-gradient(135deg, rgba(251,191,36,0.15), rgba(251,191,36,0.05));
+  border: 1.5px solid rgba(251,191,36,0.35);
+  border-radius: 12px;
+  color: #fbbf24; font-family: 'Outfit', sans-serif;
+  font-size: 15px; font-weight: 700; letter-spacing: 0.5px;
+  padding: 10px 32px; cursor: pointer;
+  transition: all 0.2s;
+}
+.btn-tournament-launch:hover {
+  background: linear-gradient(135deg, rgba(251,191,36,0.28), rgba(251,191,36,0.1));
+  border-color: rgba(251,191,36,0.7);
+  box-shadow: 0 0 24px rgba(251,191,36,0.2);
+  transform: translateY(-2px);
+}
+
+/* ── Tournament Setup Screen ──────────────────────────── */
+#tournamentScreen {
+  flex-direction: column; align-items: center;
+  justify-content: center; overflow: hidden; position: relative;
+}
+
+.tourn-setup-panel {
+  width: 100%; max-width: 520px;
+  background: rgba(0,0,0,0.28);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 16px; padding: 22px 24px;
+}
+.tourn-hint {
+  font-size: 13px; color: rgba(255,255,255,0.45);
+  margin-bottom: 16px; text-align: center; line-height: 1.5;
+}
+.tourn-hunter-list {
+  display: flex; flex-direction: column; gap: 8px;
+  max-height: 280px; overflow-y: auto; margin-bottom: 12px;
+}
+.tourn-hunter-entry {
+  display: flex; align-items: center; gap: 8px;
+}
+.tourn-hunter-entry .hunter-num {
+  font-size: 12px; font-weight: 700;
+  color: rgba(255,255,255,0.35); width: 22px; text-align: right; flex-shrink: 0;
+}
+.tourn-hunter-entry input {
+  flex: 1; padding: 8px 12px;
+  background: rgba(0,0,0,0.4);
+  border: 1.5px solid rgba(255,255,255,0.12);
+  border-radius: 8px; color: #fff;
+  font-family: 'Outfit', sans-serif; font-size: 14px; outline: none;
+  transition: border-color 0.15s;
+}
+.tourn-hunter-entry input:focus { border-color: rgba(163,230,53,0.5); }
+.btn-remove-hunter {
+  background: none; border: none; color: rgba(255,255,255,0.25);
+  cursor: pointer; font-size: 15px; padding: 4px 6px; flex-shrink: 0;
+  transition: color 0.15s;
+}
+.btn-remove-hunter:hover { color: #ff4455; }
+.btn-add-hunter {
+  background: rgba(255,255,255,0.05);
+  border: 1.5px dashed rgba(255,255,255,0.2);
+  border-radius: 8px; color: rgba(255,255,255,0.5);
+  font-family: 'Outfit', sans-serif; font-size: 13px; font-weight: 600;
+  padding: 8px; width: 100%; cursor: pointer; transition: all 0.2s;
+}
+.btn-add-hunter:hover {
+  background: rgba(163,230,53,0.08); border-color: rgba(163,230,53,0.35); color: #a3e635;
+}
+
+/* ── Bracket / Interstitial Screen ────────────────────── */
+#bracketScreen {
+  flex-direction: column; align-items: center;
+  justify-content: flex-start; overflow-y: auto;
+  overflow-x: hidden; position: relative;
+}
+.bracket-wrap {
+  position: relative; z-index: 1;
+  display: flex; flex-direction: column; align-items: center; gap: 18px;
+  padding: 28px 20px 40px; width: 100%; max-width: 680px;
+}
+.bracket-header { display: flex; align-items: center; gap: 14px; }
+.bracket-phase-badge {
+  background: rgba(163,230,53,0.12); border: 1px solid rgba(163,230,53,0.4);
+  color: #a3e635; border-radius: 6px; padding: 3px 12px;
+  font-size: 11px; font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase;
+}
+.bracket-match-counter { font-size: 13px; color: rgba(255,255,255,0.4); font-weight: 600; }
+.bracket-last-result {
+  background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 10px; padding: 9px 22px;
+  font-size: 14px; text-align: center; color: rgba(255,255,255,0.65);
+  width: 100%;
+}
+.bracket-next-match {
+  display: flex; align-items: stretch; gap: 16px; width: 100%;
+}
+.bracket-h-card {
+  flex: 1; text-align: center;
+  background: rgba(255,255,255,0.04);
+  border: 2px solid rgba(255,255,255,0.08);
+  border-radius: 14px; padding: 18px 12px;
+}
+.bracket-h-card--p1 { border-color: rgba(255,68,85,0.35); }
+.bracket-h-card--p2 { border-color: rgba(0,204,255,0.35); }
+.bracket-h-name { font-size: clamp(17px,2.5vw,24px); font-weight: 900; margin-bottom: 6px; }
+.bracket-h-card--p1 .bracket-h-name { color: var(--p1); }
+.bracket-h-card--p2 .bracket-h-name { color: var(--p2); }
+.bracket-h-record { font-size: 12px; color: rgba(255,255,255,0.4); font-weight: 700; margin-bottom: 3px; }
+.bracket-h-pts { font-size: 12px; color: rgba(255,255,255,0.55); }
+.bracket-vs-label {
+  font-size: 26px; font-weight: 900; color: rgba(255,255,255,0.2);
+  flex-shrink: 0; align-self: center;
+}
+.bracket-standings-wrap { width: 100%; }
+.bracket-section-title {
+  font-size: 11px; font-weight: 800; color: rgba(255,255,255,0.3);
+  text-transform: uppercase; letter-spacing: 2px;
+  text-align: center; margin-bottom: 10px;
+}
+.tourn-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.tourn-table th {
+  font-size: 11px; font-weight: 700; color: rgba(255,255,255,0.3);
+  text-transform: uppercase; letter-spacing: 1px;
+  padding: 6px 10px; text-align: left;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+.tourn-table td { padding: 9px 10px; border-bottom: 1px solid rgba(255,255,255,0.05); color: rgba(255,255,255,0.75); }
+.tourn-table tr.is-leader td { color: #fbbf24; font-weight: 700; }
+.tourn-table tr.is-advancing td { color: #a3e635; }
+.tourn-table tr.is-eliminated td { color: rgba(255,255,255,0.2); text-decoration: line-through; }
+.bracket-actions { display: flex; gap: 14px; flex-wrap: wrap; justify-content: center; }
+.bracket-controls-hint { font-size: 11px; color: rgba(255,255,255,0.25); text-align: center; }
+
+/* Elimination tree */
+.bracket-elim-tree {
+  width: 100%; display: flex; align-items: center;
+  justify-content: center; gap: 4px; flex-wrap: wrap;
+}
+.elim-round { display: flex; flex-direction: column; gap: 16px; align-items: center; }
+.elim-round-label {
+  font-size: 10px; font-weight: 800; color: rgba(255,255,255,0.28);
+  text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 4px; text-align: center;
+}
+.elim-connector { color: rgba(255,255,255,0.15); font-size: 24px; padding: 0 6px; align-self: center; }
+.elim-match {
+  background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 10px; padding: 10px 14px; min-width: 160px;
+}
+.elim-slot {
+  display: flex; justify-content: space-between;
+  align-items: center; padding: 5px 0; font-size: 13px;
+}
+.elim-slot + .elim-slot { border-top: 1px solid rgba(255,255,255,0.07); }
+.elim-slot.is-winner { color: #fbbf24; font-weight: 700; }
+.elim-slot.is-tbd { color: rgba(255,255,255,0.25); font-style: italic; }
+.elim-seed { font-size: 10px; color: rgba(255,255,255,0.28); font-weight: 700; margin-right: 6px; }
+.elim-score { font-size: 11px; font-weight: 700; color: rgba(255,255,255,0.45); }
+.elim-match.is-current { border-color: rgba(163,230,53,0.45); }
+
+/* Tournament match timer in HUD */
+#tournMatchTimer {
+  font-size: 20px; font-weight: 900; color: #fbbf24;
+  font-variant-numeric: tabular-nums; letter-spacing: 1px;
+}
+#tournMatchTimer.urgent { color: #ff4455; animation: blink 0.5s infinite; }
+
+
 /* ── Voice Toggle Switch ──────────────────────────────── */
 .voice-toggle-label {
   font-size: 13px; color: rgba(255,255,255,0.65);
