@@ -632,6 +632,23 @@ class DuckHuntDuel {
   _endWave() {
     this.state = 'waveclear';
     if (this._idleInterval) { clearInterval(this._idleInterval); this._idleInterval = null; }
+
+    // Tournament match-end: if tournament active, go straight to results regardless of wave count
+    if (this.tourn && this.tourn.active) {
+      this.tourn.timerActive = false;
+      // Brief "Match Over!" flash then show results
+      const banner = document.getElementById('waveBanner');
+      const text   = document.getElementById('waveBannerText');
+      text.textContent = '⏱ Match Over!';
+      banner.classList.remove('hidden');
+      Sfx.wave();
+      setTimeout(() => {
+        banner.classList.add('hidden');
+        this._showResults();
+      }, 1400);
+      return;
+    }
+
     const banner = document.getElementById('waveBanner');
     const text   = document.getElementById('waveBannerText');
     Sfx.wave();
@@ -833,8 +850,11 @@ class DuckHuntDuel {
         if (this.tourn.matchTimeLeft <= 0) {
           this.tourn.matchTimeLeft = 0;
           this.tourn.timerActive = false;
-          // Force end the current wave → triggers _showResults → intercepted by tournament engine
-          this._endWave();
+          // Stop idle chatter
+          if (this._idleInterval) { clearInterval(this._idleInterval); this._idleInterval = null; }
+          // Call _showResults() directly — NOT _endWave(), which would restart
+          // waves because maxWaves=999 is never reached in tournament mode.
+          this._showResults();
         }
       }
 
