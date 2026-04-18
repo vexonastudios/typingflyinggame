@@ -996,19 +996,7 @@ class LaneBlitz {
       // Player HUD panel
       this._drawPlayerHUD(ctx, player, vx, vy, vw, vh);
 
-      // Shield overlay
-      if (player.shieldTimer > 0) {
-        ctx.save();
-        ctx.globalAlpha = 0.6 + 0.2*Math.sin(this._globalTime*10);
-        ctx.strokeStyle = '#aaddff';
-        ctx.lineWidth = 3;
-        ctx.beginPath();
-        ctx.arc(carX + CAR_W/2, carY + CAR_H/2, CAR_W, 0, Math.PI*2);
-        ctx.stroke();
-        ctx.fillStyle = 'rgba(170,221,255,0.2)';
-        ctx.fill();
-        ctx.restore();
-      }
+
 
       // Float texts
       for (const f of this._floatTexts) {
@@ -1296,6 +1284,19 @@ class LaneBlitz {
       ctx.lineTo(ox+W*0.65, oy+H);
       ctx.lineTo(ox+W*0.5, oy+H+10+Math.random()*8);
       ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+    }
+    // Shield overlay
+    if (p.shieldTimer > 0) {
+      ctx.save();
+      ctx.globalAlpha = 0.6 + 0.2*Math.sin(this._globalTime*10);
+      ctx.strokeStyle = '#aaddff';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(carX + CAR_W/2, carY + CAR_H/2, CAR_W, 0, Math.PI*2);
+      ctx.stroke();
+      ctx.fillStyle = 'rgba(170,221,255,0.2)';
       ctx.fill();
       ctx.restore();
     }
