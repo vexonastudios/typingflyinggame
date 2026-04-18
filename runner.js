@@ -254,7 +254,7 @@ class WordRunner {
 
     document.getElementById('playAgainBtn').addEventListener('click', () => {
       document.getElementById('gameEnd').style.display = 'none';
-      this.startGame(this.gameIsOver ? 1 : Math.min(this.currentLevel + 1, 5));
+      this.startGame((this.gameIsOver || this.currentLevel >= 5) ? 1 : this.currentLevel + 1);
     });
 
     document.getElementById('retryBtn').addEventListener('click', () => {
@@ -644,7 +644,7 @@ class WordRunner {
 
     if (won) {
       Sfx.win();
-      if (this.currentLevel >= 3) {
+      if (this.currentLevel >= 5) {
         icon.textContent = '🏆';
         title.textContent = 'Game Clear!';
         nextBtn.textContent = '▶ Play Again';
