@@ -24,7 +24,7 @@ const LAND_CRUSH_MS  = 120;    // landing squash frames
 const LANE_SNAP_SPD  = 14;     // lane lerp multiplier
 const STUN_DUR       = 1.2;    // collision stun seconds
 const SHAKE_MAX      = 14;
-const TOTAL_DIST     = 8000;   // track length in scroll-units
+const TOTAL_DIST     = 24000;  // extended track length in scroll-units
 
 // ─── Colour Palette ──────────────────────────────────────────
 const P_COLORS = ['#ff4d6d', '#38bdf8'];
@@ -105,9 +105,11 @@ const OBS_TEMPLATES = [
 // Sections repeat with increasing difficulty
 const SECTIONS = [
   { name:'Open Road',   minGap:340, maxGap:520, types:['block','boost'] },
+  { name:'Traffic Jam', minGap:280, maxGap:460, types:['vehicle','block','slow'] },
   { name:'Hazard Zone', minGap:260, maxGap:420, types:['block','block','barrier','debris'] },
-  { name:'Pit Run',     minGap:300, maxGap:460, types:['block','pit','boost','slow'] },
-  { name:'Chaos Lane',  minGap:220, maxGap:380, types:['block','barrier','debris','debris','pit'] },
+  { name:'Pit Run',     minGap:280, maxGap:460, types:['block','pit','boost','slow'] },
+  { name:'Laser Field', minGap:240, maxGap:400, types:['laser','block','shield'] },
+  { name:'Chaos Lane',  minGap:200, maxGap:350, types:['block','barrier','debris','vehicle','pit','laser'] },
 ];
 
 // ═══════════════════════════════════════════════════════════
@@ -128,7 +130,17 @@ class ObstacleSequencer {
     this.scrollPos += scrollDelta;
 
     // Move obstacles down
-    this.obstacles.forEach(o => { o.ys += scrollDelta; });
+    this.obstacles.forEach(o => {
+      o.ys += scrollDelta;
+      if (o.type === 'vehicle') {
+        // vehicle drives forward, so we subtract some delta from its screen progression
+        o.ys -= 180 * (scrollDelta / 500); 
+      }
+      if (o.type === 'laser') {
+        o.timer = (o.timer || 0) + (scrollDelta / 500);
+        o.active = (Math.sin(o.timer * 6) > 0);
+      }
+    });
 
     // Moving barrier logic
     this.obstacles.forEach(o => {
@@ -168,6 +180,17 @@ class ObstacleSequencer {
   }
 
   _buildObs(type) {
+    if (type === 'vehicle') {
+      const lane = randInt(0, 4);
+      return { type:'vehicle', ys:0, lane, x:laneX(lane)-CAR_W/2, w:CAR_W, h:CAR_H+10, hit:false };
+    }
+    if (type === 'shield') {
+      const lane = randInt(0, 4);
+      return { type:'shield', ys:0, lane, x:laneX(lane)-20, w:40, h:40, hit:false };
+    }
+    if (type === 'laser') {
+      return { type:'laser', ys:0, x:ROAD_X, w:ROAD_W, h:18, hit:false, timer:0, active:true };
+    }
     if (type === 'pit') {
       return {
         type:'pit', ys:0,
@@ -388,7 +411,19 @@ class RacerPlayer {
   }
 
   hit(type, x, y) {
-    if (this.shieldTimer > 0) { Sfx.shield(); return false; }
+    if (type === 'shield') {
+      this.shieldTimer = 6.0;
+      this.flashTimer= 0.3;
+      this.flashColor= '#aaddff';
+      Sfx.shield();
+      return false;
+    }
+    if (this.shieldTimer > 0 && type !== 'boost' && type !== 'slow') { 
+      this.shieldTimer = 0; // shield breaks on hit
+      Sfx.shield(); 
+      this.emitSparks(30, x, y, '#aaddff');
+      return false; 
+    }
     if (type === 'boost') {
       this.boostTimer = 2.2;
       this.flashTimer = 0.25;
@@ -409,8 +444,8 @@ class RacerPlayer {
       this.emitSparks(25, x, y, this.color);
       return true;
     }
-    if (type === 'block' || type === 'barrier' || type === 'debris') {
-      if (this.airborne) { Sfx.nearmiss(); return false; } // cleared it!
+    if (type === 'block' || type === 'barrier' || type === 'debris' || type === 'vehicle' || type === 'laser') {
+      if (this.airborne && type !== 'laser' && type !== 'vehicle') { Sfx.nearmiss(); return false; } // cleared it!
       this.stun();
       this.emitSparks(22, x, y, this.color);
       return true;
@@ -632,14 +667,17 @@ class LaneBlitz {
       if (pRight <= ox || pLeft >= ox2) continue;
       if (pBot  <= oy || pTop >= oy2) continue;
 
-      // Boost/slow check: only fires once per pass
-      if (obs.type === 'boost' || obs.type === 'slow') {
+      // Boost/slow/shield check: only fires once per pass
+      if (obs.type === 'boost' || obs.type === 'slow' || obs.type === 'shield') {
         obs.hit = player.id;
         player.hit(obs.type, ox + obs.w/2, oy + obs.h/2);
-        this._addFloat(obs.type === 'boost' ? '🚀 BOOST!' : '🐢 SLOW!',
-          ox + obs.w/2, oy, obs.type === 'boost' ? '#ffd060' : '#5599ff');
+        if (obs.type === 'shield') this._addFloat('🛡️ SHIELD!', ox + obs.w/2, oy, '#aaddff');
+        else this._addFloat(obs.type === 'boost' ? '🚀 BOOST!' : '🐢 SLOW!', ox + obs.w/2, oy, obs.type === 'boost' ? '#ffd060' : '#5599ff');
         continue;
       }
+      
+      // Laser active check
+      if (obs.type === 'laser' && !obs.active) continue;
 
       // Damaging types
       const wasHit = player.hit(obs.type, ox + obs.w/2, oy + obs.h/2);
@@ -957,6 +995,20 @@ class LaneBlitz {
       // Player HUD panel
       this._drawPlayerHUD(ctx, player, vx, vy, vw, vh);
 
+      // Shield overlay
+      if (player.shieldTimer > 0) {
+        ctx.save();
+        ctx.globalAlpha = 0.6 + 0.2*Math.sin(this._globalTime*10);
+        ctx.strokeStyle = '#aaddff';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(carX + CAR_W/2, carY + CAR_H/2, CAR_W, 0, Math.PI*2);
+        ctx.stroke();
+        ctx.fillStyle = 'rgba(170,221,255,0.2)';
+        ctx.fill();
+        ctx.restore();
+      }
+
       // Float texts
       for (const f of this._floatTexts) {
         const fx = roadL + (ROAD_W/2);
@@ -1101,6 +1153,37 @@ class LaneBlitz {
       ctx.stroke();
       ctx.font='18px sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
       ctx.fillText('🪨', dx+obs.w/2, oy+obs.h/2);
+    } else if (obs.type === 'vehicle') {
+      const vxPos = roadL + obs.x - (vw-ROAD_W)/2;
+      ctx.fillStyle = '#99aa88';
+      this._rRect(ctx, vxPos, oy, obs.w, obs.h, 6);
+      ctx.fill();
+      ctx.fillStyle = '#111';
+      ctx.fillRect(vxPos + 6, oy + 8, obs.w - 12, obs.h * 0.3);
+      ctx.fillStyle = '#ff2222';
+      ctx.fillRect(vxPos + 4, oy + obs.h - 6, 8, 4);
+      ctx.fillRect(vxPos + obs.w - 12, oy + obs.h - 6, 8, 4);
+    } else if (obs.type === 'shield') {
+      const sx = roadL + obs.x - (vw-ROAD_W)/2;
+      ctx.fillStyle = 'rgba(100,200,255,0.4)';
+      ctx.beginPath(); ctx.arc(sx+obs.w/2, oy+obs.h/2, obs.w/2, 0, Math.PI*2); ctx.fill();
+      ctx.strokeStyle = '#aaddff'; ctx.lineWidth=2; ctx.stroke();
+      ctx.font='22px sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.fillText('🛡️', sx+obs.w/2, oy+obs.h/2);
+    } else if (obs.type === 'laser') {
+      if (obs.active) {
+        ctx.fillStyle = '#ff0055';
+        ctx.fillRect(roadL, oy, ROAD_W, obs.h);
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(roadL, oy + obs.h/2 - 2, ROAD_W, 4);
+        ctx.strokeStyle = 'rgba(255,0,85,0.6)'; ctx.lineWidth=6;
+        ctx.strokeRect(roadL, oy, ROAD_W, obs.h);
+      } else {
+        // warning lines
+        ctx.strokeStyle = 'rgba(255,0,85,0.2)';
+        ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(roadL, oy+obs.h/2); ctx.lineTo(roadL+ROAD_W, oy+obs.h/2); ctx.stroke();
+      }
     } else {
       // block
       const bx = roadL + obs.x - (vw-ROAD_W)/2;
