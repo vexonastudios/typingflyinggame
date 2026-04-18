@@ -41,15 +41,33 @@ const Sfx = {
     } catch(e){}
   },
   buffers: {},
+  sprites: {},
   async loadFiles() {
     try {
+      const imgUrls = { 
+        duck: 'images/duck_standard.png',
+        white: 'images/duck_white.png',
+        golden: 'images/duck_golden.png' 
+      };
+      for(const [k, url] of Object.entries(imgUrls)) {
+        const i = new Image(); i.src = url;
+        await new Promise(r => { i.onload=r; i.onerror=r; });
+        const c = document.createElement('canvas'); c.width = i.width; c.height = i.height;
+        const cx = c.getContext('2d'); cx.drawImage(i,0,0);
+        const d = cx.getImageData(0,0,c.width,c.height);
+        for(let j=0; j<d.data.length; j+=4) {
+          if(d.data[j]>240 && d.data[j+1]>240 && d.data[j+2]>240) d.data[j+3] = 0;
+        }
+        cx.putImageData(d,0,0);
+        this.sprites[k] = c;
+      }
       const p = { shoot: 'sounds/shotgun-fire.mp3', reload: 'sounds/shotgun-reload.mp3' };
       for (const [k, url] of Object.entries(p)) {
         const res = await fetch(url);
         const buf = await AC.decodeAudioData(await res.arrayBuffer());
         this.buffers[k] = buf;
       }
-    } catch(e) { console.warn("Failed to load SFX", e); }
+    } catch(e) { console.warn("Failed to load Assets", e); }
   },
   _playBuf(key, vol=0.6) {
     if (!this.buffers[key]) return false;
@@ -210,9 +228,9 @@ class Target {
 }
 
 // ── Player State ──────────────────────────────────────────────
-function makePlayer(id) {
+function makePlayer(id, name) {
   return {
-    id, score: 0,
+    id, name, score: 0,
     heat: 0, 
     reloading: false, reloadTimer: 0,
     combo: 0, hits: 0, misses: 0, steals: 0,
@@ -302,7 +320,16 @@ class DuckHuntDuel {
     this.difficulty = document.getElementById('diffSelect').value || 'normal';
     this.wave = 0; this.targets = []; this.bullets = []; this.particles = [];
     this._floatTexts = [];
-    this.p1 = makePlayer('p1'); this.p2 = makePlayer('p2');
+    
+    // Custom names
+    const n1 = document.getElementById('p1Name').value.trim() || 'Player 1';
+    const n2 = document.getElementById('p2Name').value.trim() || 'Player 2';
+    this.p1 = makePlayer('p1', n1); 
+    this.p2 = makePlayer('p2', n2);
+    
+    document.getElementById('nameLabelP1').textContent = `🔴 ${this.p1.name}`;
+    document.getElementById('nameLabelP2').textContent = `🔵 ${this.p2.name}`;
+
     this.wind = 0; this.windTarget = 0;
     this._resize();
     document.getElementById('hudP2').style.display = this.mode === 'solo' ? 'none' : 'flex';
@@ -383,8 +410,8 @@ class DuckHuntDuel {
       title.textContent = `Score: ${p1.score}`;
       Sfx.win();
     } else {
-      if (p1.score > p2.score)       { emoji.textContent='🏆'; title.textContent='Player 1 Wins!'; Sfx.win(); }
-      else if (p2.score > p1.score)  { emoji.textContent='🏆'; title.textContent='Player 2 Wins!'; Sfx.win(); }
+      if (p1.score > p2.score)       { emoji.textContent='🏆'; title.textContent=`${p1.name} Wins!`; Sfx.win(); }
+      else if (p2.score > p1.score)  { emoji.textContent='🏆'; title.textContent=`${p2.name} Wins!`; Sfx.win(); }
       else                            { emoji.textContent='🤝'; title.textContent="It's a Draw!"; Sfx.draw(); }
     }
 
@@ -395,7 +422,7 @@ class DuckHuntDuel {
     if (this.mode === 'solo') {
       statsEl.innerHTML = `
         <div class="stat-block" style="grid-column:1/-1">
-          <h3>🔴 Your Stats</h3>
+          <h3>🔴 ${p1.name}'s Stats</h3>
           <div class="stat-line"><span>Score</span><span class="stat-val">${p1.score}</span></div>
           <div class="stat-line"><span>Hits</span><span class="stat-val">${p1.hits}</span></div>
           <div class="stat-line"><span>Misses</span><span class="stat-val">${p1.misses}</span></div>
@@ -404,7 +431,7 @@ class DuckHuntDuel {
     } else {
       statsEl.innerHTML = `
         <div class="stat-block p1-block">
-          <h3>🔴 Player 1</h3>
+          <h3>🔴 ${p1.name}</h3>
           <div class="stat-line"><span>Score</span><span class="stat-val">${p1.score}</span></div>
           <div class="stat-line"><span>Hits</span><span class="stat-val">${p1.hits}</span></div>
           <div class="stat-line"><span>Misses</span><span class="stat-val">${p1.misses}</span></div>
@@ -412,7 +439,7 @@ class DuckHuntDuel {
           <div class="stat-line"><span>Accuracy</span><span class="stat-val">${p1Acc}%</span></div>
         </div>
         <div class="stat-block p2-block">
-          <h3>🔵 Player 2</h3>
+          <h3>🔵 ${p2.name}</h3>
           <div class="stat-line"><span>Score</span><span class="stat-val">${p2.score}</span></div>
           <div class="stat-line"><span>Hits</span><span class="stat-val">${p2.hits}</span></div>
           <div class="stat-line"><span>Misses</span><span class="stat-val">${p2.misses}</span></div>
@@ -654,10 +681,9 @@ class DuckHuntDuel {
 
     ctx.fillStyle = '#0e2a0e'; ctx.fillRect(0, H*0.82, W, H*0.18);
     ctx.fillStyle = '#1a4020'; ctx.fillRect(0, H*0.82, W, 8);
-    ctx.fillStyle = '#0d2a10';
-    for (let x = 0; x < W + 100; x += 70) {
-      const h = 80 + ((x * 37) % 50); ctx.beginPath();
-      ctx.moveTo(x - 30, H*0.82); ctx.lineTo(x, H*0.82 - h); ctx.lineTo(x + 30, H*0.82); ctx.fill();
+    for (let x = -20; x < W + 100; x += 70) {
+      const scale = 0.6 + ((x * 37) % 50)/100;
+      this._drawTree(ctx, x, H * 0.82, scale, this.wind);
     }
 
     for (const pt of this.particles) { ctx.globalAlpha = clamp(pt.life / pt.maxLife, 0, 1); ctx.fillStyle = pt.col; ctx.beginPath(); ctx.arc(pt.x, pt.y, pt.r, 0, Math.PI*2); ctx.fill(); }
@@ -713,19 +739,38 @@ class DuckHuntDuel {
       ctx.restore();
   }
 
+  _drawTree(ctx, x, y, scale, wind) {
+    ctx.save(); ctx.translate(x, y); ctx.scale(scale, scale);
+    const sway = Math.sin(performance.now()/(800 + x)) * (wind*0.005);
+    ctx.transform(1, 0, Math.max(-0.2, Math.min(0.2, sway)), 1, 0, 0); 
+    ctx.fillStyle = '#061a08'; ctx.fillRect(-4, 0, 8, 15);
+    for(let i=0; i<4; i++) {
+        ctx.fillStyle = (i%2===0) ? '#0d2a10' : '#143d14';
+        ctx.beginPath();
+        ctx.moveTo(-25 + i*4, -15 - i*20);
+        ctx.lineTo(0, -50 - i*25);
+        ctx.lineTo(25 - i*4, -15 - i*20);
+        ctx.fill();
+    }
+    ctx.restore();
+  }
+
   _drawTarget(ctx, tgt, t) {
     const x = tgt.px, y = tgt.py; ctx.save(); ctx.translate(x, y); if (tgt.vx < 0) ctx.scale(-1,1);
     const bob = Math.sin(tgt.anim * 5) * 3; const flap = Math.sin(tgt.anim * 9) * 12;
-    if (tgt.type === 'duck') {
+    if (tgt.type === 'duck' && Sfx.sprites && Sfx.sprites.duck) { ctx.drawImage(Sfx.sprites.duck, -40, bob-35, 80, 70); }
+    else if (tgt.type === 'duck') {
       ctx.fillStyle = tgt.claimedBy === 'p1' ? '#ff4455' : tgt.claimedBy === 'p2' ? '#00ccff' : '#4ade80';
       ctx.beginPath(); ctx.ellipse(0, bob, 22, 14, 0, 0, Math.PI*2); ctx.fill(); ctx.fillStyle = '#22c55e'; ctx.beginPath(); ctx.ellipse(18, bob-8, 10, 9, 0.2, 0, Math.PI*2); ctx.fill();
       ctx.save(); ctx.rotate(flap * Math.PI/180); ctx.fillStyle = '#166534'; ctx.beginPath(); ctx.ellipse(-4, bob-4, 20, 8, 0.3, 0, Math.PI*2); ctx.fill(); ctx.restore();
       ctx.fillStyle = '#fbbf24'; ctx.beginPath(); ctx.moveTo(26, bob-8); ctx.lineTo(34, bob-6); ctx.lineTo(26, bob-4); ctx.fill();
       ctx.fillStyle = '#000'; ctx.beginPath(); ctx.arc(20, bob-11, 2.5, 0, Math.PI*2); ctx.fill();
-    } else if (tgt.type === 'clay') {
+    } else if (tgt.type === 'clay' && Sfx.sprites && Sfx.sprites.white) { ctx.drawImage(Sfx.sprites.white, -35, bob-30, 70, 60); }
+    else if (tgt.type === 'clay') {
       const col = tgt.claimedBy ? (tgt.claimedBy==='p1'?'#ff4455':'#00ccff') : '#f97316';
       ctx.fillStyle = col; ctx.beginPath(); ctx.ellipse(0, bob, 20, 9, 0.2, 0, Math.PI*2); ctx.fill();
-    } else if (tgt.type === 'golden') {
+    } else if (tgt.type === 'golden' && Sfx.sprites && Sfx.sprites.golden) { ctx.drawImage(Sfx.sprites.golden, -35, bob-30, 70, 60); }
+    else if (tgt.type === 'golden') {
       ctx.fillStyle = '#fbbf24'; ctx.beginPath(); ctx.ellipse(0, bob, 18, 11, 0, 0, Math.PI*2); ctx.fill();
     } else if (tgt.type === 'squid') {
       // Ink Squid - distinct purple/black body with tentacles
