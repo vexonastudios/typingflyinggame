@@ -5,7 +5,7 @@ let state = {
   players: [],
   questionCount: 0,
   maxWins: 1, // e.g. best of X (requires x round wins)
-  targetScore: 20, // Questions needed to win one round
+  targetScore: 10, // Questions needed to win one round
   status: 'menu', // menu, countdown, active, transition, results
   currentAnswer: null,
   options: [],
