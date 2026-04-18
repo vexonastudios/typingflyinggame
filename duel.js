@@ -40,12 +40,35 @@ const Sfx = {
       src.connect(g); g.connect(AC.destination); src.start();
     } catch(e){}
   },
-  shoot()  { this._noise(0.08,0.14); this._tone(200,'square',0.06,0.05,80); },
+  buffers: {},
+  async loadFiles() {
+    try {
+      const p = { shoot: 'sounds/shotgun-fire.mp3', reload: 'sounds/shotgun-reload.mp3' };
+      for (const [k, url] of Object.entries(p)) {
+        const res = await fetch(url);
+        const buf = await AC.decodeAudioData(await res.arrayBuffer());
+        this.buffers[k] = buf;
+      }
+    } catch(e) { console.warn("Failed to load SFX", e); }
+  },
+  _playBuf(key, vol=0.6) {
+    if (!this.buffers[key]) return false;
+    try {
+      if (AC.state==='suspended') AC.resume();
+      const s = AC.createBufferSource(), g = AC.createGain();
+      s.buffer = this.buffers[key];
+      g.gain.value = vol;
+      s.connect(g); g.connect(AC.destination);
+      s.start();
+      return true;
+    } catch(e) { return false; }
+  },
+  shoot()  { if (!this._playBuf('shoot', 0.8)) { this._noise(0.08,0.14); this._tone(200,'square',0.06,0.05,80); } },
   hit()    { this._tone(660,'sine',0.12,0.12,880); this._noise(0.05,0.06); },
   hitBig() { [660,880,1100].forEach((f,i)=>setTimeout(()=>this._tone(f,'sine',0.18,0.14),i*50)); },
   miss()   { this._tone(180,'sawtooth',0.15,0.06,120); },
   steal()  { this._tone(440,'sine',0.08,0.1,330); },
-  reload() { [180,200,220].forEach((f,i)=>setTimeout(()=>this._tone(f,'sine',0.08,0.06),i*60)); },
+  reload() { if (!this._playBuf('reload', 1.0)) { [180,200,220].forEach((f,i)=>setTimeout(()=>this._tone(f,'sine',0.08,0.06),i*60)); } },
   crow()   { this._tone(120,'sawtooth',0.25,0.1); },
   squid()  { this._noise(0.2, 0.2); this._tone(150, 'triangle', 0.2, 0.2, 50); }, // Ink splatter sound
   clash()  { this._tone(800, 'square', 0.1, 0.1, 100); this._noise(0.1, 0.15); }, // Bullets colliding
@@ -778,4 +801,7 @@ function waveConfig(waveNum, difficulty) {
   };
 }
 
-window.addEventListener('DOMContentLoaded', () => { new DuckHuntDuel(); });
+window.addEventListener('DOMContentLoaded', () => { 
+  Sfx.loadFiles();
+  new DuckHuntDuel(); 
+});
