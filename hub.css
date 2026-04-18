@@ -134,6 +134,7 @@ body {
 .game-card:hover .card-glow--cyan { opacity: 1; }
 .game-card:hover .card-glow--orange { opacity: 1; }
 .game-card:hover .card-glow--purple { opacity: 1; }
+.game-card:hover .card-glow--green { opacity: 1; }
 
 .card-glow {
   position: absolute;
@@ -171,6 +172,10 @@ body {
 .card-glow--purple {
   box-shadow: inset 0 0 0 2px rgba(168,85,247,0.7), 0 0 40px rgba(168,85,247,0.25);
   border: 2px solid rgba(168,85,247,0.7);
+}
+.card-glow--green {
+  box-shadow: inset 0 0 0 2px rgba(74,222,128,0.7), 0 0 40px rgba(74,222,128,0.25);
+  border: 2px solid rgba(74,222,128,0.7);
 }
 
 .game-card--locked {
@@ -457,6 +462,7 @@ body {
 .badge--cyan    { background: rgba(6,182,212,0.18); color: #22d3ee; border: 1px solid rgba(6,182,212,0.3); }
 .badge--orange  { background: rgba(249,115,22,0.18); color: #fdba74; border: 1px solid rgba(249,115,22,0.3); }
 .badge--purple  { background: rgba(168,85,247,0.18); color: #d8b4fe; border: 1px solid rgba(168,85,247,0.3); }
+.badge--green   { background: rgba(74,222,128,0.18); color: #86efac; border: 1px solid rgba(74,222,128,0.3); }
 .badge--api     { background: rgba(168,85,247,0.18); color: #d8b4fe; border: 1px solid rgba(168,85,247,0.3); }
 .badge--players { background: rgba(255,208,96,0.14); color: #ffd060; border: 1px solid rgba(255,208,96,0.3); }
 .badge--dim     { background: rgba(255,255,255,0.07); color: var(--muted); border: 1px solid var(--border); }
@@ -516,6 +522,48 @@ body {
 
 #card-mathrace .card-play-btn {
   background: linear-gradient(135deg, #7e22ce, #a855f7);
+}
+
+/* Duck Hunt Duel card */
+.card-art--duel {
+  background: linear-gradient(180deg, #0a1e0a 0%, #143d14 55%, #1a5520 100%);
+  position: relative;
+  overflow: hidden;
+}
+.art-duck {
+  font-size: 54px;
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -60%);
+  animation: duckFly 2s ease-in-out infinite alternate;
+  filter: drop-shadow(0 4px 10px rgba(0,200,80,0.4));
+}
+@keyframes duckFly {
+  from { transform: translate(-50%, -60%) rotate(-5deg); }
+  to   { transform: translate(-50%, -70%) rotate(5deg) translateX(20px); }
+}
+.art-crosshair {
+  position: absolute;
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  border: 3px solid;
+}
+.art-crosshair::before, .art-crosshair::after {
+  content: ''; position: absolute;
+  background: currentColor;
+}
+.art-crosshair::before { width: 2px; height: 14px; top: -14px; left: 50%; transform: translateX(-50%); }
+.art-crosshair::after  { width: 14px; height: 2px; left: -14px; top: 50%; transform: translateY(-50%); }
+.art-crosshair--1 { border-color: #ff4455; color: #ff4455; bottom: 28%; left: 22%; animation: chaseTarget 1.8s ease-in-out infinite; }
+.art-crosshair--2 { border-color: #00ccff; color: #00ccff; bottom: 32%; right: 22%; animation: chaseTarget 1.8s ease-in-out infinite 0.4s; }
+@keyframes chaseTarget {
+  0%,100% { transform: translate(0,0) scale(1); }
+  50%      { transform: translate(8px,-12px) scale(1.1); }
+}
+
+.card-play-btn--green {
+  background: linear-gradient(135deg, #16a34a, #4ade80);
+  color: #052e16;
 }
 
 /* ---- Footer ---- */

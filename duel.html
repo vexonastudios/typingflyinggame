@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Duck Hunt Duel – Vexona</title>
+  <meta name="description" content="Race your opponent to shoot the same ducks in this fast-paced arcade shooter!">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;900&display=swap" rel="stylesheet">
+  <link rel="icon" type="image/png" href="favicon.png">
+  <link rel="stylesheet" href="duel.css">
+</head>
+<body>
+
+  <!-- ═══════════════════════════════════════════════════════
+    TITLE SCREEN
+  ═══════════════════════════════════════════════════════ -->
+  <div id="titleScreen" class="screen active">
+    <div class="title-bg"></div>
+    <div class="title-content">
+      <div class="title-eyebrow">Vexona Studios</div>
+      <h1 class="title-logo">🦆 Duck Hunt Duel</h1>
+      <p class="title-tagline">Same duck. Two triggers. One winner.</p>
+
+      <div class="mode-cards">
+        <button class="mode-card" id="btnSolo">
+          <div class="mode-icon">🎯</div>
+          <h2>Solo</h2>
+          <p>Score attack — how high can you get?</p>
+          <span class="mode-keys">Mouse + Click</span>
+        </button>
+        <button class="mode-card mode-card--versus" id="btnVersus">
+          <div class="mode-icon">⚔️</div>
+          <h2>2-Player Versus</h2>
+          <p>Fight for the same targets in real time!</p>
+          <span class="mode-keys">P1: Mouse · P2: WASD + Space</span>
+        </button>
+      </div>
+
+      <div class="title-settings">
+        <label for="waveSelect">Waves:</label>
+        <select id="waveSelect" class="setting-select">
+          <option value="5">Quick (5 waves)</option>
+          <option value="10" selected>Standard (10 waves)</option>
+          <option value="15">Marathon (15 waves)</option>
+        </select>
+        <label for="diffSelect" style="margin-left:20px;">Difficulty:</label>
+        <select id="diffSelect" class="setting-select">
+          <option value="easy">Easy</option>
+          <option value="normal" selected>Normal</option>
+          <option value="hard">Hard</option>
+        </select>
+      </div>
+
+      <a href="index.html" class="btn-back">← Back to Hub</a>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════
+    GAME SCREEN
+  ═══════════════════════════════════════════════════════ -->
+  <div id="gameScreen" class="screen">
+    <!-- Top HUD -->
+    <div id="hud">
+      <div class="hud-player hud-p1" id="hudP1">
+        <div class="hud-name">🔴 Player 1</div>
+        <div class="hud-score" id="scoreP1">0</div>
+        <div class="hud-ammo" id="ammoP1"></div>
+        <div class="hud-combo" id="comboP1"></div>
+      </div>
+
+      <div class="hud-center">
+        <div class="hud-wave" id="waveDisplay">Wave 1</div>
+        <div class="hud-timer" id="waveTimer">20</div>
+      </div>
+
+      <div class="hud-player hud-p2" id="hudP2">
+        <div class="hud-combo" id="comboP2"></div>
+        <div class="hud-ammo" id="ammoP2"></div>
+        <div class="hud-score" id="scoreP2">0</div>
+        <div class="hud-name">🔵 Player 2</div>
+      </div>
+    </div>
+
+    <!-- Canvas -->
+    <canvas id="gameCanvas"></canvas>
+
+    <!-- Countdown overlay -->
+    <div id="countdownOverlay" class="overlay hidden">
+      <div class="countdown-number" id="countdownNum">3</div>
+    </div>
+
+    <!-- Wave clear banner -->
+    <div id="waveBanner" class="wave-banner hidden">
+      <div class="wave-banner-text" id="waveBannerText">Wave 1 Clear!</div>
+    </div>
+
+    <!-- Reload flash (per player) -->
+    <div class="reload-toast" id="reloadP1">RELOADING…</div>
+    <div class="reload-toast reload-toast--p2" id="reloadP2">RELOADING…</div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════
+    RESULTS SCREEN
+  ═══════════════════════════════════════════════════════ -->
+  <div id="resultsScreen" class="screen">
+    <div class="results-inner">
+      <div class="results-emoji" id="resultsEmoji">🏆</div>
+      <h1 class="results-title" id="resultsTitle">Player 1 Wins!</h1>
+      <div class="results-stats" id="resultsStats"></div>
+      <div class="results-btns">
+        <button class="btn-results" id="btnPlayAgain">Play Again</button>
+        <button class="btn-results btn-results--ghost" id="btnMenu">Main Menu</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="duel.js"></script>
+</body>
+</html>
