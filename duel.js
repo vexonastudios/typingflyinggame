@@ -761,8 +761,9 @@ class DuckHuntDuel {
     const animFrame = Math.floor((performance.now() / 100 + tgt.id * 10) % 4);
 
     if (tgt.type === 'duck' && Sfx.sprites && Sfx.sprites.duck) { 
-        const fw = Sfx.sprites.duck.width / 4, fh = Sfx.sprites.duck.height;
-        ctx.drawImage(Sfx.sprites.duck, animFrame*fw, 0, fw, fh, -40, bob-35, 80, 70); 
+        const fw = Sfx.sprites.duck.width / 4;
+        const cropY = Math.max(0, (Sfx.sprites.duck.height - fw) / 2);
+        ctx.drawImage(Sfx.sprites.duck, animFrame*fw, cropY, fw, fw, -70, bob-70, 140, 140); 
     }
     else if (tgt.type === 'duck') {
       ctx.fillStyle = tgt.claimedBy === 'p1' ? '#ff4455' : tgt.claimedBy === 'p2' ? '#00ccff' : '#4ade80';
@@ -771,15 +772,17 @@ class DuckHuntDuel {
       ctx.fillStyle = '#fbbf24'; ctx.beginPath(); ctx.moveTo(26, bob-8); ctx.lineTo(34, bob-6); ctx.lineTo(26, bob-4); ctx.fill();
       ctx.fillStyle = '#000'; ctx.beginPath(); ctx.arc(20, bob-11, 2.5, 0, Math.PI*2); ctx.fill();
     } else if (tgt.type === 'clay' && Sfx.sprites && Sfx.sprites.white) { 
-        const fw = Sfx.sprites.white.width / 4, fh = Sfx.sprites.white.height;
-        ctx.drawImage(Sfx.sprites.white, animFrame*fw, 0, fw, fh, -35, bob-30, 70, 60); 
+        const fw = Sfx.sprites.white.width / 4;
+        const cropY = Math.max(0, (Sfx.sprites.white.height - fw) / 2);
+        ctx.drawImage(Sfx.sprites.white, animFrame*fw, cropY, fw, fw, -60, bob-60, 120, 120); 
     }
     else if (tgt.type === 'clay') {
       const col = tgt.claimedBy ? (tgt.claimedBy==='p1'?'#ff4455':'#00ccff') : '#f97316';
       ctx.fillStyle = col; ctx.beginPath(); ctx.ellipse(0, bob, 20, 9, 0.2, 0, Math.PI*2); ctx.fill();
     } else if (tgt.type === 'golden' && Sfx.sprites && Sfx.sprites.golden) { 
-        const fw = Sfx.sprites.golden.width / 4, fh = Sfx.sprites.golden.height;
-        ctx.drawImage(Sfx.sprites.golden, animFrame*fw, 0, fw, fh, -35, bob-30, 70, 60); 
+        const fw = Sfx.sprites.golden.width / 4;
+        const cropY = Math.max(0, (Sfx.sprites.golden.height - fw) / 2);
+        ctx.drawImage(Sfx.sprites.golden, animFrame*fw, cropY, fw, fw, -70, bob-70, 140, 140); 
     }
     else if (tgt.type === 'golden') {
       ctx.fillStyle = '#fbbf24'; ctx.beginPath(); ctx.ellipse(0, bob, 18, 11, 0, 0, Math.PI*2); ctx.fill();
