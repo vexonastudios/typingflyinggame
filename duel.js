@@ -852,7 +852,7 @@ class DuckHuntDuel {
     spawnBurst(this.particles, target.px, target.py, col, 14, target.type==='golden'?360:(target.type==='squid'?300:240));
     if (target.type === 'squid') spawnBurst(this.particles, target.px, target.py, COLORS.ink, 30, 400); // Black ink splash
 
-    let label = comboMult > 1 ? `Ã—${comboMult} ${bonus}!` : `+${pts}`;
+    let label = comboMult > 1 ? `x${comboMult} ${bonus}!` : `+${pts}`;
     if (isSteal) label = `STEAL! +${bonus}`;
     if (target.type === 'squid' && this.mode === 'versus') label = "INK ATTACK!";
     this._floatText(label, target.px, target.py - 20, col);
@@ -1355,7 +1355,7 @@ class DuckHuntDuel {
       const scoreEl = document.getElementById(`score${uID}`);
       if (scoreEl) scoreEl.textContent = p.score;
       const comboEl = document.getElementById(`combo${uID}`);
-      if (comboEl) comboEl.textContent = p.combo > 1 ? `Ã—${Math.min(p.combo,8)} COMBO` : '';
+      if (comboEl) comboEl.textContent = p.combo > 1 ? `x${Math.min(p.combo,8)} COMBO` : '';
       
       const el = document.getElementById(`ammo${uID}`);
       if (this.mode === 'solo' && id !== 'p1') return;
