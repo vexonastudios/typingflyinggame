@@ -419,6 +419,7 @@ class CastleDuel {
   }
 
   _drawWorld(ctx, viewer, vpW) {
+    ctx.save();
     // Determine camera pan (keep target centered, clamp to world bounds)
     const panX = clamp(viewer.camX - vpW/2, 0, WORLD_W - vpW);
     
@@ -513,6 +514,7 @@ class CastleDuel {
       ctx.beginPath(); ctx.arc(p.x, p.y, 4, 0, Math.PI*2); ctx.fill();
     });
     ctx.globalAlpha = 1;
+    ctx.restore();
   }
 
   _drawMountains(ctx, panX, vpW) {
@@ -556,6 +558,13 @@ class CastleDuel {
     ctx.font = 'bold 24px Outfit';
     ctx.textAlign = 'right'; ctx.textBaseline='middle';
     ctx.fillText(`🪨 ${player.ammo}`, vpW - 20, 30);
+
+    // Controls Reminder
+    ctx.fillStyle = 'rgba(255,255,255,0.4)';
+    ctx.font = '12px Outfit';
+    ctx.textAlign = 'left';
+    const aimText = player.id === 0 ? '[W/S] Aim  [A/D] Power  [SPACE] Fire' : '[↑/↓] Aim  [←/→] Power  [ENTER] Fire';
+    ctx.fillText(aimText, 20, 50);
 
     // Stun / Death overlay
     if (player.hp <= 0) {
