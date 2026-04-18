@@ -324,6 +324,81 @@ class DuckHuntDuel {
     if (type !== 'crow') Sfx._tone(rnd(300,500),'triangle',0.06,0.03);
   }
 
+  _endWave() {
+    this.state = 'waveclear';
+    const banner = document.getElementById('waveBanner');
+    const text   = document.getElementById('waveBannerText');
+    Sfx.wave();
+
+    if (this.wave >= this.maxWaves) {
+      text.textContent = '🎯 Final Wave Done!';
+    } else {
+      text.textContent = `Wave ${this.wave} Clear! `;
+    }
+    banner.classList.remove('hidden');
+
+    setTimeout(() => {
+      banner.classList.add('hidden');
+      if (this.wave >= this.maxWaves) {
+        this._showResults();
+      } else {
+        this._startWave();
+      }
+    }, 2200);
+  }
+
+  _showResults() {
+    this.state = 'results';
+    this._showScreen('resultsScreen');
+
+    const p1 = this.p1, p2 = this.p2;
+    const emoji = document.getElementById('resultsEmoji');
+    const title = document.getElementById('resultsTitle');
+
+    if (this.mode === 'solo') {
+      emoji.textContent = '🎯';
+      title.textContent = `Score: ${p1.score}`;
+      Sfx.win();
+    } else {
+      if (p1.score > p2.score)       { emoji.textContent='🏆'; title.textContent='Player 1 Wins!'; Sfx.win(); }
+      else if (p2.score > p1.score)  { emoji.textContent='🏆'; title.textContent='Player 2 Wins!'; Sfx.win(); }
+      else                            { emoji.textContent='🤝'; title.textContent="It's a Draw!"; Sfx.draw(); }
+    }
+
+    const p1Acc = p1.hits + p1.misses > 0 ? Math.round(100*p1.hits/(p1.hits+p1.misses)) : 0;
+    const p2Acc = p2.hits + p2.misses > 0 ? Math.round(100*p2.hits/(p2.hits+p2.misses)) : 0;
+
+    const statsEl = document.getElementById('resultsStats');
+    if (this.mode === 'solo') {
+      statsEl.innerHTML = `
+        <div class="stat-block" style="grid-column:1/-1">
+          <h3>🔴 Your Stats</h3>
+          <div class="stat-line"><span>Score</span><span class="stat-val">${p1.score}</span></div>
+          <div class="stat-line"><span>Hits</span><span class="stat-val">${p1.hits}</span></div>
+          <div class="stat-line"><span>Misses</span><span class="stat-val">${p1.misses}</span></div>
+          <div class="stat-line"><span>Accuracy</span><span class="stat-val">${p1Acc}%</span></div>
+        </div>`;
+    } else {
+      statsEl.innerHTML = `
+        <div class="stat-block p1-block">
+          <h3>🔴 Player 1</h3>
+          <div class="stat-line"><span>Score</span><span class="stat-val">${p1.score}</span></div>
+          <div class="stat-line"><span>Hits</span><span class="stat-val">${p1.hits}</span></div>
+          <div class="stat-line"><span>Misses</span><span class="stat-val">${p1.misses}</span></div>
+          <div class="stat-line"><span>Steals</span><span class="stat-val">${p1.steals}</span></div>
+          <div class="stat-line"><span>Accuracy</span><span class="stat-val">${p1Acc}%</span></div>
+        </div>
+        <div class="stat-block p2-block">
+          <h3>🔵 Player 2</h3>
+          <div class="stat-line"><span>Score</span><span class="stat-val">${p2.score}</span></div>
+          <div class="stat-line"><span>Hits</span><span class="stat-val">${p2.hits}</span></div>
+          <div class="stat-line"><span>Misses</span><span class="stat-val">${p2.misses}</span></div>
+          <div class="stat-line"><span>Steals</span><span class="stat-val">${p2.steals}</span></div>
+          <div class="stat-line"><span>Accuracy</span><span class="stat-val">${p2Acc}%</span></div>
+        </div>`;
+    }
+  }
+
   _shoot(who) {
     const p = who === 'p1' ? this.p1 : this.p2;
     if (p.reloading || p.heat >= MAX_HEAT) { Sfx.miss(); return; }
@@ -574,10 +649,10 @@ class DuckHuntDuel {
     ctx.restore();
 
     if (this.state === 'playing' || this.state === 'waveclear') { 
-        this._drawTurret(ctx, this.p1, COLORS.p1); 
+        this._drawShotgun(ctx, this.p1, COLORS.p1); 
         this._drawInk(ctx, this.p1, W, H);
         if (this.mode === 'versus') {
-            this._drawTurret(ctx, this.p2, COLORS.p2); 
+            this._drawShotgun(ctx, this.p2, COLORS.p2); 
             this._drawInk(ctx, this.p2, W, H);
         }
     }
@@ -660,15 +735,35 @@ class DuckHuntDuel {
     ctx.restore();
   }
 
-  _drawTurret(ctx, p, col) {
+  _drawShotgun(ctx, p, col) {
     ctx.save(); ctx.translate(p.x, p.y);
-    ctx.fillStyle = 'rgba(0,0,0,0.3)'; ctx.beginPath(); ctx.ellipse(0, 0, 35, 12, 0, 0, Math.PI*2); ctx.fill();
-    ctx.save(); ctx.translate(0, -12); ctx.rotate(p.angle); ctx.translate(-p.recoil, 0);
-    ctx.fillStyle = col; ctx.fillRect(0, -10, 60, 20); ctx.fillStyle = 'rgba(255,255,255,0.2)'; ctx.fillRect(0, -10, 60, 6);
-    ctx.fillStyle = '#222'; ctx.fillRect(35, -11, 20, 22); ctx.fillStyle = '#111'; ctx.fillRect(60, -12, 8, 24);
+    ctx.fillStyle = 'rgba(0,0,0,0.3)'; ctx.beginPath(); ctx.ellipse(0, 0, 20, 8, 0, 0, Math.PI*2); ctx.fill();
+    
+    ctx.save(); 
+    ctx.translate(0, -10); ctx.rotate(p.angle); ctx.translate(-p.recoil * 1.5, 0);
+
+    // Double barrels
+    ctx.fillStyle = '#444'; 
+    ctx.fillRect(10, -8, 70, 6); 
+    ctx.fillRect(10, -1, 70, 6); 
+    
+    // Pump
+    ctx.fillStyle = '#8b5a2b'; ctx.fillRect(30, -3, 25, 10);
+    ctx.fillStyle = '#3a200a'; for(let i=32; i<52; i+=4) ctx.fillRect(i, -3, 2, 10);
+
+    // Receiver
+    ctx.fillStyle = col; ctx.fillRect(-15, -10, 30, 20);
+    ctx.fillStyle = '#222'; ctx.fillRect(0, -10, 15, 8);
+
+    // Stock
+    ctx.fillStyle = '#5c3a21';
+    ctx.beginPath(); ctx.moveTo(-15, -10); ctx.lineTo(-40, -5); ctx.lineTo(-40, 15); ctx.lineTo(-15, 10); ctx.fill();
+    
     ctx.restore();
-    ctx.fillStyle = '#1a1a1a'; ctx.beginPath(); ctx.arc(0, -5, 30, Math.PI, 0); ctx.fill();
-    ctx.fillStyle = col; ctx.beginPath(); ctx.moveTo(-35, 0); ctx.lineTo(-25, -18); ctx.lineTo(25, -18); ctx.lineTo(35, 0); ctx.fill();
+    
+    // Player shoulder / mount base
+    ctx.fillStyle = '#111'; ctx.beginPath(); ctx.arc(0, -5, 18, Math.PI, 0); ctx.fill();
+    ctx.fillStyle = col; ctx.fillRect(-15, -5, 30, 10);
     ctx.restore();
   }
 }
