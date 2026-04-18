@@ -4,7 +4,7 @@ let state = {
   mode: 1, // 1=solo, 2=2p, 3=3p
   players: [],
   round: 0,
-  maxRounds: 20,
+  maxWins: 1,
   status: 'menu', // menu, countdown, active, transition, results
   currentAnswer: null,
   options: [],
@@ -81,6 +81,10 @@ function playSound(type) {
 function startGame(mode) {
   state.mode = mode;
   state.round = 0;
+  state.maxWins = parseInt($('rounds-select') ? $('rounds-select').value : 1) || 1;
+  // If solo mode, we might want them to answer more questions to make it a race, e.g. 5x the rounds.
+  if (state.mode === 1 && state.maxWins < 10) state.maxWins = state.maxWins * 5;
+  
   state.soloTotalTime = 0;
   state.players = [];
   
@@ -125,7 +129,9 @@ function renderPlayerCards() {
 
 function startNextRound() {
   state.round++;
-  if (state.round > state.maxRounds) {
+  // Determine if anyone has won
+  const winner = state.players.find(p => p.score >= state.maxWins);
+  if (winner) {
     endGame();
     return;
   }
@@ -134,7 +140,7 @@ function startNextRound() {
   state.players.forEach(p => p.locked = false);
   updatePlayerUI();
   
-  $('round-display').innerText = `Round ${state.round}/${state.maxRounds}`;
+  $('round-display').innerText = state.mode === 1 ? `Questions: ${state.players[0].score}/${state.maxWins}` : `Race to ${state.maxWins}! (R${state.round})`;
   $('question-container').classList.add('hidden');
   $('round-feedback').classList.add('hidden');
   
@@ -273,15 +279,19 @@ function handleAnswer(pIdx, optIdx) {
   } else {
     playSound('wrong');
     p.locked = true;
+    p.score = Math.max(0, p.score - 1);
     slot.classList.add('wrong-flash');
     
     if (state.mode === 1) {
-      // time penalty
+      // time penalty and score penalty
       state.soloTotalTime += 2000;
       $('time-display').innerText = `Time: ${(state.soloTotalTime/1000).toFixed(1)}s`;
-      showFeedback('-2s Penalty', 'rgba(255,77,77,0.8)');
+      showFeedback('-2s & -1 Pt Penalty', 'rgba(255,77,77,0.8)');
+      $(`score-p${p.id}`).innerText = p.score;
+      $('round-display').innerText = `Questions: ${p.score}/${state.maxWins}`;
       setTimeout(() => { if(state.status==='active') $('round-feedback').classList.add('hidden'); }, 800);
     } else {
+      $(`score-p${p.id}`).innerText = p.score;
       updatePlayerUI();
       // check if all locked
       if (state.players.every(pl => pl.locked)) {
