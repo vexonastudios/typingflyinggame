@@ -3,7 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Word Runner – Vexona</title>
+  <title>Word Runner – Vexona Studios</title>
+  <meta name="description" content="Word Runner – a co-op action platformer where you jump on answer blocks to solve questions and defeat enemies!">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="runner.css">
@@ -19,54 +20,89 @@
           <h1 class="wr-title">Word Runner</h1>
           <div class="wr-sub">Co-op Action Platformer</div>
         </div>
-        <div class="lives-container" style="display:flex; gap: 20px; margin-left: 30px; background: rgba(0,0,0,0.3); padding: 8px 16px; border-radius: 12px;">
-          <div style="color:#3b9eff; font-weight:800; font-size:1.1rem;">P1 LIVES: <span id="p1Lives">3</span></div>
-          <div style="color:#ff4d4d; font-weight:800; font-size:1.1rem;">P2 LIVES: <span id="p2Lives">3</span></div>
+      </div>
+      <div class="header-center">
+        <div class="lives-badge p1-badge">
+          <div class="badge-label">P1</div>
+          <div class="badge-hearts" id="p1HeartsHud">♥ ♥ ♥</div>
+        </div>
+        <div class="score-block">
+          <div class="score-label">SCORE</div>
+          <div class="score-val" id="scoreDisplay">0</div>
+        </div>
+        <div class="lives-badge p2-badge">
+          <div class="badge-label">P2</div>
+          <div class="badge-hearts" id="p2HeartsHud">♥ ♥ ♥</div>
         </div>
       </div>
       <div class="header-right">
-        <div class="wr-score-box">
-          <span class="score-label">Score</span>
-          <span class="score-val" id="scoreDisplay">0</span>
-        </div>
+        <div class="level-badge" id="levelBadge">LVL 1</div>
       </div>
     </header>
 
     <!-- Canvas Area -->
     <div class="wr-canvas-wrapper" id="canvasContainer">
       <canvas id="runnerCanvas" width="1200" height="600"></canvas>
-      
-      <!-- Overlays -->
+
+      <!-- Setup Overlay -->
       <div id="gameSetup" class="wr-overlay">
         <div class="wr-modal">
+          <div class="modal-icon">🏃</div>
           <h2>Word Runner</h2>
-          <p>Run, jump, and stomp enemies. At every gate, jump into the correct word block to answer the riddle and unlock the path!</p>
-          <ul class="role-list">
-            <li><strong>Player 1:</strong> WASD keys</li>
-            <li><strong>Player 2:</strong> Arrow keys</li>
-          </ul>
-          <div style="margin-bottom: 24px; display:flex; flex-direction:column; gap:8px; text-align:left;">
-             <label style="font-weight:700; color:#cbd5e1;">Select Curriculum</label>
-             <select id="diffSelect" style="padding:12px; font-family:inherit; font-size:1.1rem; border-radius:8px; background:rgba(0,0,0,0.5); color:white; border:1px solid var(--accent); outline:none; cursor:pointer;">
-                <option value="Easy">Easy (Addition & Spelling)</option>
-                <option value="Medium" selected>Medium (Multiplication & Grammar)</option>
-                <option value="Hard">Hard (Algebra & Advanced Grammar)</option>
-             </select>
+          <p>Run, jump, and stomp enemies! Hit the <strong>correct answer block</strong> from below to open gates and advance. Answer wrong and lose a life — make it count!</p>
+
+          <div class="controls-grid">
+            <div class="ctrl-card p1-card">
+              <div class="ctrl-title">Player 1</div>
+              <div class="ctrl-keys">
+                <span class="key">↑</span> Jump<br>
+                <span class="key">←</span><span class="key">→</span> Move
+              </div>
+            </div>
+            <div class="ctrl-card p2-card">
+              <div class="ctrl-title">Player 2</div>
+              <div class="ctrl-keys">
+                <span class="key">W</span> Jump<br>
+                <span class="key">A</span><span class="key">D</span> Move
+              </div>
+            </div>
           </div>
-          <button id="startMissionBtn" class="start-btn">Start Level 1</button>
+
+          <div class="difficulty-row">
+            <label class="diff-label">Curriculum</label>
+            <div class="diff-options">
+              <label class="diff-opt"><input type="radio" name="diff" value="Easy"> <span>Easy</span><small>Addition & Spelling</small></label>
+              <label class="diff-opt selected"><input type="radio" name="diff" value="Medium" checked> <span>Medium</span><small>Multiplication & Grammar</small></label>
+              <label class="diff-opt"><input type="radio" name="diff" value="Hard"> <span>Hard</span><small>Algebra & Vocabulary</small></label>
+            </div>
+          </div>
+
+          <div class="mode-row">
+            <label class="diff-label">Players</label>
+            <div class="diff-options">
+              <label class="diff-opt selected"><input type="radio" name="mode" value="1" checked> <span>1 Player</span><small>Solo run</small></label>
+              <label class="diff-opt"><input type="radio" name="mode" value="2"> <span>2 Players</span><small>Co-op local</small></label>
+            </div>
+          </div>
+
+          <button id="startMissionBtn" class="start-btn">▶ Start Level 1</button>
         </div>
       </div>
-      
+
+      <!-- End Overlay -->
       <div id="gameEnd" class="wr-overlay" style="display:none">
         <div class="wr-modal">
+          <div class="modal-icon" id="endIcon">🎉</div>
           <h2 id="endTitle">Level Complete!</h2>
           <p id="endMessage">You passed all the word gates!</p>
-          <button id="playAgainBtn" class="start-btn" style="margin-top:20px">Play Again</button>
+          <div class="end-stats" id="endStats"></div>
+          <button id="playAgainBtn" class="start-btn" style="margin-top:24px">Next Level →</button>
+          <button id="retryBtn" class="secondary-btn">↺ Retry Level</button>
         </div>
       </div>
     </div>
   </div>
 
-  <script src="runner.js?v=final2"></script>
+  <script src="runner.js?v=proto1"></script>
 </body>
 </html>

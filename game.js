@@ -156,7 +156,7 @@ const DIFFICULTIES = {
   rookie: {
     label: "Rookie Pilot",
     shields: 6,
-    waves: 50,
+    waves: 30,
     minLength: 3,
     maxLength: 4,
     peakMaxLength: 8,
@@ -166,9 +166,9 @@ const DIFFICULTIES = {
     enemyBulletSpeed: 175,
     enemyFireDelay: 4.2,
     playerBulletSpeed: 520,
-    speedRamp: 4,
-    bulletRamp: 4,
-    fireRamp: 0.09,
+    speedRamp: 6.6,
+    bulletRamp: 6.6,
+    fireRamp: 0.15,
     minFireDelay: 1.55,
     eliteEvery: 4,
     eliteBonusEnemies: 1,
@@ -179,7 +179,7 @@ const DIFFICULTIES = {
   pilot: {
     label: "Sky Captain",
     shields: 5,
-    waves: 50,
+    waves: 30,
     minLength: 3,
     maxLength: 5,
     peakMaxLength: 9,
@@ -189,9 +189,9 @@ const DIFFICULTIES = {
     enemyBulletSpeed: 205,
     enemyFireDelay: 3.35,
     playerBulletSpeed: 560,
-    speedRamp: 5,
-    bulletRamp: 5,
-    fireRamp: 0.1,
+    speedRamp: 8.3,
+    bulletRamp: 8.3,
+    fireRamp: 0.16,
     minFireDelay: 1.2,
     eliteEvery: 4,
     eliteBonusEnemies: 1,
@@ -202,7 +202,7 @@ const DIFFICULTIES = {
   ace: {
     label: "Ace Flyer",
     shields: 4,
-    waves: 50,
+    waves: 30,
     minLength: 4,
     maxLength: 6,
     peakMaxLength: 10,
@@ -212,9 +212,9 @@ const DIFFICULTIES = {
     enemyBulletSpeed: 235,
     enemyFireDelay: 2.7,
     playerBulletSpeed: 600,
-    speedRamp: 6,
-    bulletRamp: 6,
-    fireRamp: 0.11,
+    speedRamp: 10,
+    bulletRamp: 10,
+    fireRamp: 0.18,
     minFireDelay: 0.95,
     eliteEvery: 3,
     eliteBonusEnemies: 2,
@@ -225,7 +225,7 @@ const DIFFICULTIES = {
   legend: {
     label: "Squadron Commander",
     shields: 4,
-    waves: 50,
+    waves: 30,
     minLength: 4,
     maxLength: 6,
     peakMaxLength: 10,
@@ -235,9 +235,9 @@ const DIFFICULTIES = {
     enemyBulletSpeed: 250,
     enemyFireDelay: 2.35,
     playerBulletSpeed: 620,
-    speedRamp: 7,
-    bulletRamp: 7,
-    fireRamp: 0.12,
+    speedRamp: 11.6,
+    bulletRamp: 11.6,
+    fireRamp: 0.20,
     minFireDelay: 0.82,
     eliteEvery: 3,
     eliteBonusEnemies: 2,
@@ -261,7 +261,21 @@ const SOUND_PRESETS = {
     { type: "triangle", start: 494, end: 494, duration: 0.14, volume: 0.03, delay: 0.14 },
     { type: "triangle", start: 659, end: 659, duration: 0.2, volume: 0.03, delay: 0.31 }
   ],
-  gameover: [{ type: "sawtooth", start: 150, end: 70, duration: 0.32, volume: 0.05 }]
+  gameover: [{ type: "sawtooth", start: 150, end: 70, duration: 0.32, volume: 0.05 }],
+  click: [{ type: "triangle", start: 800, end: 1200, duration: 0.03, volume: 0.02 }],
+  comboBreak: [
+    { type: "square", start: 280, end: 140, duration: 0.2, volume: 0.05 },
+    { type: "triangle", start: 240, end: 100, duration: 0.25, volume: 0.04, delay: 0.1 }
+  ],
+  waveStart: [
+    { type: "triangle", start: 300, end: 380, duration: 0.2, volume: 0.03 },
+    { type: "triangle", start: 450, end: 550, duration: 0.3, volume: 0.04, delay: 0.2 }
+  ],
+  bossWarning: [
+    { type: "sawtooth", start: 400, end: 400, duration: 0.3, volume: 0.06 },
+    { type: "sawtooth", start: 400, end: 300, duration: 0.3, volume: 0.06, delay: 0.5 },
+    { type: "sawtooth", start: 400, end: 400, duration: 0.3, volume: 0.06, delay: 1.0 }
+  ]
 };
 
 class SkyTyperGame {
@@ -286,7 +300,24 @@ class SkyTyperGame {
       comboValue: document.getElementById("comboValue"),
       statusBanner: document.getElementById("statusBanner"),
       targetValue: document.getElementById("targetValue"),
-      fullscreenButton: document.getElementById("fullscreenButton")
+      fullscreenButton: document.getElementById("fullscreenButton"),
+      gameMenusOverlay: document.getElementById("gameMenusOverlay"),
+      mainMenuPanel: document.getElementById("mainMenuPanel"),
+      pausePanel: document.getElementById("pausePanel"),
+      debriefPanel: document.getElementById("debriefPanel"),
+      debriefTitle: document.getElementById("debriefTitle"),
+      debriefMsg: document.getElementById("debriefMsg"),
+      debriefScore: document.getElementById("debriefScore"),
+      debriefCombo: document.getElementById("debriefCombo"),
+      debriefAccuracy: document.getElementById("debriefAccuracy"),
+      debriefBonus: document.getElementById("debriefBonus"),
+      debriefCloseButton: document.getElementById("debriefCloseButton"),
+      abortButton: document.getElementById("abortButton"),
+      cinematicBanner: document.getElementById("cinematicBanner"),
+      cinematicBannerText: document.getElementById("cinematicBannerText"),
+      bossHealthContainer: document.getElementById("bossHealthContainer"),
+      bossHealthFill: document.getElementById("bossHealthFill"),
+      comboCard: document.getElementById("comboCard")
     };
 
     this.audioContext = null;
@@ -415,16 +446,27 @@ class SkyTyperGame {
     this.wave = 0;
     this.score = 0;
     this.combo = 0;
+    this.maxCombo = 0;
+    this.totalKeystrokes = 0;
+    this.correctKeystrokes = 0;
+    this.waveStartTime = 0;
+    this.timeBonusScore = 0;
+    this.screenShake = 0;
     this.comboTimer = 0;
     this.keyJamTimer = 0;
     this.flashTimer = 0;
     this.pendingWaveTimer = 0;
+    this.cinematicTimer = 0;
     this.maxWaves = this.settings.waves;
     this.maxHealth = this.settings.shields;
     this.shields = this.settings.shields;
     this.currentWaveConfig = null;
     this.activeTargetId = null;
     this.messageText = "Choose a mission, then type the enemy words to fire.";
+
+    // Hide overlays
+    if (this.ui.cinematicBanner) this.ui.cinematicBanner.style.display = "none";
+    if (this.ui.bossHealthContainer) this.ui.bossHealthContainer.style.display = "none";
 
     this.player = {
       x: PLAYER_X,
@@ -451,6 +493,18 @@ class SkyTyperGame {
   bindEvents() {
     this.ui.startButton.addEventListener("click", () => this.startMission());
     this.ui.pauseButton.addEventListener("click", () => this.togglePause());
+    this.ui.abortButton.addEventListener("click", () => {
+       this.running = false;
+       this.ui.gameMenusOverlay.style.display = "flex";
+       this.ui.pausePanel.style.display = "none";
+       this.ui.mainMenuPanel.style.display = "flex";
+       this.updateUi();
+    });
+    this.ui.debriefCloseButton.addEventListener("click", () => {
+       this.ui.debriefPanel.style.display = "none";
+       this.ui.mainMenuPanel.style.display = "flex";
+       this.updateUi();
+    });
     this.ui.fullscreenButton.addEventListener("click", () => this.toggleFullScreen());
     window.addEventListener("resize", () => this.resizeCanvas());
     document.addEventListener("fullscreenchange", () => {
@@ -502,7 +556,7 @@ class SkyTyperGame {
         return;
       }
 
-      if (event.code === "Space" && this.running) {
+      if (event.code === "Space" && this.running && !this.activeTargetId) {
         event.preventDefault();
         this.togglePause();
         return;
@@ -601,6 +655,8 @@ class SkyTyperGame {
     this.settings = this.buildSettings();
     this.resetState();
     this.running = true;
+    this.ui.gameMenusOverlay.style.display = "none";
+    this.ui.mainMenuPanel.style.display = "none";
     this.maxWaves = this.settings.waves;
     this.maxHealth = this.settings.shields;
     this.shields = this.settings.shields;
@@ -609,7 +665,6 @@ class SkyTyperGame {
       : `${this.settings.label} mission launched. Type the word to fire.`;
 
     this.ui.startButton.textContent = "Restart Mission";
-    this.ui.pauseButton.textContent = "Pause";
     this.resumeAudio();
     this.spawnWave(1);
     this.updateUi();
@@ -621,8 +676,9 @@ class SkyTyperGame {
     }
 
     this.paused = !this.paused;
-    this.messageText = this.paused ? "Mission paused. Press Space or Pause to fly again." : "Mission resumed. Keep typing!";
-    this.ui.pauseButton.textContent = this.paused ? "Resume" : "Pause";
+    this.messageText = this.paused ? "Mission paused. Press Space or Resume to fly again." : "Mission resumed. Keep typing!";
+    this.ui.gameMenusOverlay.style.display = this.paused ? "flex" : "none";
+    this.ui.pausePanel.style.display = this.paused ? "flex" : "none";
     this.updateUi();
   }
 
@@ -655,6 +711,7 @@ class SkyTyperGame {
       return;
     }
 
+    this.totalKeystrokes += 1;
     let target = this.getActiveTarget();
 
     if (!target) {
@@ -672,10 +729,11 @@ class SkyTyperGame {
     const expected = target.word[target.typedIndex];
 
     if (letter !== expected) {
-      this.registerMiss(`Oops! ${expected.toUpperCase()} was next.`);
+      this.registerMiss(`Oops! ${expected.toUpperCase()} was next.`, target);
       return;
     }
 
+    this.correctKeystrokes += 1;
     target.typedIndex += 1;
     target.flash = 0.15;
     this.player.flash = 0.12;
@@ -684,9 +742,12 @@ class SkyTyperGame {
     this.messageText = `Locked on ${target.word.toUpperCase()}!`;
     this.spawnPlayerBullet(target);
     this.playSound("shoot");
+    this.playSound("click");
+    this.sparkleBurst(this.player.x + 42, this.player.y, 3, 220); // Gun barrel sparks
 
     if (target.typedIndex >= target.word.length) {
       target.completedTyping = true;
+      target.flash = 1.0; // Flash word completed
       this.activeTargetId = null;
       this.messageText = `${target.word.toUpperCase()} finished. Watch the plane burst!`;
     }
@@ -716,13 +777,18 @@ class SkyTyperGame {
     return target;
   }
 
-  registerMiss(message) {
+  registerMiss(message, target = null) {
+    if (this.combo >= 3) {
+      this.playSound("comboBreak");
+    } else {
+      this.playSound("miss");
+    }
+    
     this.combo = 0;
     this.comboTimer = 0;
     this.flashTimer = 0.18;
     this.keyJamTimer = 0.18;
     this.messageText = message;
-    this.playSound("miss");
     this.updateUi();
   }
 
@@ -866,8 +932,8 @@ class SkyTyperGame {
       y: LOGICAL_HEIGHT / 2 - 18,
       baseY: LOGICAL_HEIGHT / 2 - 18,
       speed: waveConfig.enemySpeed * 0.48,
-      bulletSpeed: waveConfig.enemyBulletSpeed + 18,
-      fireDelay: Math.max(waveConfig.fireDelay * 1.05, 0.85),
+      bulletSpeed: waveConfig.enemyBulletSpeed + 24,
+      fireDelay: Math.max(waveConfig.fireDelay * 0.75, 0.45),
       swaySpeed: 0.95,
       swayAmount: 22,
       shootCooldown: 1.25,
@@ -881,7 +947,9 @@ class SkyTyperGame {
       isBoss: true,
       gunPorts: [
         { x: -90, y: -24, angleOffset: -0.16 },
+        { x: -90, y: -12, angleOffset: -0.08 },
         { x: -102, y: 0, angleOffset: 0 },
+        { x: -90, y: 12, angleOffset: 0.08 },
         { x: -90, y: 24, angleOffset: 0.16 }
       ]
     };
@@ -910,6 +978,10 @@ class SkyTyperGame {
     }
 
     this.pendingWaveTimer = 0;
+    this.waveStartTime = this.totalTime;
+
+    let bannerText = `WAVE ${waveNumber}`;
+
     if (this.settings.practice) {
       this.messageText = waveConfig.isBossWave
         ? `Boss practice wave ${waveNumber}. The giant plane has a bigger word.`
@@ -917,6 +989,7 @@ class SkyTyperGame {
         ? `Ace practice wave ${waveNumber}. Longer words are coming in.`
         : `Wave ${waveNumber} ready. Practice mission is calm and safe.`;
     } else if (waveConfig.isBossWave) {
+      bannerText = waveConfig.isFinalWave ? `FINAL BOSS` : `BOSS WAVE`;
       this.messageText = waveConfig.isFinalWave
         ? `Final boss wave ${waveNumber}! Giant plane, huge word, and triple cannons.`
         : `Boss wave ${waveNumber}! Giant plane ahead with a bigger word and multiple guns.`;
@@ -927,12 +1000,33 @@ class SkyTyperGame {
     } else if (shouldSpawnRepairTarget) {
       this.messageText = `Wave ${waveNumber} incoming. A repair plane is in the sky if you need integrity back.`;
     } else if (waveConfig.isFinalWave) {
+      bannerText = `FINAL WAVE`;
       this.messageText = `Final ace wave ${waveNumber}! Fast planes, harder words, heavy fire.`;
     } else if (waveConfig.isEliteWave) {
       this.messageText = `Ace wave ${waveNumber}! More planes, faster shots, bigger words.`;
     } else {
       this.messageText = `Wave ${waveNumber} incoming. Type fast and dodge return fire.`;
     }
+    
+    // Trigger cinematic banner
+    if (this.ui.cinematicBanner && this.ui.cinematicBannerText) {
+      this.ui.cinematicBannerText.textContent = bannerText;
+      this.ui.cinematicBanner.style.display = "flex";
+      this.ui.cinematicBanner.style.opacity = "1";
+      if (waveConfig.isBossWave) {
+        this.playSound("bossWarning");
+      } else {
+        this.playSound("waveStart");
+      }
+      this.cinematicTimer = 2.0; // Show banner for 2 seconds
+    }
+    
+    if (waveConfig.isBossWave) {
+      this.bossEnemy = this.enemies.find(e => e.isBoss);
+    } else {
+      this.bossEnemy = null;
+    }
+
     this.updateUi();
   }
 
@@ -1079,6 +1173,18 @@ class SkyTyperGame {
     if (this.player.flash > 0) {
       this.player.flash = Math.max(this.player.flash - dt, 0);
     }
+    
+    if (this.screenShake > 0) {
+      this.screenShake = Math.max(0, this.screenShake - dt);
+    }
+    
+    if (this.cinematicTimer > 0) {
+      this.cinematicTimer = Math.max(0, this.cinematicTimer - dt);
+      if (this.cinematicTimer <= 0 && this.ui.cinematicBanner) {
+        this.ui.cinematicBanner.style.opacity = "0";
+        setTimeout(() => { if (this.ui.cinematicBanner) this.ui.cinematicBanner.style.display = "none"; }, 300);
+      }
+    }
 
     this.explosions = this.explosions.filter((explosion) => {
       explosion.life -= dt;
@@ -1196,6 +1302,21 @@ class SkyTyperGame {
       if (this.pendingWaveTimer <= 0) {
         this.pendingWaveTimer = 0.15;
         this.messageText = this.wave >= this.maxWaves ? "Sky clear. Mission complete!" : "Wave clear!";
+        
+        let timeBonus = 0;
+        if (!this.settings.practice) {
+          const waveTime = this.totalTime - this.waveStartTime;
+          const parTime = 12 + this.currentWaveConfig.enemyCount * 1.8;
+          if (waveTime < parTime) {
+             timeBonus = Math.floor((parTime - waveTime) * 15);
+             this.score += timeBonus;
+             this.timeBonusScore += timeBonus;
+          }
+        }
+        
+        if (timeBonus > 0) {
+           this.messageText += ` (+${timeBonus} Time Bonus)`;
+        }
         this.updateUi();
       }
     }
@@ -1223,6 +1344,7 @@ class SkyTyperGame {
     }
 
     this.combo += 1;
+    if (this.combo > this.maxCombo) this.maxCombo = this.combo;
     this.comboTimer = 3.1;
     const comboBonus = Math.max(0, this.combo - 1) * 20;
     this.score += (enemy.scoreValue ?? 100) + comboBonus;
@@ -1271,6 +1393,7 @@ class SkyTyperGame {
     this.comboTimer = 0;
     this.flashTimer = 0.24;
     this.player.flash = 0.24;
+    this.screenShake = 0.4;
     this.messageText = message;
     this.playSound("hurt");
 
@@ -1281,29 +1404,26 @@ class SkyTyperGame {
     this.updateUi();
   }
 
-  finishVictory() {
-    this.running = false;
-    this.victory = true;
-    const isNewBest = this.updateHighScores();
-    this.messageText = isNewBest
-      ? `New high score! Mission complete with ${this.score} points.`
-      : `Mission complete! Score ${this.score}. Your pilot saved the sky!`;
-    this.ui.pauseButton.textContent = "Pause";
-    this.playSound("victory");
-    if (this.tournament.active) this.recordTournamentScore(this.score);
-    this.updateUi();
-  }
-
   finishGameOver() {
     this.running = false;
     this.gameOver = true;
-    const isNewBest = this.updateHighScores();
-    this.messageText = isNewBest
-      ? `New high score! ${this.score} points before repairs were needed.`
-      : "Your plane needs repairs. Press Start Mission to fly again.";
-    this.ui.pauseButton.textContent = "Pause";
-    this.playSound("gameover");
-    if (this.tournament.active) this.recordTournamentScore(this.score);
+    this.activeTargetId = null;
+    this.createExplosion(this.player.x, this.player.y, "#ff4f54", 150);
+    this.playSound("boom");
+    this.messageText = "Ship destroyed! Mission Failed.";
+    this.ui.startButton.textContent = "Restart Mission";
+    this.showDebrief("SHIP DESTROYED");
+    this.updateUi();
+  }
+
+  finishVictory() {
+    this.running = false;
+    this.victory = true;
+    this.activeTargetId = null;
+    this.messageText = "Mission Accomplished! RTB for debrief.";
+    this.ui.startButton.textContent = "Restart Mission";
+    this.playSound("victory");
+    this.showDebrief("MISSION ACCOMPLISHED");
     this.updateUi();
   }
 
@@ -1325,10 +1445,10 @@ class SkyTyperGame {
     });
   }
 
-  sparkleBurst(x, y) {
-    for (let index = 0; index < 12; index += 1) {
-      const angle = (Math.PI * 2 * index) / 12 + Math.random() * 0.15;
-      const speed = 50 + Math.random() * 120;
+  sparkleBurst(x, y, count = 12, maxSpeed = 120) {
+    for (let index = 0; index < count; index += 1) {
+      const angle = (Math.PI * 2 * index) / count + Math.random() * 0.15;
+      const speed = 50 + Math.random() * maxSpeed;
       this.sparkles.push({
         x,
         y,
@@ -1347,15 +1467,52 @@ class SkyTyperGame {
     requestAnimationFrame((nextTimestamp) => this.loop(nextTimestamp));
   }
 
-  draw() {
+  drawPlayer() {
+    if (this.gameOver) {
+      return;
+    }
+
+    this.ctx.save();
+    this.ctx.translate(this.player.x, this.player.y);
+    
+    if (!this.paused) {
+      this.ctx.fillStyle = "rgba(100, 230, 255, 0.4)";
+      this.ctx.beginPath();
+      this.ctx.ellipse(-38, 0, 16 + Math.random() * 6, 4 + Math.random() * 2, 0, 0, Math.PI * 2);
+      this.ctx.fill();
+      this.ctx.fillStyle = "rgba(40, 100, 255, 0.2)";
+      this.ctx.beginPath();
+      this.ctx.ellipse(-52, 0, 12 + Math.random() * 4, 3 + Math.random() * 2, 0, 0, Math.PI * 2);
+      this.ctx.fill();
+    }
+    
+    if (this.combo >= 3) {
+      const glowScale = Math.min(1.2 + (this.combo - 3) * 0.05, 1.8);
+      this.ctx.shadowColor = "#ffd700";
+      this.ctx.shadowBlur = 15;
+      this.ctx.strokeStyle = `rgba(255, 215, 0, ${0.4 + Math.sin(this.totalTime * 8) * 0.2})`;
+      this.ctx.lineWidth = 3;
+      this.ctx.beginPath();
+      this.ctx.ellipse(0, 0, 42 * glowScale, 18 * glowScale, 0, 0, Math.PI * 2);
+      this.ctx.stroke();
+      this.ctx.shadowBlur = 0;
+    }
+    if (this.screenShake > 0) {
+       const intensity = this.screenShake * 35;
+       const dx = (Math.random() - 0.5) * intensity;
+       const dy = (Math.random() - 0.5) * intensity;
+       this.ctx.translate(dx, dy);
+    }
+  
     this.ctx.clearRect(0, 0, LOGICAL_WIDTH, LOGICAL_HEIGHT);
     this.drawBackground();
     this.drawPlayer();
     this.drawBullets();
     this.drawEnemies();
     this.drawEffects();
-    this.drawOverlay();
     this.drawCrewBadge();
+    
+    this.ctx.restore();
   }
 
   drawBackground() {
@@ -1928,32 +2085,36 @@ class SkyTyperGame {
     });
   }
 
-  drawOverlay() {
-    if (this.running) {
-      return;
+  showDebrief(titleText) {
+    if (this.ui.cinematicBanner) this.ui.cinematicBanner.style.display = "none";
+    if (this.ui.bossHealthContainer) this.ui.bossHealthContainer.style.display = "none";
+    
+    this.ui.gameMenusOverlay.style.display = "flex";
+    this.ui.pausePanel.style.display = "none";
+    this.ui.mainMenuPanel.style.display = "none";
+    this.ui.debriefPanel.style.display = "flex";
+     
+    this.ui.debriefTitle.textContent = titleText;
+    this.ui.debriefTitle.style.color = this.victory ? "#75ff9a" : "#ff6565";
+     
+    this.ui.debriefScore.textContent = `${this.score}`;
+    this.ui.debriefCombo.textContent = `x${this.maxCombo}`;
+     
+    const accuracy = this.totalKeystrokes > 0 ? Math.round((this.correctKeystrokes / this.totalKeystrokes) * 100) : 0;
+    this.ui.debriefAccuracy.textContent = `${accuracy}%`;
+    this.ui.debriefBonus.textContent = `${this.timeBonusScore}`;
+     
+    const isBest = this.updateHighScores();
+    if (isBest && this.score > 0) {
+       this.ui.debriefMsg.textContent = "New High Score! Hall of Fame updated.";
+       this.ui.debriefMsg.style.color = "#ffd700";
+    } else {
+       this.ui.debriefMsg.textContent = "Score sent to command.";
+       this.ui.debriefMsg.style.color = "#a8d6f5";
     }
-
-    this.ctx.save();
-    this.ctx.fillStyle = "rgba(6, 15, 32, 0.34)";
-    this.ctx.fillRect(0, 0, LOGICAL_WIDTH, LOGICAL_HEIGHT);
-
-    this.ctx.fillStyle = "#ffffff";
-    this.ctx.textAlign = "center";
-    this.ctx.font = '48px Impact, Haettenschweiler, "Arial Narrow Bold", sans-serif';
-
-    let title = "Ready To Fly?";
-    if (this.victory) {
-      title = "Mission Complete!";
-    } else if (this.gameOver) {
-      title = "Repair And Retry";
-    }
-
-    this.ctx.fillText(title, LOGICAL_WIDTH / 2, 208);
-    this.ctx.font = '24px "Trebuchet MS", sans-serif';
-    this.ctx.fillText(this.messageText, LOGICAL_WIDTH / 2, 250);
-    this.ctx.fillStyle = "#ffe06b";
-    this.ctx.fillText("Press Start Mission or Enter", LOGICAL_WIDTH / 2, 292);
-    this.ctx.restore();
+     
+    if (this.tournament.active) this.recordTournamentScore(this.score);
+    this.checkTournamentSubmission();
   }
 
   updateUi() {
@@ -1976,6 +2137,22 @@ class SkyTyperGame {
     this.ui.comboValue.textContent = `x${Math.max(1, this.combo)}`;
     this.ui.statusBanner.textContent = this.messageText;
     this.ui.targetValue.innerHTML = this.formatTargetLabel();
+    
+    if (this.ui.comboCard) {
+      if (this.combo >= 3) {
+        this.ui.comboCard.classList.add("combo-hot");
+      } else {
+        this.ui.comboCard.classList.remove("combo-hot");
+      }
+    }
+
+    if (this.bossEnemy && this.bossEnemy.health > 0 && !this.victory && !this.gameOver) {
+      if (this.ui.bossHealthContainer) this.ui.bossHealthContainer.style.display = "flex";
+      const hpPercent = (this.bossEnemy.health / this.bossEnemy.word.length) * 100;
+      if (this.ui.bossHealthFill) this.ui.bossHealthFill.style.width = `${hpPercent}%`;
+    } else {
+      if (this.ui.bossHealthContainer) this.ui.bossHealthContainer.style.display = "none";
+    }
   }
 
   formatTargetLabel() {
