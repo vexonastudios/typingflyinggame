@@ -1,19 +1,19 @@
-'use strict';
-// ═══════════════════════════════════════════════════════════════
-//  DUCK HUNT DUEL — Arcade Shooter Engine
+﻿'use strict';
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+//  DUCK HUNT DUEL â€” Arcade Shooter Engine
 //  Keyboard Aiming & Bullet Physics
 //  P1: A/D to rotate barrel, W to shoot
 //  P2: Left/Right to rotate barrel, Up to shoot
-// ═══════════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
-// ── Math helpers ─────────────────────────────────────────────
+// â”€â”€ Math helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const rnd  = (a,b) => a + Math.random()*(b-a);
 const rndI = (a,b) => Math.floor(rnd(a,b+1));
 const lerp = (a,b,t) => a+(b-a)*t;
 const dist = (ax,ay,bx,by) => Math.hypot(ax-bx,ay-by);
 const clamp = (v,lo,hi) => Math.max(lo,Math.min(hi,v));
 
-// ── Audio Engine ─────────────────────────────────────────────
+// â”€â”€ Audio Engine â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const AC = new (window.AudioContext || window.webkitAudioContext)();
 const Sfx = {
   _tone(freq, type, dur, vol=0.1, slope=null) {
@@ -77,7 +77,7 @@ const Sfx = {
   draw()   { [440,440,440].forEach((f,i)=>setTimeout(()=>this._tone(f,'triangle',0.2,0.08),i*120)); },
 };
 
-// ── Constants ─────────────────────────────────────────────────
+// â”€â”€ Constants â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const MAX_HEAT    = 100;
 const HEAT_PER_SHOT = 22;
 const COOL_RATE    = 42; // heat per second
@@ -87,7 +87,7 @@ const HIT_RADIUS = { duck:52, clay:38, golden:40, crow:48, squid:38, goose:62 };
 const PTS        = { duck:100, clay:150, golden:500, crow:-200, squid:250, goose:300 };
 const COLORS     = { p1:'#ff4455', p2:'#00ccff', p3:'#a855f7', gold:'#fbbf24', bad:'#ff6600', ink: '#111' };
 
-// ── Hunter Voice Lines ────────────────────────────────────────
+// â”€â”€ Hunter Voice Lines â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const HUNTER_VOICES = {
   p1: 'ruirxsoakN0GWmGNIo04',
   p2: 'aOcS60CY8CoaVaZfqqb5',
@@ -168,7 +168,7 @@ const hunterVoiceLines = {
   ]
 };
 
-// ── Hunter TTS Engine ─────────────────────────────────────────
+// â”€â”€ Hunter TTS Engine â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const HunterVoice = (() => {
   // Per-voice IndexedDB cache (keyed "voiceId:text")
   const DB_NAME = 'DuckHuntVoiceDB';
@@ -253,7 +253,14 @@ const HunterVoice = (() => {
   return { speak, maybeSpeak };
 })();
 
-// ── Particle system ────────────────────────────────────────────
+// Gated wrapper â€” respects the user's voice toggle preference
+function _voiceMaybe(category, voiceId, chance = 0.5) {
+  const toggle = document.getElementById('voiceToggle');
+  if (toggle && !toggle.checked) return;
+  _voiceMaybe(category, voiceId, chance);
+}
+
+// â”€â”€ Particle system â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 class Particle {
   constructor(x,y,col,vx,vy,life,r) {
     this.x=x; this.y=y; this.col=col;
@@ -269,7 +276,7 @@ function spawnBurst(particles, x, y, col, n=12, speed=280) {
   }
 }
 
-// ── Bullet ────────────────────────────────────────────────────
+// â”€â”€ Bullet â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 class Bullet {
   constructor(x, y, vx, vy, owner, col) {
     this.x = x; this.y = y; 
@@ -297,7 +304,7 @@ class Bullet {
   }
 }
 
-// ── Target ────────────────────────────────────────────────────
+// â”€â”€ Target â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 class Target {
   constructor(type, canvas) {
     this.type = type;
@@ -375,7 +382,7 @@ class Target {
   isExpired() { return this.dead && this.deadTimer > (this.claimedBy ? 0.7 : 0.1); }
 }
 
-// ── Player State ──────────────────────────────────────────────
+// â”€â”€ Player State â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function makePlayer(id, name) {
   return {
     id, name, score: 0,
@@ -389,7 +396,7 @@ function makePlayer(id, name) {
   };
 }
 
-// ── Main Game ─────────────────────────────────────────────────
+// â”€â”€ Main Game â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 class DuckHuntDuel {
   constructor() {
     this.canvas = document.getElementById('gameCanvas');
@@ -480,10 +487,14 @@ class DuckHuntDuel {
     this.p2 = makePlayer('p2', n2);
     if (this.mode === 'trio') this.p3 = makePlayer('p3', n3);
     else this.p3 = null;
+
+    // Persist names to localStorage for quick-fill next time
+    [n1, n2, ...(this.mode === 'trio' ? [n3] : [])].forEach(_addSavedName);
+    _refreshDatalist();
     
-    document.getElementById('nameLabelP1').textContent = `🔴 ${this.p1.name}`;
-    document.getElementById('nameLabelP2').textContent = `🔵 ${this.p2.name}`;
-    if (this.p3) document.getElementById('nameLabelP3').textContent = `🟣 ${this.p3.name}`;
+    document.getElementById('nameLabelP1').textContent = `ðŸ”´ ${this.p1.name}`;
+    document.getElementById('nameLabelP2').textContent = `ðŸ”µ ${this.p2.name}`;
+    if (this.p3) document.getElementById('nameLabelP3').textContent = `ðŸŸ£ ${this.p3.name}`;
 
     this.wind = 0; this.windTarget = 0;
     this._resize();
@@ -519,14 +530,14 @@ class DuckHuntDuel {
     if (this.mode === 'versus') {
       const starterVoice = Math.random() < 0.5 ? HUNTER_VOICES.p1 : HUNTER_VOICES.p2;
       // ~40% chance on wave 1, ~25% on later waves
-      HunterVoice.maybeSpeak('roundStart', starterVoice, this.wave === 1 ? 0.8 : 0.25);
+      _voiceMaybe('roundStart', starterVoice, this.wave === 1 ? 0.8 : 0.25);
 
-      // Idle chatter timer — random whispers during play
+      // Idle chatter timer â€” random whispers during play
       if (this._idleInterval) clearInterval(this._idleInterval);
       this._idleInterval = setInterval(() => {
         if (this.state !== 'playing') return;
         const v = Math.random() < 0.5 ? HUNTER_VOICES.p1 : HUNTER_VOICES.p2;
-        HunterVoice.maybeSpeak('idleChatter', v, 0.5);
+        _voiceMaybe('idleChatter', v, 0.5);
       }, rnd(18, 30) * 1000);
     }
   }
@@ -553,7 +564,7 @@ class DuckHuntDuel {
     Sfx.wave();
 
     if (this.wave >= this.maxWaves) {
-      text.textContent = '🎯 Final Wave Done!';
+      text.textContent = 'ðŸŽ¯ Final Wave Done!';
     } else {
       text.textContent = `Wave ${this.wave} Clear! `;
     }
@@ -578,16 +589,16 @@ class DuckHuntDuel {
     const title = document.getElementById('resultsTitle');
 
     if (this.mode === 'solo') {
-      emoji.textContent = '🎯';
+      emoji.textContent = 'ðŸŽ¯';
       title.textContent = `Score: ${this.p1.score}`;
       Sfx.win();
     } else {
       const highest = Math.max(...players.map(p => p.score));
       const winners = players.filter(p => p.score === highest);
       if (winners.length > 1) {
-         emoji.textContent = '🤝'; title.textContent = "It's a Draw!"; Sfx.draw();
+         emoji.textContent = 'ðŸ¤'; title.textContent = "It's a Draw!"; Sfx.draw();
       } else {
-         emoji.textContent = '🏆'; title.textContent = `${winners[0].name} Wins!`; Sfx.win();
+         emoji.textContent = 'ðŸ†'; title.textContent = `${winners[0].name} Wins!`; Sfx.win();
       }
     }
 
@@ -596,7 +607,7 @@ class DuckHuntDuel {
 
     statsEl.innerHTML = players.map(p => {
       const acc = p.hits + p.misses > 0 ? Math.round(100*p.hits/(p.hits+p.misses)) : 0;
-      const emojiName = p.id === 'p1' ? '🔴' : (p.id === 'p2' ? '🔵' : '🟣');
+      const emojiName = p.id === 'p1' ? 'ðŸ”´' : (p.id === 'p2' ? 'ðŸ”µ' : 'ðŸŸ£');
       if (this.mode === 'solo') {
         return `
           <div class="stat-block" style="grid-column:1/-1">
@@ -627,7 +638,7 @@ class DuckHuntDuel {
       // Taunt the reloading player from the opponent
       if (this.mode === 'versus' && who in HUNTER_VOICES) {
         const otherVoice = HUNTER_VOICES[who === 'p1' ? 'p2' : 'p1'];
-        HunterVoice.maybeSpeak('rivalry', otherVoice, 0.4);
+        _voiceMaybe('rivalry', otherVoice, 0.4);
       }
       return;
     }
@@ -660,10 +671,10 @@ class DuckHuntDuel {
       Sfx.crow(); this.shake = 15;
       spawnBurst(this.particles, target.px, target.py, COLORS.bad, 14, 200);
       this._floatText(`${PTS.crow}`, target.px, target.py, COLORS.bad);
-      // Crow is a penalty — the OTHER player trash-talks (rival voice)
+      // Crow is a penalty â€” the OTHER player trash-talks (rival voice)
       if (this.mode === 'versus') {
         const otherVoice = HUNTER_VOICES[who === 'p1' ? 'p2' : 'p1'];
-        HunterVoice.maybeSpeak('rivalry', otherVoice, 0.55);
+        _voiceMaybe('rivalry', otherVoice, 0.55);
       }
       return;
     }
@@ -693,24 +704,24 @@ class DuckHuntDuel {
     spawnBurst(this.particles, target.px, target.py, col, 14, target.type==='golden'?360:(target.type==='squid'?300:240));
     if (target.type === 'squid') spawnBurst(this.particles, target.px, target.py, COLORS.ink, 30, 400); // Black ink splash
 
-    let label = comboMult > 1 ? `×${comboMult} ${bonus}!` : `+${pts}`;
+    let label = comboMult > 1 ? `Ã—${comboMult} ${bonus}!` : `+${pts}`;
     if (isSteal) label = `STEAL! +${bonus}`;
     if (target.type === 'squid' && this.mode === 'versus') label = "INK ATTACK!";
     this._floatText(label, target.px, target.py - 20, col);
 
-    // ── Hunter voice on hit (versus only) ──
+    // â”€â”€ Hunter voice on hit (versus only) â”€â”€
     if (this.mode === 'versus' && who in HUNTER_VOICES) {
       const voice = HUNTER_VOICES[who];
       const otherVoice = HUNTER_VOICES[who === 'p1' ? 'p2' : 'p1'];
       if (isSteal) {
-        HunterVoice.maybeSpeak('rivalry', voice, 0.7);
+        _voiceMaybe('rivalry', voice, 0.7);
       } else if (p.combo >= 4) {
-        HunterVoice.maybeSpeak('streak', voice, 0.65);
+        _voiceMaybe('streak', voice, 0.65);
       } else if (target.type === 'golden') {
-        HunterVoice.maybeSpeak('roundWin', otherVoice, 0.75); // opponent reacts to a golden bird
+        _voiceMaybe('roundWin', otherVoice, 0.75); // opponent reacts to a golden bird
       } else {
         // alternate between shooter praising themselves and short calls
-        HunterVoice.maybeSpeak(Math.random() < 0.5 ? 'hit' : 'shortCalls', voice, 0.35);
+        _voiceMaybe(Math.random() < 0.5 ? 'hit' : 'shortCalls', voice, 0.35);
       }
     }
   }
@@ -724,9 +735,9 @@ class DuckHuntDuel {
     // If the player is behind by a big margin, offer a comeback line from the opponent
     const other = who === 'p1' ? this.p2 : this.p1;
     if (other.score - p.score > 400) {
-      HunterVoice.maybeSpeak('comeback', otherVoice, 0.35); // sympathetic from opponent
+      _voiceMaybe('comeback', otherVoice, 0.35); // sympathetic from opponent
     } else {
-      HunterVoice.maybeSpeak('miss', otherVoice, 0.25);     // taunt
+      _voiceMaybe('miss', otherVoice, 0.25);     // taunt
     }
   }
 
@@ -859,7 +870,7 @@ class DuckHuntDuel {
       const scoreEl = document.getElementById(`score${uID}`);
       if (scoreEl) scoreEl.textContent = p.score;
       const comboEl = document.getElementById(`combo${uID}`);
-      if (comboEl) comboEl.textContent = p.combo > 1 ? `×${Math.min(p.combo,8)} COMBO` : '';
+      if (comboEl) comboEl.textContent = p.combo > 1 ? `Ã—${Math.min(p.combo,8)} COMBO` : '';
       
       const el = document.getElementById(`ammo${uID}`);
       if (this.mode === 'solo' && id !== 'p1') return;
@@ -966,7 +977,7 @@ class DuckHuntDuel {
   }
 
   _drawCanvasGoose(ctx, bob, flap, claimedBy) {
-    // Canada Goose — larger, black head/neck, white chin strap, brown body
+    // Canada Goose â€” larger, black head/neck, white chin strap, brown body
     let headC = '#111', bodyC = '#8b6914', chestC = '#c8a84b', wingC = '#6b5010', beakC = '#333', chinC = '#fff';
     if (claimedBy) {
       headC = claimedBy==='p1'?'#ff4455':'#00ccff';
@@ -1199,16 +1210,16 @@ class DuckHuntDuel {
   _drawShotgun(ctx, p, col, variant = 'male') {
     ctx.save(); ctx.translate(p.x, p.y);
 
-    // ── Shadow ─────────────────────────────────────────
+    // â”€â”€ Shadow â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     ctx.fillStyle = 'rgba(0,0,0,0.25)';
     ctx.beginPath(); ctx.ellipse(2, 6, 22, 7, 0, 0, Math.PI*2); ctx.fill();
 
-    // ── Boots ──────────────────────────────────────────
+    // â”€â”€ Boots â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     ctx.fillStyle = '#2d1a0e';
     ctx.beginPath(); ctx.roundRect(-14, -4, 12, 10, 3); ctx.fill();
     ctx.beginPath(); ctx.roundRect(2, -4, 12, 10, 3); ctx.fill();
 
-    // ── Legs (camo trousers) ────────────────────────────
+    // â”€â”€ Legs (camo trousers) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     ctx.fillStyle = '#4a5240';
     ctx.fillRect(-12, -22, 10, 20);
     ctx.fillRect(2, -22, 10, 20);
@@ -1216,7 +1227,7 @@ class DuckHuntDuel {
     ctx.fillStyle = '#3a4030';
     ctx.fillRect(-11, -18, 4, 5); ctx.fillRect(3, -15, 5, 4);
 
-    // ── Jacket body (dark olive camo) ──────────────────
+    // â”€â”€ Jacket body (dark olive camo) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     ctx.fillStyle = '#4b5320';
     if (variant === 'female') {
       ctx.beginPath(); ctx.roundRect(-12, -46, 24, 26, 4); ctx.fill(); // narrower shoulders
@@ -1230,7 +1241,7 @@ class DuckHuntDuel {
       ctx.fillStyle = col; ctx.fillRect(-6, -46, 12, 5);
     }
 
-    // ── Arm holding gun ────────────────────────────────
+    // â”€â”€ Arm holding gun â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     ctx.save();
     ctx.translate(6, -38);
     ctx.rotate(p.angle + 0.1);
@@ -1241,7 +1252,7 @@ class DuckHuntDuel {
     ctx.fillStyle = '#2d1a0e'; ctx.beginPath(); ctx.ellipse(32, 0, 8, 6, 0, 0, Math.PI*2); ctx.fill();
     ctx.restore();
 
-    // ── Gun (aiming from shoulder) ─────────────────────
+    // â”€â”€ Gun (aiming from shoulder) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     ctx.save();
     ctx.translate(4, -42);
     ctx.rotate(p.angle);
@@ -1264,7 +1275,7 @@ class DuckHuntDuel {
     ctx.beginPath(); ctx.moveTo(-14,-9); ctx.lineTo(-40,-5); ctx.lineTo(-40, 13); ctx.lineTo(-14, 9); ctx.fill();
     ctx.restore();
 
-    // ── Head (hunter face) ─────────────────────────────
+    // â”€â”€ Head (hunter face) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     // Neck
     ctx.fillStyle = '#c8845a';
     ctx.fillRect(-5, -58, 10, 14);
@@ -1300,7 +1311,7 @@ class DuckHuntDuel {
     ctx.fillStyle = '#b06040';
     ctx.beginPath(); ctx.ellipse(0, -62, 2.5, 2, 0, 0, Math.PI*2); ctx.fill();
 
-    // Hunter cap (flat-brim / blaze style — player color tinted)
+    // Hunter cap (flat-brim / blaze style â€” player color tinted)
     if (variant === 'female') {
       // Ponytail out the back
       ctx.fillStyle = '#2d1a0e';
@@ -1336,7 +1347,51 @@ function waveConfig(waveNum, difficulty) {
   };
 }
 
-window.addEventListener('DOMContentLoaded', () => { 
+// â”€â”€ Persistent Settings & Name Memory â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+const LS_NAMES_KEY  = 'duckHunt_savedNames';   // JSON array of unique name strings
+const LS_VOICE_KEY  = 'duckHunt_voiceEnabled'; // '0' or '1'
+
+function _savedNames() {
+  try { return JSON.parse(localStorage.getItem(LS_NAMES_KEY) || '[]'); } catch(e) { return []; }
+}
+
+function _addSavedName(name) {
+  if (!name) return;
+  const list = _savedNames().filter(n => n !== name); // dedupe
+  list.unshift(name); // most-recent first
+  const capped = list.slice(0, 20); // keep max 20
+  localStorage.setItem(LS_NAMES_KEY, JSON.stringify(capped));
+}
+
+function _refreshDatalist() {
+  const dl = document.getElementById('savedNames');
+  if (!dl) return;
+  dl.innerHTML = _savedNames().map(n => `<option value="${n.replace(/"/g,'&quot;')}"></option>`).join('');
+}
+
+window.addEventListener('DOMContentLoaded', () => {
   Sfx.loadFiles();
-  new DuckHuntDuel(); 
+
+  // â”€â”€ Restore saved names â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  const saved = _savedNames();
+  // Pre-fill inputs with the three most recent names
+  ['p1Name','p2Name','p3Name'].forEach((id, i) => {
+    const el = document.getElementById(id);
+    if (el && saved[i]) el.value = saved[i];
+  });
+  _refreshDatalist();
+
+  // â”€â”€ Restore voice toggle â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  const voiceToggle = document.getElementById('voiceToggle');
+  if (voiceToggle) {
+    const stored = localStorage.getItem(LS_VOICE_KEY);
+    // Default is ON (checked). Only turn off if explicitly saved as '0'.
+    voiceToggle.checked = stored !== '0';
+    voiceToggle.addEventListener('change', () => {
+      localStorage.setItem(LS_VOICE_KEY, voiceToggle.checked ? '1' : '0');
+    });
+  }
+
+  new DuckHuntDuel();
 });
+

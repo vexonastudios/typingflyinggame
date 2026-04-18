@@ -45,10 +45,11 @@
       </div>
 
       <div class="title-settings">
+        <datalist id="savedNames"></datalist>
         <div class="name-inputs" style="display:flex; gap:10px; justify-content:center; margin-bottom:15px; width: 100%; max-width: 600px;">
-          <input type="text" id="p1Name" placeholder="Player 1 Name" class="setting-input" style="text-align:center; flex:1; min-width:80px; background:rgba(0,0,0,0.4); border:1px solid #ff4455; color:#fff; border-radius:4px; padding:6px; font-family: 'Outfit', sans-serif;">
-          <input type="text" id="p2Name" placeholder="Player 2 Name" class="setting-input" style="text-align:center; flex:1; min-width:80px; background:rgba(0,0,0,0.4); border:1px solid #00ccff; color:#fff; border-radius:4px; padding:6px; font-family: 'Outfit', sans-serif;">
-          <input type="text" id="p3Name" placeholder="Player 3 Name" class="setting-input" style="text-align:center; flex:1; min-width:80px; background:rgba(0,0,0,0.4); border:1px solid #a855f7; color:#fff; border-radius:4px; padding:6px; font-family: 'Outfit', sans-serif;">
+          <input type="text" id="p1Name" placeholder="Player 1 Name" list="savedNames" autocomplete="off" class="setting-input" style="text-align:center; flex:1; min-width:80px; background:rgba(0,0,0,0.4); border:1px solid #ff4455; color:#fff; border-radius:4px; padding:6px; font-family: 'Outfit', sans-serif;">
+          <input type="text" id="p2Name" placeholder="Player 2 Name" list="savedNames" autocomplete="off" class="setting-input" style="text-align:center; flex:1; min-width:80px; background:rgba(0,0,0,0.4); border:1px solid #00ccff; color:#fff; border-radius:4px; padding:6px; font-family: 'Outfit', sans-serif;">
+          <input type="text" id="p3Name" placeholder="Player 3 Name" list="savedNames" autocomplete="off" class="setting-input" style="text-align:center; flex:1; min-width:80px; background:rgba(0,0,0,0.4); border:1px solid #a855f7; color:#fff; border-radius:4px; padding:6px; font-family: 'Outfit', sans-serif;">
         </div>
         <div class="game-settings-row">
         <label for="waveSelect">Waves:</label>
@@ -63,6 +64,15 @@
           <option value="normal" selected>Normal</option>
           <option value="hard">Hard</option>
         </select>
+        </div>
+        <div class="game-settings-row" style="margin-top: 10px;">
+          <label class="voice-toggle-label" for="voiceToggle">
+            🎙️ Hunter Voice Banter
+          </label>
+          <label class="toggle-switch" title="Toggle hunter voice comments">
+            <input type="checkbox" id="voiceToggle" checked>
+            <span class="toggle-track"><span class="toggle-thumb"></span></span>
+          </label>
         </div>
       </div>
 
