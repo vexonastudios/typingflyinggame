@@ -657,6 +657,8 @@ class SkyTyperGame {
     this.running = true;
     this.ui.gameMenusOverlay.style.display = "none";
     this.ui.mainMenuPanel.style.display = "none";
+    this.ui.pausePanel.style.display = "none";
+    this.ui.debriefPanel.style.display = "none";
     this.maxWaves = this.settings.waves;
     this.maxHealth = this.settings.shields;
     this.shields = this.settings.shields;
@@ -679,6 +681,10 @@ class SkyTyperGame {
     this.messageText = this.paused ? "Mission paused. Press Space or Resume to fly again." : "Mission resumed. Keep typing!";
     this.ui.gameMenusOverlay.style.display = this.paused ? "flex" : "none";
     this.ui.pausePanel.style.display = this.paused ? "flex" : "none";
+    if (this.paused) {
+      this.ui.debriefPanel.style.display = "none";
+      this.ui.mainMenuPanel.style.display = "none";
+    }
     this.updateUi();
   }
 
@@ -2322,13 +2328,22 @@ class SkyTyperGame {
     this.ctx.restore();
   }
 
-  // Generate round-robin pairs from team list
+  // Generate round-robin pairs from team list using standard polygon method
   generateRoundRobin(teams) {
     const schedule = [];
-    for (let i = 0; i < teams.length; i++) {
-      for (let j = i + 1; j < teams.length; j++) {
-        schedule.push({ t1Idx: i, t2Idx: j, t1Score: null, t2Score: null, done: false });
-      }
+    const numTeams = teams.length;
+    const totalTeams = numTeams % 2 !== 0 ? numTeams + 1 : numTeams;
+    let indices = Array.from({length: totalTeams}, (_, i) => i);
+    
+    for (let round = 0; round < totalTeams - 1; round++) {
+       for (let i = 0; i < totalTeams / 2; i++) {
+          const t1 = indices[i];
+          const t2 = indices[totalTeams - 1 - i];
+          if (t1 < numTeams && t2 < numTeams) {
+             schedule.push({ t1Idx: t1, t2Idx: t2, t1Score: null, t2Score: null, done: false });
+          }
+       }
+       indices = [indices[0], indices[totalTeams - 1], ...indices.slice(1, totalTeams - 1)];
     }
     return schedule;
   }
