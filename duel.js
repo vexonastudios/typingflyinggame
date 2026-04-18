@@ -83,8 +83,8 @@ const HEAT_PER_SHOT = 22;
 const COOL_RATE    = 42; // heat per second
 const RELOAD_MS    = 2000; // Overheat penalty time
 const BULLET_SPEED = 1400; 
-const HIT_RADIUS = { duck:38, clay:30, golden:26, crow:44, squid:30 };
-const PTS        = { duck:100, clay:150, golden:500, crow:-200, squid: 250 };
+const HIT_RADIUS = { duck:52, clay:38, golden:40, crow:48, squid:38, goose:62 };
+const PTS        = { duck:100, clay:150, golden:500, crow:-200, squid:250, goose:300 };
 const COLORS     = { p1:'#ff4455', p2:'#00ccff', gold:'#fbbf24', bad:'#ff6600', ink: '#111' };
 
 // ── Particle system ────────────────────────────────────────────
@@ -165,7 +165,7 @@ class Target {
     const sx = side === 'left' ? -60 : W + 60;
     const tx_dir = side === 'left' ? 1 : -1;
 
-    const speeds = { duck: rnd(140,240), clay: rnd(200,340), golden: rnd(300,480), crow: rnd(80,160), squid: rnd(180,300) };
+    const speeds = { duck: rnd(140,240), clay: rnd(200,340), golden: rnd(300,480), crow: rnd(80,160), squid: rnd(180,300), goose: rnd(100,180) };
     const spd = speeds[type];
 
     const style = (type === 'squid') ? 2 : rndI(0,2); // squids always sine wave
@@ -350,6 +350,7 @@ class DuckHuntDuel {
     else if (r < c.squidChance+c.crowChance) type = 'crow';
     else if (r < c.squidChance+c.crowChance+c.goldChance) type = 'golden';
     else if (r < c.squidChance+c.crowChance+c.goldChance+c.clayChance) type = 'clay';
+    else if (r < c.squidChance+c.crowChance+c.goldChance+c.clayChance+(c.gooseChance||0)) type = 'goose';
     else type = 'duck';
     this.targets.push(new Target(type, this.canvas));
     this.targetsLeft--;
@@ -721,6 +722,65 @@ class DuckHuntDuel {
       ctx.restore();
   }
 
+  _drawCanvasGoose(ctx, bob, flap, claimedBy) {
+    // Canada Goose — larger, black head/neck, white chin strap, brown body
+    let headC = '#111', bodyC = '#8b6914', chestC = '#c8a84b', wingC = '#6b5010', beakC = '#333', chinC = '#fff';
+    if (claimedBy) {
+      headC = claimedBy==='p1'?'#ff4455':'#00ccff';
+      bodyC = headC; chestC = headC; wingC = headC; beakC = '#fff'; chinC = headC;
+    }
+    ctx.translate(0, bob);
+    ctx.scale(1.35, 1.35); // Goose is bigger than a duck!
+
+    // Rear tail feathers
+    ctx.fillStyle = wingC;
+    ctx.beginPath(); ctx.moveTo(-30,0); ctx.lineTo(-52,-6); ctx.lineTo(-45,8); ctx.fill();
+
+    // Main body
+    ctx.fillStyle = bodyC;
+    ctx.beginPath(); ctx.ellipse(0, 4, 32, 17, 0, 0, Math.PI*2); ctx.fill();
+
+    // Lower chest / belly (lighter)
+    ctx.fillStyle = chestC;
+    ctx.beginPath(); ctx.ellipse(14, 10, 16, 11, -0.3, 0, Math.PI*2); ctx.fill();
+
+    // Back wing (animating)
+    ctx.save(); ctx.translate(-6, 0); ctx.rotate(flap * Math.PI/180);
+    ctx.fillStyle = wingC;
+    ctx.beginPath(); ctx.ellipse(0, -14, 12, 28, -0.15, 0, Math.PI*2); ctx.fill();
+    ctx.restore();
+
+    // Front wing flash (lighter brown tip)
+    ctx.fillStyle = '#4a3808';
+    ctx.beginPath(); ctx.moveTo(-22, 0); ctx.lineTo(-44, -10); ctx.lineTo(-34, 10); ctx.fill();
+
+    // Long neck (black)
+    ctx.fillStyle = headC;
+    ctx.beginPath();
+    ctx.moveTo(14, -4); ctx.quadraticCurveTo(28, -28, 30, -36);
+    ctx.quadraticCurveTo(32, -44, 28, -44);
+    ctx.quadraticCurveTo(16, -44, 14, -28);
+    ctx.quadraticCurveTo(10, -14, 10, -4);
+    ctx.fill();
+
+    // Head (oval, black)
+    ctx.fillStyle = headC;
+    ctx.beginPath(); ctx.ellipse(28, -50, 11, 9, 0.2, 0, Math.PI*2); ctx.fill();
+
+    // White chin strap
+    ctx.fillStyle = chinC;
+    ctx.beginPath(); ctx.ellipse(27, -46, 6, 3.5, 0.2, 0, Math.PI*2); ctx.fill();
+
+    // Beak (dark, flat)
+    ctx.fillStyle = beakC;
+    ctx.beginPath(); ctx.moveTo(38, -52); ctx.lineTo(50, -50); ctx.lineTo(38, -48); ctx.fill();
+
+    // Eye
+    ctx.fillStyle = claimedBy ? '#fff' : '#e8d44d';
+    ctx.beginPath(); ctx.arc(33, -52, 2.2, 0, Math.PI*2); ctx.fill();
+    if (!claimedBy) { ctx.fillStyle='#000'; ctx.beginPath(); ctx.arc(33.5,-52,1.2,0,Math.PI*2); ctx.fill(); }
+  }
+
   _drawCanvasDuck(ctx, bob, flap, variant, claimedBy) {
     let headC = '#064e3b', bodyC = '#a8a29e', chestC = '#78350f', wingC = '#44403c', beakC = '#fbbf24';
     if (variant === 'white') {
@@ -794,17 +854,32 @@ class DuckHuntDuel {
         const variant = tgt.type === 'duck' ? 'mallard' : (tgt.type === 'clay' ? 'white' : 'golden');
         this._drawCanvasDuck(ctx, bob, flap, variant, tgt.claimedBy);
     } 
+    else if (tgt.type === 'goose') {
+        this._drawCanvasGoose(ctx, bob, flap, tgt.claimedBy);
+    }
     else if (tgt.type === 'squid') {
+      // Orient squid correctly: body forward, tentacles trail behind
       const squish = Math.sin(tgt.anim * 8) * 3;
       ctx.fillStyle = tgt.claimedBy==='p1'?'#ff4455':tgt.claimedBy==='p2'?'#00ccff':'#4c1d95';
-      ctx.beginPath(); ctx.ellipse(0, bob, 24 + squish, 18 - squish, 0, 0, Math.PI*2); ctx.fill();
-      ctx.fillStyle = '#000'; ctx.beginPath(); ctx.moveTo(20, bob+5); ctx.lineTo(35, bob+squish); ctx.lineTo(20, bob-5); ctx.fill();
-      ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(10, bob-5, 4, 0, Math.PI*2); ctx.fill();
-      ctx.fillStyle = '#ff0044'; ctx.beginPath(); ctx.arc(11, bob-5, 2, 0, Math.PI*2); ctx.fill(); 
-      ctx.strokeStyle = '#3b0764'; ctx.lineWidth = 4; ctx.lineCap = 'round';
-      for(let i=0; i<4; i++) {
-        ctx.beginPath(); ctx.moveTo(-15, bob - 10 + i * 6);
-        ctx.quadraticCurveTo(-35, bob - 10 + i * 6 + squish*2, -45 - Math.random()*10, bob - 10 + i * 6 - squish*2);
+      // Main mantle (points forward)
+      ctx.beginPath(); ctx.ellipse(8, bob, 20+squish, 13-squish*0.5, 0, 0, Math.PI*2); ctx.fill();
+      // Pointed head cone
+      ctx.beginPath(); ctx.moveTo(28+squish, bob); ctx.lineTo(18, bob-7); ctx.lineTo(18, bob+7); ctx.fill();
+      // Fin flaps (back sides)
+      ctx.fillStyle = tgt.claimedBy?'rgba(255,255,255,0.3)':'#6d28d9';
+      ctx.beginPath(); ctx.ellipse(0, bob-10, 10, 5, 0.4, 0, Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(0, bob+10, 10, 5, -0.4, 0, Math.PI*2); ctx.fill();
+      // Eye
+      ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(20, bob-4, 4, 0, Math.PI*2); ctx.fill();
+      ctx.fillStyle = '#ff0044'; ctx.beginPath(); ctx.arc(21, bob-4, 2.2, 0, Math.PI*2); ctx.fill();
+      // Tentacles trail BEHIND (to the left, since target moves right)
+      ctx.strokeStyle = '#3b0764'; ctx.lineWidth = 3.5; ctx.lineCap = 'round';
+      for(let i=0; i<6; i++) {
+        const ty = bob - 10 + i * 4;
+        const wave = Math.sin(tgt.anim * 6 + i) * (4 + squish);
+        ctx.beginPath();
+        ctx.moveTo(-8, ty);
+        ctx.quadraticCurveTo(-28, ty + wave, -44 - i*4, ty + wave * 1.5);
         ctx.stroke();
       }
     } 
@@ -948,7 +1023,8 @@ function waveConfig(waveNum, difficulty) {
   return {
     targetCount : Math.round((4 + base * 1.2) * d), spawnInterval: Math.max(0.5, (2.5 - base*0.15) / d), timer: Math.round(20 + base * 2),
     goldChance: Math.min(0.08 + base*0.015, 0.2), clayChance: Math.min(0.15 + base*0.02, 0.35), crowChance: Math.min(base*0.015, 0.12),
-    squidChance: 0.05, // 5% chance of sabotage squad
+    squidChance: 0.05,
+    gooseChance: waveNum >= 5 ? Math.min((waveNum - 4) * 0.04, 0.25) : 0, // Geese start wave 5, ramp up
   };
 }
 
