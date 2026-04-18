@@ -2149,8 +2149,9 @@ class SkyTyperGame {
        this.ui.debriefMsg.style.color = "#a8d6f5";
     }
      
-    if (this.tournament.active) this.recordTournamentScore(this.score);
-    this.checkTournamentSubmission();
+    if (this.tournament.active) {
+      this.recordTournamentScore(this.score);
+    }
   }
 
   updateUi() {
