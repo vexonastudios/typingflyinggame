@@ -854,8 +854,8 @@ class DuckHuntDuel {
     const col = who === 'p1' ? COLORS.p1 : COLORS.p2;
     
     if (target.type === 'golden') { Sfx.hitBig(); this.shake = 20; this.hitStopTimer = 0.12; } 
-    else if (target.type === 'squid') { Sfx.hitBig(); }
-    else { Sfx.hit(); }
+    else if (target.type === 'squid') { Sfx.hitBig(); this.hitStopTimer = 0.08; }
+    else { Sfx.hit(); this.hitStopTimer = 0.04; }
     
     // Combo milestones hit stop
     if (p.combo > 0 && p.combo % 5 === 0) {
@@ -996,7 +996,17 @@ class DuckHuntDuel {
         b.update(dt, this.canvas.width, this.canvas.height, this.wind);
         if (b.dead) continue;
         for (const t of this.targets) {
-          if (!t.dead && dist(b.x, b.y, t.px, t.py) <= t.r + b.r) { b.dead = true; b.hitSomething = true; this._claimTarget(t, b.owner); break; }
+          if (!t.dead) {
+             const d = dist(b.x, b.y, t.px, t.py);
+             if (d <= t.r + b.r) { 
+                 b.dead = true; b.hitSomething = true; this._claimTarget(t, b.owner); break; 
+             } else if (d < t.r + b.r + 80 && !t.fleeing && t.type !== 'kite' && t.type !== 'balloon' && t.type !== 'crate') {
+                 t.fleeing = true;
+                 t.vx *= 1.6;
+                 t.vy += (Math.random() > 0.5 ? 90 : -90);
+                 spawnBurst(this.particles, t.px, t.py, '#fff', 3, 100);
+             }
+          }
         }
       }
 
@@ -1023,14 +1033,6 @@ class DuckHuntDuel {
         const ownerP = b.owner === 'p1' ? this.p1 : (b.owner === 'p2' ? this.p2 : this.p3);
         ownerP.misses++; ownerP.combo = 0;
         this._bullet_miss_voice(b.owner);
-        // Startle nearby targets
-        for (const t of this.targets) {
-           if (!t.dead && !t.fleeing && t.type !== 'kite' && dist(b.x, b.y, t.px, t.py) < 180) {
-               t.fleeing = true;
-               t.vx *= 1.6;
-               t.vy += (Math.random() > 0.5 ? 80 : -80);
-           }
-        }
       }
       this.bullets = this.bullets.filter(b => !b.dead);
 
