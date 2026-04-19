@@ -586,9 +586,11 @@ class DuckHuntDuel {
   _startWave() {
     this.wave++;
     this.waveConf    = waveConfig(this.wave, this.difficulty);
-    this.waveTimer   = this.waveConf.timer;
+    // In tournament mode, a match is just one massive, continuous 120-second wave
+    // We override waveTimer and targetsLeft so the engine never naturally triggers _endWave
+    this.waveTimer   = this.tourn && this.tourn.active ? 999 : this.waveConf.timer;
     this.spawnTimer  = 0;
-    this.targetsLeft = this.waveConf.targetCount;
+    this.targetsLeft = this.tourn && this.tourn.active ? 9999 : this.waveConf.targetCount;
     this.targets = []; this.bullets = []; this.state = 'countdown';
     
     // Initial wind target for the wave
@@ -629,12 +631,18 @@ class DuckHuntDuel {
   _spawnTarget() {
     const c = this.waveConf; const r = Math.random();
     let type;
-    if (r < c.squidChance) type = 'squid';
+    
+    // 5% chance to spawn a supply balloon in multiplayer/tournament
+    if (r > 0.95 && (this.mode === 'versus' || this.mode === 'trio' || (this.tourn && this.tourn.active))) {
+       type = 'balloon';
+    } 
+    else if (r < c.squidChance) type = 'squid';
     else if (r < c.squidChance+c.crowChance) type = 'crow';
     else if (r < c.squidChance+c.crowChance+c.goldChance) type = 'golden';
     else if (r < c.squidChance+c.crowChance+c.goldChance+c.clayChance) type = 'clay';
     else if (r < c.squidChance+c.crowChance+c.goldChance+c.clayChance+(c.gooseChance||0)) type = 'goose';
     else type = 'duck';
+    
     this.targets.push(new Target(type, this.canvas));
     this.targetsLeft--;
     if (type !== 'crow') Sfx._tone(rnd(300,500),'triangle',0.06,0.03);
