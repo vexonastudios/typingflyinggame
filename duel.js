@@ -397,7 +397,8 @@ class Target {
     const speeds = { duck: rnd(140,240), clay: rnd(200,340), golden: rnd(300,480), crow: rnd(80,160), squid: rnd(180,300), goose: rnd(100,180) };
     
     if (type === 'balloon') {
-       return { px: W * rnd(0.2, 0.8), py: H + 80, vx: rnd(-20, 20), vy: -rnd(30, 60), ax:0, ay:0, sine:true, sineAmp:20, sineFreq:1.5 };
+       // Supply balloon drifts slowly across the very top of the sky
+       return { px: sx, py: rnd(40, H * 0.15), vx: tx_dir * rnd(50, 90), vy: 0, ax:0, ay:0, sine:true, sineAmp:15, sineFreq:1.2 };
     }
     if (type === 'crate') {
        // crate falls down from the spawner
