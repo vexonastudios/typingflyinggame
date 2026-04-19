@@ -939,10 +939,16 @@ class DuckHuntDuel {
       this.wind = lerp(this.wind, this.windTarget, dt * 1.5);
 
       const turnSpd = 3.8 * dt;
-      if (this.keys['KeyA']) this.p1.angle -= turnSpd;
-      if (this.keys['KeyD']) this.p1.angle += turnSpd;
+      const p1Left = this.mode === 'solo' ? this.keys['ArrowLeft'] : this.keys['KeyA'];
+      const p1Right = this.mode === 'solo' ? this.keys['ArrowRight'] : this.keys['KeyD'];
+      const p1Shoot = this.mode === 'solo' 
+          ? (this.keys['ArrowUp'] && !this._prevKeys['ArrowUp']) 
+          : (this.keys['KeyW'] && !this._prevKeys['KeyW']);
+      
+      if (p1Left) this.p1.angle -= turnSpd;
+      if (p1Right) this.p1.angle += turnSpd;
       this.p1.angle = clamp(this.p1.angle, -Math.PI + 0.15, -0.15);
-      if (this.keys['KeyW'] && !this._prevKeys['KeyW']) this._shoot('p1');
+      if (p1Shoot) this._shoot('p1');
 
       if (this.mode === 'versus' || this.mode === 'trio') {
         if (this.keys['ArrowLeft']) this.p2.angle -= turnSpd;
