@@ -643,6 +643,12 @@ class DuckHuntDuel {
     else if (r < c.squidChance+c.crowChance+c.goldChance+c.clayChance+(c.gooseChance||0)) type = 'goose';
     else type = 'duck';
     
+    // Prevent the very last target of the wave from being a crow,
+    // otherwise the game forces players to wait for it to fly off-screen.
+    if (this.targetsLeft === 1 && type === 'crow') {
+        type = 'duck';
+    }
+
     this.targets.push(new Target(type, this.canvas));
     this.targetsLeft--;
     if (type !== 'crow') Sfx._tone(rnd(300,500),'triangle',0.06,0.03);
@@ -1884,7 +1890,7 @@ function waveConfig(waveNum, difficulty) {
   const d = { easy:0.7, normal:1, hard:1.4 }[difficulty] || 1;
   const base = Math.min(waveNum, 10);
   return {
-    targetCount : Math.round((4 + base * 1.2) * d), spawnInterval: Math.max(0.5, (2.5 - base*0.15) / d), timer: Math.round(20 + base * 2),
+    targetCount : Math.round((10 + base * 2.0) * d), spawnInterval: Math.max(0.5, (2.2 - base*0.1) / d), timer: Math.round(35 + base * 3),
     goldChance: Math.min(0.08 + base*0.015, 0.2), clayChance: Math.min(0.15 + base*0.02, 0.35), crowChance: Math.min(base*0.015, 0.12),
     squidChance: 0.05,
     gooseChance: waveNum >= 5 ? Math.min((waveNum - 4) * 0.04, 0.25) : 0, // Geese start wave 5, ramp up
