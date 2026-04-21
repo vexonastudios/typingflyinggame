@@ -309,7 +309,7 @@ function handleAnswer(pIdx, optIdx) {
     }
   } else {
     playSound('wrong');
-    p.locked = true;
+    if (state.mode !== 1) p.locked = true;
     p.score = Math.max(0, p.score - 1);
     slot.classList.add('wrong-flash');
     
