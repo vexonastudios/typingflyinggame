@@ -686,94 +686,122 @@ class NerfArena {
 
       const texU = (col - startCol) / (endCol - startCol);
 
-      // Draw more human-like figure
-
-      // Head (top 20%)
+      // ── Pro Sci-Fi Armor Sprite Redesign ──
+      
+      // Head (top 22%)
       if (texU > 0.3 && texU < 0.7) {
-        const headH = spriteH * 0.2;
         const headTop = spriteTop;
-        const brightness = Math.max(0.3, 1 - dist/10);
+        const headH = spriteH * 0.22;
         
-        // Visor/Goggles in the middle of the head
-        if (texU > 0.35 && texU < 0.65 && (vpH/dist) > 30) {
-            // We need a way to draw the visor at a specific height, but we are drawing columns.
-            // So we draw the head color, then the visor on top.
-            ctx.fillStyle = `rgba(230,180,120,${brightness})`;
+        // Outline (left/right edges)
+        if (texU < 0.35 || texU > 0.65) {
+            ctx.fillStyle = `rgba(10,10,15,${Math.max(0.4, 1-dist/10)})`; // Dark outline
             ctx.fillRect(ox+col, oy+headTop, 1, headH);
-            
-            // Draw visor strip
-            const visorTop = headTop + headH * 0.3;
-            const visorH = headH * 0.3;
-            ctx.fillStyle = `rgba(30,30,30,${brightness})`;
-            ctx.fillRect(ox+col, oy+visorTop, 1, visorH);
-            
-            // Draw a little blue glow on the visor
-            if (texU > 0.4 && texU < 0.6) {
-                ctx.fillStyle = `rgba(50,150,255,${brightness})`;
-                ctx.fillRect(ox+col, oy+visorTop + 1, 1, visorH - 2);
-            }
         } else {
-            ctx.fillStyle = `rgba(230,180,120,${brightness})`;
+            // Helmet Base (White/Light Grey armor)
+            ctx.fillStyle = `rgba(240,245,255,${Math.max(0.4, 1-dist/10)})`;
             ctx.fillRect(ox+col, oy+headTop, 1, headH);
+            
+            // Glowing Visor
+            if (texU > 0.38 && texU < 0.62) {
+                const visorTop = headTop + headH * 0.3;
+                const visorH = headH * 0.35;
+                // Bright glowing team color (NO distance fading so it POPS)
+                ctx.fillStyle = sprite.color; 
+                ctx.fillRect(ox+col, oy+visorTop, 1, visorH);
+                // White hot center of visor
+                if (texU > 0.45 && texU < 0.55) {
+                    ctx.fillStyle = '#ffffff';
+                    ctx.fillRect(ox+col, oy+visorTop + visorH*0.2, 1, visorH*0.6);
+                }
+            }
         }
       }
 
-      // Shoulders & Arms (Outer 15% on each side of the body)
-      if ((texU > 0.1 && texU <= 0.25) || (texU >= 0.75 && texU < 0.9)) {
-        const armTop = spriteTop + spriteH * 0.2;
-        const armH   = spriteH * 0.4;
-        const brightness = Math.max(0.25, 1 - dist/10);
-        // Slightly darker than shirt to distinguish arms
-        ctx.fillStyle = this._shadeColor(sprite.color, 0.75);
-        ctx.globalAlpha = brightness;
-        ctx.fillRect(ox+col, oy+armTop, 1, armH);
+      // Shoulders & Arms (Outer 15%)
+      if ((texU > 0.15 && texU <= 0.3) || (texU >= 0.7 && texU < 0.85)) {
+        const armTop = spriteTop + spriteH * 0.22;
+        const armH   = spriteH * 0.45;
         
-        // Hands
-        const handTop = armTop + armH;
-        const handH = spriteH * 0.1;
-        ctx.fillStyle = `rgba(230,180,120,${brightness})`;
-        ctx.fillRect(ox+col, oy+handTop, 1, handH);
+        if (texU < 0.2 || texU > 0.8) {
+             // Outline
+             ctx.fillStyle = `rgba(10,10,15,${Math.max(0.4, 1-dist/10)})`;
+             ctx.fillRect(ox+col, oy+armTop, 1, armH);
+        } else {
+             // Shoulder pad (Team color)
+             const padH = armH * 0.35;
+             ctx.fillStyle = sprite.color;
+             ctx.fillRect(ox+col, oy+armTop, 1, padH);
+             
+             // Lower arm (Dark grey body suit)
+             ctx.fillStyle = `rgba(60,65,70,${Math.max(0.3, 1-dist/10)})`;
+             ctx.fillRect(ox+col, oy+armTop+padH, 1, armH-padH);
+        }
         
-        // Let's draw a little blaster in the right hand (texU < 0.25 is screen left, which is their right hand if facing us)
-        if (texU > 0.15 && texU <= 0.25) {
-            const gunTop = handTop - spriteH * 0.05;
-            const gunH = spriteH * 0.15;
-            ctx.fillStyle = `rgba(255,100,30,${brightness})`; // Nerf orange blaster
+        // Blaster in right hand (viewer's left side)
+        if (texU > 0.15 && texU <= 0.3) {
+            const gunTop = armTop + armH - spriteH*0.1;
+            const gunH = spriteH * 0.22;
+            ctx.fillStyle = `rgba(10,10,15,${Math.max(0.4, 1-dist/10)})`; // Gun outline
+            ctx.fillRect(ox+col, oy+gunTop-1, 1, gunH+2);
+            ctx.fillStyle = '#ff6600'; // Bright Nerf Orange (no fade)
             ctx.fillRect(ox+col, oy+gunTop, 1, gunH);
         }
-        ctx.globalAlpha = 1;
       }
 
-      // Torso (middle 50%)
-      if (texU > 0.25 && texU < 0.75) {
-        const bodyTop = spriteTop + spriteH*0.2;
+      // Torso (middle 40%)
+      if (texU > 0.3 && texU < 0.7) {
+        const bodyTop = spriteTop + spriteH*0.22;
         const bodyH   = spriteH * 0.45;
-        const brightness = Math.max(0.3, 1 - dist/10);
-        // Shirt color = opponent's team color
-        ctx.fillStyle = sprite.color;
-        ctx.globalAlpha = brightness;
-        ctx.fillRect(ox+col, oy+bodyTop, 1, bodyH);
         
-        // Add a belt
-        const beltTop = bodyTop + bodyH - spriteH * 0.05;
-        const beltH = spriteH * 0.05;
-        ctx.fillStyle = `rgba(40,40,40,${brightness})`;
-        ctx.fillRect(ox+col, oy+beltTop, 1, beltH);
-        
-        ctx.globalAlpha = 1;
+        // Outline
+        if (texU < 0.35 || texU > 0.65) {
+            ctx.fillStyle = `rgba(10,10,15,${Math.max(0.4, 1-dist/10)})`;
+            ctx.fillRect(ox+col, oy+bodyTop, 1, bodyH);
+        } else {
+            // White armor plate
+            ctx.fillStyle = `rgba(240,245,255,${Math.max(0.4, 1-dist/10)})`;
+            ctx.fillRect(ox+col, oy+bodyTop, 1, bodyH);
+            
+            // Glowing chest core
+            if (texU > 0.45 && texU < 0.55) {
+                const coreTop = bodyTop + bodyH * 0.2;
+                const coreH = bodyH * 0.3;
+                ctx.fillStyle = sprite.color; // Emissive team color
+                ctx.fillRect(ox+col, oy+coreTop, 1, coreH);
+            }
+            
+            // Dark tactical belt
+            const beltTop = bodyTop + bodyH - spriteH * 0.08;
+            const beltH = spriteH * 0.08;
+            ctx.fillStyle = `rgba(30,30,35,${Math.max(0.4, 1-dist/10)})`;
+            ctx.fillRect(ox+col, oy+beltTop, 1, beltH);
+        }
       }
 
-      // Legs (bottom 35%, split in the middle)
-      if (texU > 0.25 && texU < 0.75) {
-        // Gap between legs
+      // Legs (bottom 33%)
+      if (texU > 0.3 && texU < 0.7) {
         if (texU > 0.45 && texU < 0.55) {
-            // Do nothing, leave it empty (transparency)
+            // Gap between legs
         } else {
-            const legTop = spriteTop + spriteH * 0.65;
-            const legH   = spriteH * 0.35;
-            const brightness = Math.max(0.25, 1 - dist/10);
-            ctx.fillStyle = `rgba(50,60,80,${brightness})`; // Dark pants
-            ctx.fillRect(ox+col, oy+legTop, 1, legH);
+            const legTop = spriteTop + spriteH * 0.67;
+            const legH   = spriteH * 0.33;
+            
+            // Outline around each leg
+            if (texU < 0.35 || texU > 0.65 || (texU > 0.42 && texU < 0.45) || (texU > 0.55 && texU < 0.58)) {
+                ctx.fillStyle = `rgba(10,10,15,${Math.max(0.4, 1-dist/10)})`;
+                ctx.fillRect(ox+col, oy+legTop, 1, legH);
+            } else {
+                // Leg armor (Dark Grey)
+                ctx.fillStyle = `rgba(80,85,90,${Math.max(0.3, 1-dist/10)})`;
+                ctx.fillRect(ox+col, oy+legTop, 1, legH);
+                
+                // Glowing knee pads
+                const kneeTop = legTop + legH * 0.3;
+                const kneeH = legH * 0.25;
+                ctx.fillStyle = sprite.color; // Emissive team color
+                ctx.fillRect(ox+col, oy+kneeTop, 1, kneeH);
+            }
         }
       }
     }
