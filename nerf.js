@@ -287,8 +287,8 @@ class NerfArena {
     document.getElementById('gameResults').style.display = 'none';
 
     const starts = STARTS[this.arenaIdx];
-    const C1 = { fwd:'KeyW', back:'KeyS', left:'KeyA', right:'KeyD', turnL:'KeyQ', turnR:'KeyE', shoot:'Space', reload:'KeyR' };
-    const C2 = { fwd:'ArrowUp', back:'ArrowDown', left:'ArrowLeft', right:'ArrowRight', turnL:'Comma', turnR:'Period', shoot:'Enter', reload:'Slash' };
+    const C1 = { fwd:'KeyW', back:'KeyS', turnL:'KeyA', turnR:'KeyD', shoot:'Space', reload:'KeyR' };
+    const C2 = { fwd:'ArrowUp', back:'ArrowDown', turnL:'ArrowLeft', turnR:'ArrowRight', shoot:'Enter', reload:'Slash' };
 
     this.players = [
       new Player(0, C1, starts[0], this.palette),
@@ -413,8 +413,6 @@ class NerfArena {
     let speed = 0, strafe = 0, turn = 0;
     if (keys[p.ctrl.fwd])   speed  =  MOVE_SPD;
     if (keys[p.ctrl.back])  speed  = -MOVE_SPD * 0.65;
-    if (keys[p.ctrl.left])  strafe = -MOVE_SPD * 0.75;
-    if (keys[p.ctrl.right]) strafe =  MOVE_SPD * 0.75;
     if (keys[p.ctrl.turnL]) turn   = -TURN_SPD;
     if (keys[p.ctrl.turnR]) turn   =  TURN_SPD;
 
@@ -679,38 +677,95 @@ class NerfArena {
 
       const texU = (col - startCol) / (endCol - startCol);
 
-      // Draw cardboard target figure
-      const segW = Math.max(1, endCol - startCol);
+      // Draw more human-like figure
 
-      // Head (top 25%)
-      if (texU > 0.25 && texU < 0.75) {
-        const headH = spriteH * 0.25;
+      // Head (top 20%)
+      if (texU > 0.3 && texU < 0.7) {
+        const headH = spriteH * 0.2;
         const headTop = spriteTop;
         const brightness = Math.max(0.3, 1 - dist/10);
-        ctx.fillStyle = `rgba(210,160,100,${brightness})`;
-        ctx.fillRect(ox+col, oy+headTop, 1, headH);
+        
+        // Visor/Goggles in the middle of the head
+        if (texU > 0.35 && texU < 0.65 && (vpH/corrDist) > 30) {
+            // We need a way to draw the visor at a specific height, but we are drawing columns.
+            // So we draw the head color, then the visor on top.
+            ctx.fillStyle = `rgba(230,180,120,${brightness})`;
+            ctx.fillRect(ox+col, oy+headTop, 1, headH);
+            
+            // Draw visor strip
+            const visorTop = headTop + headH * 0.3;
+            const visorH = headH * 0.3;
+            ctx.fillStyle = `rgba(30,30,30,${brightness})`;
+            ctx.fillRect(ox+col, oy+visorTop, 1, visorH);
+            
+            // Draw a little blue glow on the visor
+            if (texU > 0.4 && texU < 0.6) {
+                ctx.fillStyle = `rgba(50,150,255,${brightness})`;
+                ctx.fillRect(ox+col, oy+visorTop + 1, 1, visorH - 2);
+            }
+        } else {
+            ctx.fillStyle = `rgba(230,180,120,${brightness})`;
+            ctx.fillRect(ox+col, oy+headTop, 1, headH);
+        }
       }
 
-      // Body (middle 50%)
-      if (texU > 0.1 && texU < 0.9) {
-        const bodyTop = spriteTop + spriteH*0.25;
-        const bodyH   = spriteH * 0.5;
-        const brightness = Math.max(0.3, 1 - dist/10);
-        // Shirt color = opponent's team color
-        const col2 = texU < 0.5 ? sprite.color : this._shadeColor(sprite.color, 0.6);
-        ctx.fillStyle = col2;
+      // Shoulders & Arms (Outer 15% on each side of the body)
+      if ((texU > 0.1 && texU <= 0.25) || (texU >= 0.75 && texU < 0.9)) {
+        const armTop = spriteTop + spriteH * 0.2;
+        const armH   = spriteH * 0.4;
+        const brightness = Math.max(0.25, 1 - dist/10);
+        // Slightly darker than shirt to distinguish arms
+        ctx.fillStyle = this._shadeColor(sprite.color, 0.75);
         ctx.globalAlpha = brightness;
-        ctx.fillRect(ox+col, oy+bodyTop, 1, bodyH);
+        ctx.fillRect(ox+col, oy+armTop, 1, armH);
+        
+        // Hands
+        const handTop = armTop + armH;
+        const handH = spriteH * 0.1;
+        ctx.fillStyle = `rgba(230,180,120,${brightness})`;
+        ctx.fillRect(ox+col, oy+handTop, 1, handH);
+        
+        // Let's draw a little blaster in the right hand (texU < 0.25 is screen left, which is their right hand if facing us)
+        if (texU > 0.15 && texU <= 0.25) {
+            const gunTop = handTop - spriteH * 0.05;
+            const gunH = spriteH * 0.15;
+            ctx.fillStyle = `rgba(255,100,30,${brightness})`; // Nerf orange blaster
+            ctx.fillRect(ox+col, oy+gunTop, 1, gunH);
+        }
         ctx.globalAlpha = 1;
       }
 
-      // Legs (bottom 25%)
-      if (texU > 0.15 && texU < 0.85) {
-        const legTop = spriteTop + spriteH*0.75;
-        const legH   = spriteH * 0.25;
-        const brightness = Math.max(0.25, 1 - dist/10);
-        ctx.fillStyle = `rgba(50,50,80,${brightness})`;
-        ctx.fillRect(ox+col, oy+legTop, 1, legH);
+      // Torso (middle 50%)
+      if (texU > 0.25 && texU < 0.75) {
+        const bodyTop = spriteTop + spriteH*0.2;
+        const bodyH   = spriteH * 0.45;
+        const brightness = Math.max(0.3, 1 - dist/10);
+        // Shirt color = opponent's team color
+        ctx.fillStyle = sprite.color;
+        ctx.globalAlpha = brightness;
+        ctx.fillRect(ox+col, oy+bodyTop, 1, bodyH);
+        
+        // Add a belt
+        const beltTop = bodyTop + bodyH - spriteH * 0.05;
+        const beltH = spriteH * 0.05;
+        ctx.fillStyle = `rgba(40,40,40,${brightness})`;
+        ctx.fillRect(ox+col, oy+beltTop, 1, beltH);
+        
+        ctx.globalAlpha = 1;
+      }
+
+      // Legs (bottom 35%, split in the middle)
+      if (texU > 0.25 && texU < 0.75) {
+        // Gap between legs
+        if (texU > 0.45 && texU < 0.55) {
+            // Do nothing, leave it empty (transparency)
+        } else {
+            const legTop = spriteTop + spriteH * 0.65;
+            const legH   = spriteH * 0.35;
+            const brightness = Math.max(0.25, 1 - dist/10);
+            ctx.fillStyle = `rgba(50,60,80,${brightness})`; // Dark pants
+            ctx.fillRect(ox+col, oy+legTop, 1, legH);
+        }
       }
     }
   }
