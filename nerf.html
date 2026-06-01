@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Nerf Arena — Family Game Hub</title>
+  <meta name="description" content="2-player split-screen Nerf gun duel! Load up, aim, and fire foam darts at your opponent in a colorful first-person arena.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;900&display=swap" rel="stylesheet">
+  <link rel="icon" type="image/png" href="favicon.png">
+  <link rel="stylesheet" href="nerf.css">
+</head>
+<body>
+
+  <canvas id="gameCanvas" aria-label="Nerf Arena game"></canvas>
+  <div id="levelBanner"></div>
+
+  <!-- ── Setup Screen ──────────────────────────────────── -->
+  <div id="gameSetup" class="overlay">
+    <div class="setup-panel">
+      <a href="index.html" class="back-link">← Back to Hub</a>
+      <h1>🔫 Nerf Arena</h1>
+      <p class="subtitle">2-player split-screen foam dart duel!</p>
+
+      <!-- Difficulty -->
+      <div class="option-group">
+        <h3>Match Length</h3>
+        <div class="option-row">
+          <label class="diff-opt selected" id="opt-short">
+            <input type="radio" name="target" value="3" checked>
+            <span class="opt-label">Quick</span>
+            <span class="opt-desc">First to 3 hits</span>
+          </label>
+          <label class="diff-opt" id="opt-medium">
+            <input type="radio" name="target" value="5">
+            <span class="opt-label">Standard</span>
+            <span class="opt-desc">First to 5 hits</span>
+          </label>
+          <label class="diff-opt" id="opt-long">
+            <input type="radio" name="target" value="10">
+            <span class="opt-label">Marathon</span>
+            <span class="opt-desc">First to 10 hits</span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Arena -->
+      <div class="option-group">
+        <h3>Arena</h3>
+        <div class="option-row">
+          <label class="diff-opt selected" id="opt-arena1">
+            <input type="radio" name="arena" value="0" checked>
+            <span class="opt-label">🏢 Classic</span>
+            <span class="opt-desc">Open arena</span>
+          </label>
+          <label class="diff-opt" id="opt-arena2">
+            <input type="radio" name="arena" value="1">
+            <span class="opt-label">🌀 Maze</span>
+            <span class="opt-desc">Lots of cover</span>
+          </label>
+          <label class="diff-opt" id="opt-arena3">
+            <input type="radio" name="arena" value="2">
+            <span class="opt-label">🏰 Fortress</span>
+            <span class="opt-desc">Two bases</span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Controls -->
+      <div class="controls-display">
+        <div class="ctrl-col">
+          <h4><span class="player-color-1">Player 1</span></h4>
+          <p><b>WASD</b> — Move</p>
+          <p><b>Q / E</b> — Turn left / right</p>
+          <p><b>Space</b> — Shoot</p>
+          <p><b>R</b> — Reload</p>
+        </div>
+        <div class="ctrl-divider"></div>
+        <div class="ctrl-col">
+          <h4><span class="player-color-2">Player 2</span></h4>
+          <p><b>↑↓←→</b> — Move</p>
+          <p><b>, / .</b> — Turn left / right</p>
+          <p><b>Enter</b> — Shoot</p>
+          <p><b>/ (slash)</b> — Reload</p>
+        </div>
+      </div>
+
+      <button id="startBtn" class="start-btn">🎯 Load Up & Play!</button>
+    </div>
+  </div>
+
+  <!-- ── Results Screen ───────────────────────────────── -->
+  <div id="gameResults" class="overlay" style="display:none">
+    <div class="results-panel">
+      <span id="resultsIcon" class="results-icon">🏆</span>
+      <h2 id="resultsTitle">Results</h2>
+      <div id="resultsList"></div>
+      <button id="restartBtn" class="start-btn">🔄 Play Again</button>
+      <br>
+      <a href="index.html" class="hub-link">← Back to Hub</a>
+    </div>
+  </div>
+
+  <script src="nerf.js"></script>
+</body>
+</html>
