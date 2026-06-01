@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ramp Racer — Family Game Hub</title>
+  <meta name="description" content="Launch your car off ramps and land on distant platforms! Find the perfect speed in this physics-based jumping game.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;900&display=swap" rel="stylesheet">
+  <link rel="icon" type="image/png" href="favicon.png">
+  <link rel="stylesheet" href="ramp.css">
+</head>
+<body>
+
+  <canvas id="gameCanvas" aria-label="Ramp Racer game"></canvas>
+
+  <!-- ── Level Banner ────────────────────────────── -->
+  <div id="levelBanner" class="level-banner"></div>
+
+  <!-- ── Setup Screen ────────────────────────────── -->
+  <div id="gameSetup" class="overlay">
+    <div class="setup-panel">
+      <a href="index.html" class="back-link">← Back to Hub</a>
+      <h1>🚗 Ramp Racer</h1>
+      <p class="subtitle">Find the perfect speed to clear the gap!</p>
+
+      <!-- Mode -->
+      <div class="option-group">
+        <h3>Game Mode</h3>
+        <div class="option-row">
+          <label class="mode-opt selected" id="opt-adventure">
+            <input type="radio" name="mode" value="adventure" checked>
+            <span class="opt-icon">🗺️</span>
+            <span class="opt-label">Adventure</span>
+            <span class="opt-desc">25 Levels</span>
+          </label>
+          <label class="mode-opt" id="opt-endless">
+            <input type="radio" name="mode" value="endless">
+            <span class="opt-icon">♾️</span>
+            <span class="opt-label">Endless</span>
+            <span class="opt-desc">How far?</span>
+          </label>
+          <label class="mode-opt" id="opt-versus">
+            <input type="radio" name="mode" value="versus">
+            <span class="opt-icon">⚔️</span>
+            <span class="opt-label">Versus</span>
+            <span class="opt-desc">2 Players</span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Difficulty -->
+      <div class="option-group">
+        <h3>Difficulty</h3>
+        <div class="option-row">
+          <label class="diff-opt" id="opt-easy">
+            <input type="radio" name="diff" value="easy">
+            <span class="opt-label">Easy</span>
+            <span class="opt-desc">Wide platforms</span>
+          </label>
+          <label class="diff-opt selected" id="opt-medium">
+            <input type="radio" name="diff" value="medium" checked>
+            <span class="opt-label">Medium</span>
+            <span class="opt-desc">Balanced</span>
+          </label>
+          <label class="diff-opt" id="opt-hard">
+            <input type="radio" name="diff" value="hard">
+            <span class="opt-label">Hard</span>
+            <span class="opt-desc">Tiny targets</span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Controls -->
+      <div class="controls-display">
+        <div class="ctrl-col">
+          <h4>Player 1</h4>
+          <p>Hold <b>→</b> to rev</p>
+          <p>Release to launch</p>
+          <p><b>↑ ↓</b> tilt in air</p>
+        </div>
+        <div class="ctrl-divider"></div>
+        <div class="ctrl-col p2-ctrl">
+          <h4>Player 2</h4>
+          <p>Hold <b>D</b> to rev</p>
+          <p>Release to launch</p>
+          <p><b>W S</b> tilt in air</p>
+        </div>
+      </div>
+
+      <button id="startBtn" class="start-btn">🏁 Start Game</button>
+    </div>
+  </div>
+
+  <!-- ── Results Screen ──────────────────────────── -->
+  <div id="gameResults" class="overlay" style="display:none">
+    <div class="results-panel">
+      <div id="resultsIcon" class="results-icon">🏆</div>
+      <h2 id="resultsTitle">Results</h2>
+      <div id="resultsList"></div>
+      <button id="restartBtn" class="start-btn">🔄 Play Again</button>
+      <br>
+      <a href="index.html" class="hub-link">← Back to Hub</a>
+    </div>
+  </div>
+
+  <script src="ramp.js"></script>
+</body>
+</html>

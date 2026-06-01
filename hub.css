@@ -637,6 +637,84 @@ body {
   color: #052e16;
 }
 
+/* Ramp Racer art */
+.card-art--ramp {
+  background: linear-gradient(180deg, #5bb8f5 0%, #87ceeb 55%, #c8e6fc 100%);
+  position: relative;
+  overflow: hidden;
+}
+.art-ramp-sky {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, #4aa3e8 0%, #87ceeb 100%);
+}
+.art-ramp-plat {
+  position: absolute;
+  height: 28px;
+  background: linear-gradient(180deg, #4caf50, #6d4c41);
+  border-top: 4px solid #66bb6a;
+}
+.art-ramp-plat--left {
+  bottom: 25%;
+  left: 0;
+  width: 35%;
+  border-radius: 0 4px 0 0;
+}
+.art-ramp-plat--right {
+  bottom: 25%;
+  right: 0;
+  width: 28%;
+  border-radius: 4px 0 0 0;
+}
+.art-ramp-slope {
+  position: absolute;
+  bottom: calc(25% + 28px);
+  left: 28%;
+  width: 0; height: 0;
+  border-left: 26px solid transparent;
+  border-bottom: 30px solid #6d4c41;
+  border-right: 0 solid transparent;
+  filter: drop-shadow(0 -2px 0 #66bb6a);
+}
+.art-ramp-car {
+  position: absolute;
+  font-size: 28px;
+  top: 32%;
+  left: 45%;
+  transform: rotate(-20deg);
+  animation: rampCarJump 2.5s ease-in-out infinite;
+  filter: drop-shadow(0 4px 8px rgba(0,0,0,0.3));
+}
+@keyframes rampCarJump {
+  0%   { top: 55%; left: 26%; transform: rotate(0deg); }
+  20%  { top: 50%; left: 30%; transform: rotate(-15deg); }
+  50%  { top: 25%; left: 50%; transform: rotate(-25deg); }
+  80%  { top: 40%; left: 65%; transform: rotate(5deg); }
+  100% { top: 55%; left: 26%; transform: rotate(0deg); }
+}
+.art-ramp-stars {
+  position: absolute;
+  top: 28%;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 14px;
+  letter-spacing: 18px;
+  opacity: 0.8;
+  animation: rampStarPulse 2s ease-in-out infinite alternate;
+}
+@keyframes rampStarPulse {
+  from { opacity: 0.5; transform: translateX(-50%) scale(0.9); }
+  to   { opacity: 1; transform: translateX(-50%) scale(1.1); }
+}
+
+.card-play-btn--orange {
+  background: linear-gradient(135deg, #ea580c, #f97316);
+}
+
+#card-ramp .card-play-btn {
+  background: linear-gradient(135deg, #ea580c, #f97316);
+}
+
 /* ---- Footer ---- */
 .hub-footer {
   text-align: center;
