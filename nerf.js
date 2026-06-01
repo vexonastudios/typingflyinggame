@@ -695,7 +695,7 @@ class NerfArena {
         const brightness = Math.max(0.3, 1 - dist/10);
         
         // Visor/Goggles in the middle of the head
-        if (texU > 0.35 && texU < 0.65 && (vpH/corrDist) > 30) {
+        if (texU > 0.35 && texU < 0.65 && (vpH/dist) > 30) {
             // We need a way to draw the visor at a specific height, but we are drawing columns.
             // So we draw the head color, then the visor on top.
             ctx.fillStyle = `rgba(230,180,120,${brightness})`;
