@@ -145,6 +145,7 @@ const Sfx = {
   go()       { [523,659,784,1047].forEach((f,i)=>setTimeout(()=>this._tone(f,'sine',0.2,0.09),i*85)); },
   win()      { [523,659,784,1047,1318].forEach((f,i)=>setTimeout(()=>this._tone(f,'sine',0.28,0.09),i*100)); },
   click()    { this._tone(600,'sine',0.04,0.04); },
+  step()     { this._noise(0.04, 0.015); }, // Soft static burst for footsteps
 };
 
 // ─── Utilities ──────────────────────────────────────────────
@@ -177,6 +178,7 @@ class Player {
     this.gunSwayX = 0;
     this.gunSwayY = 0;
     this._shootCd = 0;
+    this._stepTimer = 0;
     this.alive = true;
   }
 }
@@ -428,15 +430,22 @@ class NerfArena {
     if (!this._wallAt(Math.floor(nx), Math.floor(p.y))) p.x = nx;
     if (!this._wallAt(Math.floor(p.x), Math.floor(ny))) p.y = ny;
 
-    // Gun bob
+    // Gun bob & footsteps
     if (speed !== 0 || strafe !== 0) {
       p.bobTimer += dt * 6;
       p.gunSwayX = Math.sin(p.bobTimer) * 4;
       p.gunSwayY = Math.abs(Math.sin(p.bobTimer)) * 3;
+      
+      p._stepTimer -= dt;
+      if (p._stepTimer <= 0) {
+        Sfx.step();
+        p._stepTimer = 0.35; // play step sound every 0.35s while walking
+      }
     } else {
       p.bobTimer += dt * 1.5;
       p.gunSwayX = Math.sin(p.bobTimer) * 0.8;
       p.gunSwayY = 0;
+      p._stepTimer = 0;
     }
 
     // ── Update darts ──
