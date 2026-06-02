@@ -187,8 +187,8 @@ class NCEngine {
     // 2. Raycast walls
     this._raycastWalls(player, map);
 
-    // 3. Draw sprites (enemies, pickups)
-    this._drawSprites(player, enemies, pickups, map);
+    // 3. Draw sprites (enemies, pickups, exits)
+    this._drawSprites(state);
 
     // 4. Draw gun viewmodel
     this._drawGun(state);
@@ -310,7 +310,8 @@ class NCEngine {
   }
 
   // ── Sprite Rendering ──────────────────────────────────────────────────────────
-  _drawSprites(player, enemies, pickups, map) {
+  _drawSprites(state) {
+    const { player, enemies, pickups, map, exitUnlocked } = state;
     const ctx = this.ctx;
     const W = this.W, H = this.H;
     const { x: px, y: py, angle: pa } = player;
@@ -330,6 +331,18 @@ class NCEngine {
       const dist = Math.sqrt(dx*dx + dy*dy);
       allSprites.push({ type: 'pickup', obj: p, dist });
     }
+    // Exit tile
+    if (map && map.grid) {
+      for (let y = 0; y < map.height; y++) {
+        for (let x = 0; x < map.width; x++) {
+          if (map.grid[y * map.width + x] === 5) { // NC_TILE.EXIT is 5
+            const ex = x + 0.5, ey = y + 0.5;
+            const dx = ex - px, dy = ey - py;
+            allSprites.push({ type: 'exit', obj: { x: ex, y: ey }, dist: Math.sqrt(dx*dx + dy*dy) });
+          }
+        }
+      }
+    }
 
     // Painter's sort (back to front)
     allSprites.sort((a, b) => b.dist - a.dist);
@@ -337,6 +350,8 @@ class NCEngine {
     for (const s of allSprites) {
       if (s.type === 'enemy') {
         this._drawEnemySprite(s.obj, px, py, pa, W, H);
+      } else if (s.type === 'exit') {
+        this._drawExitSprite(s.obj, px, py, pa, W, H, exitUnlocked);
       } else {
         this._drawPickupSprite(s.obj, px, py, pa, W, H);
       }
@@ -430,6 +445,61 @@ class NCEngine {
     e.screenY = sy + spriteH / 2;
     e.dist = dist;
     e.visible = true;
+
+    ctx.restore();
+  }
+
+  _drawExitSprite(p, px, py, pa, W, H, unlocked) {
+    const ctx = this.ctx;
+    const dx = p.x - px, dy = p.y - py;
+    const dist = Math.sqrt(dx*dx + dy*dy);
+    if (dist < 0.1 || dist > 25) return;
+
+    const angle = Math.atan2(dy, dx);
+    let relAngle = angle - pa;
+    while (relAngle > Math.PI)  relAngle -= Math.PI * 2;
+    while (relAngle < -Math.PI) relAngle += Math.PI * 2;
+    if (Math.abs(relAngle) > this.halfFov + 0.3) return;
+
+    const screenX = ((relAngle / this.halfFov) * 0.5 + 0.5) * W;
+    const corrDist = dist * Math.cos(relAngle);
+    if (corrDist <= 0.1) return;
+
+    const spriteH = Math.min(H * 1.8, (H / corrDist) | 0);
+    const spriteW = spriteH * 0.8;
+    const sx = (screenX - spriteW / 2) | 0;
+    const sy = ((H - spriteH) / 2) | 0;
+
+    const fog = Math.min(1, corrDist / 12);
+    ctx.save();
+    ctx.globalAlpha = (unlocked ? 0.9 : 0.4) * (1 - fog * 0.8);
+
+    const midCol = Math.max(0, Math.min(W - 1, screenX | 0));
+    if (corrDist >= this._zBuf[midCol]) { ctx.restore(); return; }
+
+    const color = unlocked ? '#44ffaa' : '#ff4444';
+    
+    // Draw glowing back panel
+    ctx.fillStyle = unlocked ? 'rgba(68, 255, 170, 0.25)' : 'rgba(255, 68, 68, 0.25)';
+    ctx.fillRect(sx, sy, spriteW, spriteH);
+    
+    // Draw wireframe border
+    ctx.strokeStyle = color;
+    ctx.lineWidth = Math.max(2, spriteH * 0.02);
+    ctx.strokeRect(sx, sy, spriteW, spriteH);
+
+    // Draw EXIT text
+    ctx.fillStyle = color;
+    ctx.font = `bold ${Math.max(12, spriteH * 0.15)}px monospace`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('EXIT', screenX, sy + spriteH * 0.4);
+
+    // If locked, show locked text
+    if (!unlocked) {
+      ctx.font = `bold ${Math.max(8, spriteH * 0.08)}px monospace`;
+      ctx.fillText('LOCKED', screenX, sy + spriteH * 0.6);
+    }
 
     ctx.restore();
   }
