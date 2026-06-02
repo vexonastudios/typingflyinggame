@@ -285,7 +285,11 @@ class NCHUD {
 
       switch (level.winCondition) {
         case 'eliminate_all':
-          objLine = `☐ Eliminate all (${alive}/${total} remaining)`;
+          if (alive === 0) {
+             objLine = `☑ Eliminate all ✓`;
+          } else {
+             objLine = `☐ Eliminate all (${alive}/${total} remaining)`;
+          }
           break;
         case 'eliminate_commander':
           const cmd = enemies ? enemies.find(e => e.isCommander) : null;

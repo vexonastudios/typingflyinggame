@@ -63,6 +63,7 @@ class NerfOpsGame {
     this._shootCooldown = 250; // ms
     this._reloadTime = 0;
     this._isReloading = false;
+    this._stepTimer = 0;
 
     // Timing
     this._lastTime = 0;
@@ -319,6 +320,13 @@ class NerfOpsGame {
         !this._solid(p.x, ny - WALL_MARGIN * Math.sign(sinA))) p.y = ny;
 
     p.moving = Math.abs(p.velFwd) > 0.15;
+    if (p.moving) {
+      this._stepTimer -= dt;
+      if (this._stepTimer <= 0) {
+        if (typeof Sfx !== 'undefined') Sfx.step();
+        this._stepTimer = 0.32;
+      }
+    }
 
     // Reload
     if (this._isReloading) {
@@ -334,6 +342,7 @@ class NerfOpsGame {
       this._isReloading = true;
       this._reloadTime = 1500;
       this.hud.showMessage('RELOADING...', 1500, '#ff8800');
+      if (typeof Sfx !== 'undefined') Sfx.reload();
       return;
     }
 
@@ -345,9 +354,11 @@ class NerfOpsGame {
       if (now - this._lastShot > 500) {
         this._lastShot = now;
         this.hud.showMessage('OUT OF AMMO — Press R', 800, '#ff4444');
+        if (typeof Sfx !== 'undefined') Sfx.empty();
         if (!this._isReloading) {
           this._isReloading = true;
           this._reloadTime = 1500;
+          if (typeof Sfx !== 'undefined') Sfx.reload();
         }
       }
     }
@@ -358,6 +369,7 @@ class NerfOpsGame {
     this._lastShot = now;
     this.player.ammo--;
     this.engine.triggerShoot();
+    if (typeof Sfx !== 'undefined') Sfx.shoot();
 
     // Raycast for hit
     const p = this.player;
@@ -367,6 +379,7 @@ class NerfOpsGame {
       const dmg = 20 + (Math.random() * 10 | 0);
       const died = hitEnemy.takeDamage(dmg);
       const kill = died;
+      if (typeof Sfx !== 'undefined') Sfx.hit();
       this.hud.showHitMarker(kill);
       if (kill) {
         const bonus = hitEnemy.isCommander ? 2 : 1;
@@ -385,7 +398,8 @@ class NerfOpsGame {
       }
     } else {
       // Check barrel hit
-      this._checkBarrelShot(p.x, p.y, p.angle);
+      const hitBarrel = this._checkBarrelShot(p.x, p.y, p.angle);
+      if (!hitBarrel && typeof Sfx !== 'undefined') Sfx.splat();
     }
   }
 
@@ -434,6 +448,7 @@ class NerfOpsGame {
         this.map.grid[idx] = NC_TILE.EMPTY;
         this.score += 50;
         this.hud.showMessage('BARREL DESTROYED!', 1500, '#ffaa00');
+        if (typeof Sfx !== 'undefined') Sfx.hit();
         // Check objectives
         for (const obj of this.objectives) {
           if (obj.type === 'destroy_barrel' && obj.x === bx && obj.y === by) {
@@ -441,9 +456,10 @@ class NerfOpsGame {
             this.hud.showMessage(`✓ OBJECTIVE: ${obj.label}`, 2500, '#44ff88');
           }
         }
-        break;
+        return true;
       }
     }
+    return false;
   }
 
   // ─── Enemy update ─────────────────────────────────────────────────────────────
@@ -456,6 +472,7 @@ class NerfOpsGame {
         if (dmg > 0) {
           p.health = Math.max(0, p.health - dmg);
           this.hud.showDamage(dmg);
+          if (typeof Sfx !== 'undefined') Sfx.playerHit();
           if (p.health <= 0) {
             this._triggerGameOver();
             return;
@@ -484,6 +501,7 @@ class NerfOpsGame {
       const dx = p.x - pk.x, dy = p.y - pk.y;
       if (Math.sqrt(dx*dx + dy*dy) < 0.8) {
         pk.collected = true;
+        if (typeof Sfx !== 'undefined') Sfx.pickup();
         switch (pk.type) {
           case 'ammo':
             p.ammo = Math.min(p.maxAmmo, p.ammo + (pk.amount || 15));
@@ -497,6 +515,7 @@ class NerfOpsGame {
           case 'key':
             p.hasKey = true;
             this.hud.showMessage('⚷ KEY ACQUIRED — Doors unlocked!', 3000, '#44ffaa');
+            if (typeof Sfx !== 'undefined') Sfx.door();
             // Unlock door tiles
             for (let i = 0; i < this.map.grid.length; i++) {
               if (this.map.grid[i] === NC_TILE.DOOR) this.map.grid[i] = NC_TILE.EMPTY;
@@ -521,6 +540,10 @@ class NerfOpsGame {
         if (alive.length === 0) {
           this.exitUnlocked = true;
           won = this._playerOnExit();
+          if (!won && !this._exitMsgShown) {
+            this._exitMsgShown = true;
+            this.hud.showMessage('AREA CLEARED — Reach the exit!', 3000, '#44ffaa');
+          }
         }
         break;
       case 'eliminate_commander':
@@ -560,11 +583,11 @@ class NerfOpsGame {
     return this.map.grid[ty * this.map.width + tx] === NC_TILE.EXIT;
   }
 
-  // ─── Level Complete ───────────────────────────────────────────────────────────
   _triggerLevelComplete() {
     if (this.gameState !== GAME_STATE.PLAYING) return;
     this.gameState = GAME_STATE.LEVEL_END;
     document.exitPointerLock();
+    if (typeof Sfx !== 'undefined') Sfx.win();
 
     const timeBonus = Math.max(0, (this.map.par - (this.elapsedTime | 0)) * 10);
     this.score += timeBonus;
@@ -617,11 +640,11 @@ class NerfOpsGame {
     });
   }
 
-  // ─── Game Over ────────────────────────────────────────────────────────────────
   _triggerGameOver() {
     if (this.gameState !== GAME_STATE.PLAYING) return;
     this.gameState = GAME_STATE.GAME_OVER;
     document.exitPointerLock();
+    if (typeof Sfx !== 'undefined') Sfx.hit();
 
     this.menuOverlay.style.display = 'flex';
     this.menuOverlay.innerHTML = `

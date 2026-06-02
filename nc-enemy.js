@@ -244,7 +244,11 @@ class Enemy {
     if (now - this.lastShot < this.fireRate) return 0;
     this.lastShot = now;
     const accuracy = Math.max(0.05, 1 - dist / (this.sightRange * 1.5));
-    return Math.random() < accuracy ? this.damage : 0;
+    if (Math.random() < accuracy) {
+      if (typeof Sfx !== 'undefined') Sfx.enemyShoot();
+      return this.damage;
+    }
+    return 0;
   }
 
   // ── Patrol ────────────────────────────────────────────────────────────────────
