@@ -331,11 +331,30 @@ class NerfArena {
         const grp = el.closest('.option-group');
         grp.querySelectorAll('.diff-opt').forEach(e => e.classList.remove('selected'));
         el.classList.add('selected');
-        el.querySelector('input').checked = true;
+        const input = el.querySelector('input');
+        input.checked = true;
         Sfx.click();
+
+        // Toggle visibility of duel settings
+        if (input.name === 'gamemode') {
+          const isCampaign = input.value === 'campaign';
+          document.getElementById('duelSettings').style.display = isCampaign ? 'none' : 'block';
+          document.getElementById('ctrlDivider').style.display = isCampaign ? 'none' : 'block';
+          document.getElementById('player2Controls').style.display = isCampaign ? 'none' : 'block';
+          document.querySelector('#player1Controls h4 span').textContent = isCampaign ? 'Single Player' : 'Player 1';
+        }
       });
     });
-    document.getElementById('startBtn').addEventListener('click', () => this._startGame());
+    
+    document.getElementById('startBtn').addEventListener('click', () => {
+      const mode = document.querySelector('input[name="gamemode"]:checked')?.value || 'duel';
+      if (mode === 'campaign') {
+        window.location.href = 'nerf-campaign.html';
+      } else {
+        this._startGame();
+      }
+    });
+    
     document.getElementById('restartBtn').addEventListener('click', () => this._goSetup());
   }
 

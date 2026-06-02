@@ -22,61 +22,80 @@
       <h1>🔫 Nerf Arena</h1>
       <p class="subtitle">2-player split-screen foam dart duel!</p>
 
-      <!-- Difficulty -->
+      <!-- Game Mode -->
       <div class="option-group">
-        <h3>Match Length</h3>
+        <h3>Game Mode</h3>
         <div class="option-row">
-          <label class="diff-opt selected" id="opt-short">
-            <input type="radio" name="target" value="3" checked>
-            <span class="opt-label">Quick</span>
-            <span class="opt-desc">First to 3 hits</span>
+          <label class="diff-opt selected" id="opt-mode-duel">
+            <input type="radio" name="gamemode" value="duel" checked>
+            <span class="opt-label">Split-Screen Duel</span>
+            <span class="opt-desc">2-player local match</span>
           </label>
-          <label class="diff-opt" id="opt-medium">
-            <input type="radio" name="target" value="5">
-            <span class="opt-label">Standard</span>
-            <span class="opt-desc">First to 5 hits</span>
-          </label>
-          <label class="diff-opt" id="opt-long">
-            <input type="radio" name="target" value="10">
-            <span class="opt-label">Marathon</span>
-            <span class="opt-desc">First to 10 hits</span>
+          <label class="diff-opt" id="opt-mode-campaign">
+            <input type="radio" name="gamemode" value="campaign">
+            <span class="opt-label">Rogue Protocol</span>
+            <span class="opt-desc">1-player story campaign</span>
           </label>
         </div>
       </div>
 
-      <!-- Arena -->
-      <div class="option-group">
-        <h3>Arena</h3>
-        <div class="option-row">
-          <label class="diff-opt selected" id="opt-arena1">
-            <input type="radio" name="arena" value="0" checked>
-            <span class="opt-label">🏢 Classic</span>
-            <span class="opt-desc">Open arena</span>
-          </label>
-          <label class="diff-opt" id="opt-arena2">
-            <input type="radio" name="arena" value="1">
-            <span class="opt-label">🌀 Maze</span>
-            <span class="opt-desc">Lots of cover</span>
-          </label>
-          <label class="diff-opt" id="opt-arena3">
-            <input type="radio" name="arena" value="2">
-            <span class="opt-label">🏰 Fortress</span>
-            <span class="opt-desc">Two bases</span>
-          </label>
+      <div id="duelSettings">
+        <!-- Difficulty -->
+        <div class="option-group">
+          <h3>Match Length</h3>
+          <div class="option-row">
+            <label class="diff-opt selected" id="opt-short">
+              <input type="radio" name="target" value="3" checked>
+              <span class="opt-label">Quick</span>
+              <span class="opt-desc">First to 3 hits</span>
+            </label>
+            <label class="diff-opt" id="opt-medium">
+              <input type="radio" name="target" value="5">
+              <span class="opt-label">Standard</span>
+              <span class="opt-desc">First to 5 hits</span>
+            </label>
+            <label class="diff-opt" id="opt-long">
+              <input type="radio" name="target" value="10">
+              <span class="opt-label">Marathon</span>
+              <span class="opt-desc">First to 10 hits</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Arena -->
+        <div class="option-group">
+          <h3>Arena</h3>
+          <div class="option-row">
+            <label class="diff-opt selected" id="opt-arena1">
+              <input type="radio" name="arena" value="0" checked>
+              <span class="opt-label">🏢 Classic</span>
+              <span class="opt-desc">Open arena</span>
+            </label>
+            <label class="diff-opt" id="opt-arena2">
+              <input type="radio" name="arena" value="1">
+              <span class="opt-label">🌀 Maze</span>
+              <span class="opt-desc">Lots of cover</span>
+            </label>
+            <label class="diff-opt" id="opt-arena3">
+              <input type="radio" name="arena" value="2">
+              <span class="opt-label">🏰 Fortress</span>
+              <span class="opt-desc">Two bases</span>
+            </label>
+          </div>
         </div>
       </div>
 
       <!-- Controls -->
       <div class="controls-display">
-        <div class="ctrl-col">
+        <div class="ctrl-col" id="player1Controls">
           <h4><span class="player-color-1">Player 1</span></h4>
           <p><b>W / S</b> — Move forward / back</p>
           <p><b>A / D</b> — Turn left / right</p>
           <p><b>Space</b> — Shoot</p>
           <p><b>R</b> — Reload</p>
         </div>
-        <div class="ctrl-divider"></div>
-        <div class="ctrl-col">
+        <div class="ctrl-divider" id="ctrlDivider"></div>
+        <div class="ctrl-col" id="player2Controls">
           <h4><span class="player-color-2">Player 2</span></h4>
           <p><b>↑ / ↓</b> — Move forward / back</p>
           <p><b>← / →</b> — Turn left / right</p>
