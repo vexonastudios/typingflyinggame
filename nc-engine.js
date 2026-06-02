@@ -404,30 +404,38 @@ class NCEngine {
     ctx.save();
     ctx.globalAlpha = alpha * (1 - fog * 0.8);
 
-    // Draw enemy body as billboard blocks
+    // Determine animation frame
+    let frame = 'idle';
+    if (e.shootAnimTimer > 0) {
+      frame = 'shoot';
+    } else if (e.isMoving) {
+      frame = (Math.floor(e.walkAnimTimer / 200) % 2 === 0) ? 'walk1' : 'walk2';
+    }
+    const frameIndex = { 'idle': 0, 'walk1': 1, 'walk2': 2, 'shoot': 3 }[frame] || 0;
+
+    const spriteSheet = typeof EnemySpriteGen !== 'undefined' 
+      ? EnemySpriteGen.getSpriteSheet(e.color, e.typeCfg.accentColor, e.isCommander) 
+      : null;
+    const S = spriteSheet ? spriteSheet.height : 64; // Fallback to 64 if not loaded yet
+
+    // Draw enemy slice by slice (for z-buffering)
     for (let col = 0; col < spriteW; col++) {
       if (sx + col < 0 || sx + col >= W) continue;
       if (corrDist >= this._zBuf[sx + col]) continue; // behind wall
 
-      // Body gradient
-      const t = col / spriteW;
       const isFlash = e.isFlashing && Math.floor(Date.now() / 80) % 2 === 0;
-      const color = isFlash ? '#ffffff' :
-        (e.isCommander ? e.typeCfg.accentColor : e.color);
-
-      // Draw body
-      const bodyTop    = sy + spriteH * 0.15;
-      const bodyBottom = sy + spriteH * 0.85;
-      const headTop    = sy;
-      const headBottom = sy + spriteH * 0.2;
-
-      // Body
-      ctx.fillStyle = color;
-      ctx.fillRect(sx + col, bodyTop | 0, 1, (bodyBottom - bodyTop) | 0);
-
-      // Head (slightly lighter)
-      ctx.fillStyle = '#f0c080';
-      ctx.fillRect(sx + col, headTop | 0, 1, (headBottom - headTop) | 0);
+      
+      if (isFlash) {
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(sx + col, sy + spriteH * 0.1, 1, spriteH * 0.8);
+      } else if (spriteSheet) {
+        const srcX = frameIndex * S + Math.floor((col / spriteW) * S);
+        ctx.drawImage(spriteSheet, srcX, 0, 1, S, sx + col, sy, 1, spriteH);
+      } else {
+        // Fallback block if generator fails
+        ctx.fillStyle = e.color;
+        ctx.fillRect(sx + col, sy + spriteH * 0.2, 1, spriteH * 0.6);
+      }
     }
 
     // Health bar above enemy

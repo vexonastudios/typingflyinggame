@@ -1,15 +1,15 @@
 // nc-enemy.js — NERF OPS: Rogue Protocol — Enemy AI
 'use strict';
 
-// ─── Enemy type configs ────────────────────────────────────────────────────────
+// ─── Enemy type configs (Increased Difficulty) ──────────────────────────────────
 const ENEMY_TYPES = {
   grunt: {
     label: 'Grunt',
     health: 40,
-    speed: 1.2,
-    damage: 8,
-    fireRate: 1800,   // ms between shots
-    sightRange: 7,
+    speed: 1.6,       // increased
+    damage: 12,       // increased
+    fireRate: 1200,   // faster
+    sightRange: 10,
     color: '#e05c20',
     accentColor: '#ff8844',
     size: 0.4,
@@ -18,10 +18,10 @@ const ENEMY_TYPES = {
   scout: {
     label: 'Scout',
     health: 25,
-    speed: 2.2,
-    damage: 5,
-    fireRate: 1200,
-    sightRange: 10,
+    speed: 2.8,       // increased
+    damage: 8,        // increased
+    fireRate: 800,    // faster
+    sightRange: 12,
     color: '#20a0e0',
     accentColor: '#44ccff',
     size: 0.35,
@@ -29,11 +29,11 @@ const ENEMY_TYPES = {
   },
   heavy: {
     label: 'Heavy',
-    health: 100,
-    speed: 0.7,
-    damage: 18,
-    fireRate: 2500,
-    sightRange: 6,
+    health: 120,
+    speed: 1.0,
+    damage: 25,
+    fireRate: 1800,
+    sightRange: 8,
     color: '#8020e0',
     accentColor: '#bb44ff',
     size: 0.5,
@@ -42,10 +42,10 @@ const ENEMY_TYPES = {
   sniper: {
     label: 'Sniper',
     health: 30,
-    speed: 0.8,
-    damage: 30,
-    fireRate: 3000,
-    sightRange: 15,
+    speed: 1.2,
+    damage: 40,
+    fireRate: 2500,
+    sightRange: 20,
     color: '#20e060',
     accentColor: '#44ff88',
     size: 0.38,
@@ -53,11 +53,11 @@ const ENEMY_TYPES = {
   },
   commander: {
     label: 'Commander',
-    health: 80,
-    speed: 1.5,
-    damage: 12,
-    fireRate: 1400,
-    sightRange: 12,
+    health: 100,
+    speed: 1.8,
+    damage: 18,
+    fireRate: 1000,
+    sightRange: 15,
     color: '#e0c020',
     accentColor: '#ffdd44',
     size: 0.45,
@@ -65,11 +65,11 @@ const ENEMY_TYPES = {
   },
   keyguard: {
     label: 'Key Guard',
-    health: 50,
-    speed: 1.0,
-    damage: 10,
-    fireRate: 2000,
-    sightRange: 8,
+    health: 60,
+    speed: 1.2,
+    damage: 15,
+    fireRate: 1500,
+    sightRange: 10,
     color: '#e02080',
     accentColor: '#ff44aa',
     size: 0.42,
@@ -77,11 +77,11 @@ const ENEMY_TYPES = {
   },
   general: {
     label: 'Rogue General',
-    health: 200,
-    speed: 1.8,
-    damage: 20,
-    fireRate: 900,
-    sightRange: 20,
+    health: 300,
+    speed: 2.2,
+    damage: 25,
+    fireRate: 600,
+    sightRange: 25,
     color: '#ff2020',
     accentColor: '#ff6060',
     size: 0.55,
@@ -144,6 +144,11 @@ class Enemy {
     // death animation
     this._deathTimer = 0;
     this._deathDuration = 600; // ms
+
+    // Rendering / Animations
+    this.shootAnimTimer = 0;
+    this.walkAnimTimer = 0;
+    this.isMoving = false;
   }
 
   // ── Main update ──────────────────────────────────────────────────────────────
@@ -154,6 +159,9 @@ class Enemy {
     }
 
     if (this._hitFlash > 0) this._hitFlash -= dt * 1000;
+    if (this.shootAnimTimer > 0) this.shootAnimTimer -= dt * 1000;
+    
+    this.isMoving = false;
 
     const dx = playerX - this.x;
     const dy = playerY - this.y;
@@ -242,7 +250,11 @@ class Enemy {
     if (dist > this.sightRange) return 0;
     if (!this._hasLOS(playerX, playerY)) return 0;
     if (now - this.lastShot < this.fireRate) return 0;
+    
     this.lastShot = now;
+    this.shootAnimTimer = 200; // 200ms muzzle flash animation
+    this.angle = Math.atan2(dy, dx); // Face player when shooting
+
     const accuracy = Math.max(0.05, 1 - dist / (this.sightRange * 1.5));
     if (Math.random() < accuracy) {
       if (typeof Sfx !== 'undefined') Sfx.enemyShoot();
@@ -282,8 +294,11 @@ class Enemy {
     const ny = this.y + (dy / dist) * step;
 
     // Collision check with bounding box
-    if (this._canMoveTo(nx, this.y)) this.x = nx;
-    if (this._canMoveTo(this.x, ny)) this.y = ny;
+    if (this._canMoveTo(nx, this.y)) { this.x = nx; this.isMoving = true; }
+    if (this._canMoveTo(this.x, ny)) { this.y = ny; this.isMoving = true; }
+    
+    if (this.isMoving) this.walkAnimTimer += dt * 1000;
+    
     return true;
   }
 
@@ -294,8 +309,10 @@ class Enemy {
     const step = this.speed * 0.5 * dt;
     const nx = this.x + Math.cos(perp) * step * dir;
     const ny = this.y + Math.sin(perp) * step * dir;
-    if (this._canMoveTo(nx, this.y)) this.x = nx;
-    if (this._canMoveTo(this.x, ny)) this.y = ny;
+    if (this._canMoveTo(nx, this.y)) { this.x = nx; this.isMoving = true; }
+    if (this._canMoveTo(this.x, ny)) { this.y = ny; this.isMoving = true; }
+    
+    if (this.isMoving) this.walkAnimTimer += dt * 1000;
   }
 
   // ── LOS check (simple ray march) ─────────────────────────────────────────────
