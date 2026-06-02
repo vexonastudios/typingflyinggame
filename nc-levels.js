@@ -210,7 +210,7 @@ const LEVEL_3 = {
     { x: 5.5,  y: 2.5,  type: 'grunt',    patrol: [{x:5.5,y:2.5},{x:9.5,y:2.5}] },
     { x: 15.5, y: 2.5,  type: 'scout',    patrol: [{x:15.5,y:2.5},{x:19.5,y:2.5}] },
     { x: 10.5, y: 7.5,  type: 'grunt',    patrol: [{x:10.5,y:7.5},{x:10.5,y:10.5}] },
-    { x: 5.5,  y: 14.5, type: 'scout',    patrol: [{x:5.5,y:14.5},{x:17.5,y:14.5}] },
+    { x: 6.5,  y: 14.5, type: 'scout',    patrol: [{x:6.5,y:14.5},{x:14.5,y:14.5}] },
     { x: 10.5, y: 19.5, type: 'commander',patrol: [{x:10.5,y:19.5},{x:10.5,y:17.5}], isCommander: true },
   ],
 
