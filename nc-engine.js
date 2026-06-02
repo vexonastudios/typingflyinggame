@@ -206,25 +206,27 @@ class NCEngine {
   _drawFloorCeiling(player, map) {
     const ctx = this.ctx;
     const W = this.W, H = this.H;
+    const pitch = player.pitch || 0;
+    const splitY = Math.max(0, Math.min(H, (H / 2) + pitch));
 
     // Ceiling gradient
-    const ceilGrad = ctx.createLinearGradient(0, 0, 0, H/2);
+    const ceilGrad = ctx.createLinearGradient(0, 0, 0, splitY || 1);
     ceilGrad.addColorStop(0, map.ambientColor || '#0d0d1a');
     ceilGrad.addColorStop(1, '#1a1a2a');
     ctx.fillStyle = ceilGrad;
-    ctx.fillRect(0, 0, W, H/2);
+    ctx.fillRect(0, 0, W, splitY);
 
     // Floor gradient
-    const floorGrad = ctx.createLinearGradient(0, H/2, 0, H);
+    const floorGrad = ctx.createLinearGradient(0, splitY, 0, H);
     floorGrad.addColorStop(0, '#111118');
     floorGrad.addColorStop(1, '#050508');
     ctx.fillStyle = floorGrad;
-    ctx.fillRect(0, H/2, W, H/2);
+    ctx.fillRect(0, splitY, W, H - splitY);
 
     // Floor grid lines for depth effect
     ctx.strokeStyle = 'rgba(80,80,120,0.15)';
     ctx.lineWidth = 1;
-    for (let fy = H/2 + 10; fy < H; fy += 20) {
+    for (let fy = splitY + 10; fy < H; fy += 20) {
       ctx.beginPath();
       ctx.moveTo(0, fy);
       ctx.lineTo(W, fy);
@@ -237,6 +239,7 @@ class NCEngine {
     const ctx = this.ctx;
     const W = this.W, H = this.H;
     const { x: px, y: py, angle: pa } = player;
+    const pitch = player.pitch || 0;
     const fogDepth = map.fogDepth || 12;
     const texCanvas = this._getTexCanvas(map.wallTex || 0);
     const S = this._TEX_SIZE;
@@ -287,9 +290,13 @@ class NCEngine {
       else            wallX = px + dist * cosA;
       wallX -= Math.floor(wallX);
 
-      const lineH = Math.min(H * 3, (H / corrDist) | 0);
-      const drawStart = Math.max(0, ((H - lineH) >> 1));
-      const drawEnd   = Math.min(H - 1, ((H + lineH) >> 1));
+      const lineH = Math.min(H * 6, (H / corrDist) | 0);
+      const actualStart = ((H - lineH) >> 1) + pitch;
+      const actualEnd   = ((H + lineH) >> 1) + pitch;
+      const drawStart = Math.max(0, actualStart);
+      const drawEnd   = Math.min(H - 1, actualEnd);
+
+      if (drawEnd <= drawStart) continue;
 
       // Fog factor
       const fog = Math.min(1, corrDist / fogDepth);
@@ -298,10 +305,14 @@ class NCEngine {
       const texX = Math.floor(wallX * S);
       const shadeFactor = side === 1 ? 0.6 : 1.0;
 
+      const yOffset = drawStart - actualStart;
+      const srcY = yOffset * S / lineH;
+      const srcH = (drawEnd - drawStart) * S / lineH;
+
       ctx.save();
       ctx.globalAlpha = 1;
       // Draw texture slice
-      ctx.drawImage(texCanvas, texX, 0, 1, S, col, drawStart, 1, drawEnd - drawStart);
+      ctx.drawImage(texCanvas, texX, srcY, 1, srcH, col, drawStart, 1, drawEnd - drawStart);
       // Apply shade + fog
       ctx.fillStyle = `rgba(0,0,0,${fog * 0.85 + (1 - shadeFactor) * 0.3})`;
       ctx.fillRect(col, drawStart, 1, drawEnd - drawStart);
@@ -314,7 +325,7 @@ class NCEngine {
     const { player, enemies, pickups, map, exitUnlocked } = state;
     const ctx = this.ctx;
     const W = this.W, H = this.H;
-    const { x: px, y: py, angle: pa } = player;
+    const { x: px, y: py, angle: pa, pitch = 0 } = player;
 
     const allSprites = [];
 
@@ -349,16 +360,16 @@ class NCEngine {
 
     for (const s of allSprites) {
       if (s.type === 'enemy') {
-        this._drawEnemySprite(s.obj, px, py, pa, W, H);
+        this._drawEnemySprite(s.obj, px, py, pa, W, H, pitch);
       } else if (s.type === 'exit') {
-        this._drawExitSprite(s.obj, px, py, pa, W, H, exitUnlocked);
+        this._drawExitSprite(s.obj, px, py, pa, W, H, exitUnlocked, pitch);
       } else {
-        this._drawPickupSprite(s.obj, px, py, pa, W, H);
+        this._drawPickupSprite(s.obj, px, py, pa, W, H, pitch);
       }
     }
   }
 
-  _drawEnemySprite(e, px, py, pa, W, H) {
+  _drawEnemySprite(e, px, py, pa, W, H, pitch) {
     const ctx = this.ctx;
     if (e.isDead && e.deathProgress >= 1) return;
 
@@ -383,7 +394,7 @@ class NCEngine {
     const spriteH = Math.min(H * 2, (H / corrDist) | 0);
     const spriteW = spriteH;
     const sx = (screenX - spriteW / 2) | 0;
-    const sy = ((H - spriteH) / 2) | 0;
+    const sy = (((H - spriteH) / 2) + pitch) | 0;
 
     // Fog
     const fogDepth = 12;
@@ -449,7 +460,7 @@ class NCEngine {
     ctx.restore();
   }
 
-  _drawExitSprite(p, px, py, pa, W, H, unlocked) {
+  _drawExitSprite(p, px, py, pa, W, H, unlocked, pitch) {
     const ctx = this.ctx;
     const dx = p.x - px, dy = p.y - py;
     const dist = Math.sqrt(dx*dx + dy*dy);
@@ -468,7 +479,7 @@ class NCEngine {
     const spriteH = Math.min(H * 1.8, (H / corrDist) | 0);
     const spriteW = spriteH * 0.8;
     const sx = (screenX - spriteW / 2) | 0;
-    const sy = ((H - spriteH) / 2) | 0;
+    const sy = (((H - spriteH) / 2) + pitch) | 0;
 
     const fog = Math.min(1, corrDist / 12);
     ctx.save();
@@ -504,7 +515,7 @@ class NCEngine {
     ctx.restore();
   }
 
-  _drawPickupSprite(p, px, py, pa, W, H) {
+  _drawPickupSprite(p, px, py, pa, W, H, pitch) {
     const ctx = this.ctx;
     const dx = p.x - px, dy = p.y - py;
     const dist = Math.sqrt(dx*dx + dy*dy);
@@ -523,7 +534,7 @@ class NCEngine {
     const spriteH = Math.min(H, (H * 0.5 / corrDist) | 0);
     const spriteW = spriteH;
     const sx = (screenX - spriteW / 2) | 0;
-    const sy = ((H - spriteH) / 2 + spriteH * 0.25) | 0;
+    const sy = (((H - spriteH) / 2 + spriteH * 0.25) + pitch) | 0;
 
     const fog = Math.min(1, corrDist / 10);
     ctx.save();
@@ -587,9 +598,10 @@ class NCEngine {
     const ax = W * 0.85 + swayX;
     const ay = H + 50 * scale + recoilY + swayY;
 
-    // Crosshair position (vanishing point = center of screen)
+    // Crosshair position (vanishing point = center of screen, offset by pitch)
+    const pitch = player.pitch || 0;
     const cx = W / 2;
-    const cy = H / 2;
+    const cy = H / 2 + pitch;
 
     ctx.save();
     ctx.translate(ax, ay);

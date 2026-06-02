@@ -722,6 +722,11 @@ class NerfOpsGame {
     document.addEventListener('mousemove', e => {
       if (!this._mouseLocked || this.gameState !== GAME_STATE.PLAYING) return;
       this.player.angle += e.movementX * this._mouseSensitivity;
+      
+      const vertSens = this._mouseSensitivity * 1000;
+      this.player.pitch = (this.player.pitch || 0) - e.movementY * vertSens;
+      const maxPitch = window.innerHeight / 1.5;
+      this.player.pitch = Math.max(-maxPitch, Math.min(maxPitch, this.player.pitch));
     });
 
     window.addEventListener('mousedown', e => {
