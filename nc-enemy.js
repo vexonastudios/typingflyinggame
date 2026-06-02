@@ -281,9 +281,9 @@ class Enemy {
     const nx = this.x + (dx / dist) * step;
     const ny = this.y + (dy / dist) * step;
 
-    // Collision check
-    if (!this._isSolid(nx, this.y)) this.x = nx;
-    if (!this._isSolid(this.x, ny)) this.y = ny;
+    // Collision check with bounding box
+    if (this._canMoveTo(nx, this.y)) this.x = nx;
+    if (this._canMoveTo(this.x, ny)) this.y = ny;
     return true;
   }
 
@@ -294,8 +294,8 @@ class Enemy {
     const step = this.speed * 0.5 * dt;
     const nx = this.x + Math.cos(perp) * step * dir;
     const ny = this.y + Math.sin(perp) * step * dir;
-    if (!this._isSolid(nx, this.y)) this.x = nx;
-    if (!this._isSolid(this.x, ny)) this.y = ny;
+    if (this._canMoveTo(nx, this.y)) this.x = nx;
+    if (this._canMoveTo(this.x, ny)) this.y = ny;
   }
 
   // ── LOS check (simple ray march) ─────────────────────────────────────────────
@@ -320,7 +320,16 @@ class Enemy {
     const iy = Math.floor(y);
     if (ix < 0 || iy < 0 || ix >= map.width || iy >= map.height) return true;
     const t = map.grid[iy * map.width + ix];
-    return t === NC_TILE.WALL || t === NC_TILE.CRATE || t === NC_TILE.DOOR;
+    return t === NC_TILE.WALL || t === NC_TILE.CRATE || t === NC_TILE.DOOR || t === NC_TILE.BARREL;
+  }
+
+  // ── Bounding box collision check ──────────────────────────────────────────────
+  _canMoveTo(x, y) {
+    const margin = 0.25; // Enemy physical radius
+    return !this._isSolid(x - margin, y - margin) &&
+           !this._isSolid(x + margin, y - margin) &&
+           !this._isSolid(x - margin, y + margin) &&
+           !this._isSolid(x + margin, y + margin);
   }
 
   // ── Take damage ────────────────────────────────────────────────────────────────
