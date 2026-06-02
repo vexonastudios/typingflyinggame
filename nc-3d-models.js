@@ -29,11 +29,13 @@ const Model3D = {
 
     // 3. Perspective projection
     const halfFov = fov / 2;
-    const focalLen = (W / 2) / Math.tan(halfFov);
+    const focalLenX = (W / 2) / Math.tan(halfFov);
+    const focalLenY = H; // Match the raycaster's vertical scaling exactly
     const pitch = camPitch || 0;
 
-    const sx = W / 2 + (cy / cx) * focalLen;
-    const sy = H / 2 - (wz / cx) * focalLen + pitch;
+    const sx = W / 2 + (cy / cx) * focalLenX;
+    // Shift Z down by 0.5 so Z=0 aligns perfectly with the floor and Z=1 is the ceiling
+    const sy = H / 2 - ((wz - 0.5) / cx) * focalLenY + pitch;
 
     return { sx, sy, depth: cx };
   },
