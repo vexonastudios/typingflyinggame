@@ -1101,166 +1101,138 @@ class NerfArena {
     ctx.restore();
   }
 
-  // ─── Gun Viewmodel (Classic Centered FPS) ───────────────────
-  // Drawn symmetrically at the bottom center of the screen.
-  // Uses tapering trapezoids to natively create 3D perspective pointing forward.
+  // ─── Gun Viewmodel (True 3D Projection FPS) ─────────────────
+  // Renders solid 3D blocks projecting towards a vanishing point at the crosshair.
   _drawGun(ctx, p, ox, oy, vpW, vpH) {
     const gunColor = p.color;
-    const [r,g,b]  = this._hexToRgb(gunColor);
 
-    // Bobbing and recoil
-    const swayX   = p.gunSwayX * 2.0;
-    const swayY   = Math.abs(p.gunSwayY) * 1.5;
-    const recoilY = p.gunRecoil * 60;
+    const swayX   = p.gunSwayX * 1.5;
+    const swayY   = p.gunSwayY * 1.2;
+    const recoilY = p.gunRecoil * 45;
 
-    // Centered bottom anchor
+    // Anchor at bottom right of viewport
     const scale = vpH / 700;
-    const ax = ox + vpW / 2 + swayX;
-    const ay = oy + vpH + recoilY + swayY + 15 * scale;
+    const ax = ox + vpW * 0.85 + swayX;
+    const ay = oy + vpH + 50 * scale + recoilY + swayY;
+
+    // Crosshair position (vanishing point)
+    const cx = ox + vpW / 2;
+    const cy = oy + vpH / 2;
 
     ctx.save();
     ctx.translate(ax, ay);
     ctx.scale(scale, scale);
 
-    // All shapes taper from wide at bottom (close to player) to narrow at top (far away).
-    // This is the DOOM perspective trick — wide base, narrow top = "pointing forward".
+    // Calculate vanishing point in local scaled coordinates
+    const vpX = (cx - ax) / scale;
+    const vpY = (cy - ay) / scale;
 
-    // Helper: draw a centred trapezoid (wBot=wide near end, wTop=narrow far end)
-    const trap = (fill, wBot, yBot, wTop, yTop) => {
+    // 3D Projection function: z=1 is closest, higher z is further away
+    function pt(x, y, z) {
+      return [
+        vpX + (x - vpX) / z,
+        vpY + (y - vpY) / z
+      ];
+    }
+
+    function drawFace(fill, pts) {
       ctx.fillStyle = fill;
       ctx.beginPath();
-      ctx.moveTo(-wBot/2, yBot);
-      ctx.lineTo( wBot/2, yBot);
-      ctx.lineTo( wTop/2, yTop);
-      ctx.lineTo(-wTop/2, yTop);
+      ctx.moveTo(pts[0][0], pts[0][1]);
+      for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i][0], pts[i][1]);
       ctx.closePath();
       ctx.fill();
+    }
+
+    const mix = (hex, amt) => {
+      const [r, g, b] = this._hexToRgb(hex);
+      const clamp = v => Math.max(0, Math.min(255, Math.round(v)));
+      return `rgb(${clamp(r*amt)},${clamp(g*amt)},${clamp(b*amt)})`;
     };
 
-    // Y extents (negative = up the screen = "further forward into scene")
-    const yHand  =  60;    // bottom, below screen edge
-    const yRec1  = -20;    // receiver starts here (just below viewport)
-    const yRec2  = -240;   // receiver ends here
-    const yBrl1  = -220;   // barrel starts (overlaps receiver top for clean join)
-    const yBrl2  = -490;   // barrel ends
-    const yTip1  = -480;   // muzzle tip starts
-    const yTip2  = -540;   // muzzle tip ends
+    // Draws a solid 3D box. Because vpX and vpY are always negative (up and left),
+    // we only ever see the Top, Left, and Back (closest) faces.
+    function drawBlock(x1, x2, y1, y2, z1, z2, baseColor) {
+      const cTop   = mix(baseColor, 1.15); // Lighter top
+      const cSide  = mix(baseColor, 0.65); // Darker left side
+      const cBack  = baseColor;            // Base colour facing player
 
-    // ── Grip / Hands (very wide, right at the bottom) ──────────
-    trap(this._mixColor(r,g,b,0.45), 320, yHand, 240, yRec1);
-    // Grip highlight left panel
-    trap('rgba(255,255,255,0.07)', 320*0.18, yHand, 240*0.18, yRec1);
-
-    // Grip texture lines
-    ctx.fillStyle = 'rgba(0,0,0,0.22)';
-    for (let i = 0; i < 5; i++) {
-      const t = i / 4;
-      const y = yHand + (yRec1 - yHand) * (0.15 + t * 0.7);
-      const w = 320 + (240 - 320) * (0.15 + t * 0.7);
-      ctx.fillRect(-w/2 * 0.8, y, w * 0.8, 7 - t*3);
+      // Left face
+      drawFace(cSide, [ pt(x1,y1,z1), pt(x1,y1,z2), pt(x1,y2,z2), pt(x1,y2,z1) ]);
+      // Top face
+      drawFace(cTop,  [ pt(x1,y1,z1), pt(x2,y1,z1), pt(x2,y1,z2), pt(x1,y1,z2) ]);
+      // Back face (closest to camera, drawn last to overlay edges)
+      drawFace(cBack, [ pt(x1,y1,z1), pt(x2,y1,z1), pt(x2,y2,z1), pt(x1,y2,z1) ]);
     }
 
-    // ── Trigger guard ──────────────────────────────────────────
-    ctx.strokeStyle = this._mixColor(r,g,b,0.55);
-    ctx.lineWidth = 10;
-    ctx.lineJoin = 'round';
-    ctx.beginPath();
-    ctx.moveTo(-50, -30);
-    ctx.quadraticCurveTo(-80, 20, 0, 20);
-    ctx.quadraticCurveTo(80, 20, 50, -30);
-    ctx.stroke();
-    // Yellow trigger
-    ctx.fillStyle = '#ffcc00';
-    ctx.beginPath();
-    ctx.roundRect(-10, -10, 20, 40, 5);
-    ctx.fill();
+    // ── Draw blocks from furthest (high Z) to closest (low Z) ──
 
-    // ── Receiver body ──────────────────────────────────────────
-    trap(gunColor, 240, yRec1, 140, yRec2);
-    // Left highlight
-    trap('rgba(255,255,255,0.12)', 240*0.12, yRec1, 140*0.12, yRec2);
-    // Right shadow
-    trap('rgba(0,0,0,0.2)', 240*0.12, yRec1, 140*0.12, yRec2);
-    // Raised centre spine
-    trap(this._mixColor(r,g,b,0.75), 240*0.25, yRec1, 140*0.25, yRec2);
-    // Top face (foreshortened front of receiver)
-    trap(this._mixColor(r,g,b,0.85), 140, yRec2, 130, yRec2-18);
-
-    // Dart indicator lights along the top of the receiver
-    for (let i = 0; i < MAX_AMMO; i++) {
-      const t = i / (MAX_AMMO - 1) - 0.5; // -0.5 to +0.5
-      const cx2 = t * 110;
-      const cy2 = yRec2 - 8;
-      ctx.fillStyle = i < p.ammo ? '#ffaa00' : '#333333';
-      ctx.beginPath(); ctx.arc(cx2, cy2, 5, 0, Math.PI*2); ctx.fill();
-      if (i < p.ammo) {
-        ctx.fillStyle = '#ff3300';
-        ctx.beginPath(); ctx.arc(cx2, cy2, 2.5, 0, Math.PI*2); ctx.fill();
-      }
+    // 7. Orange Tip Front
+    drawBlock(-20, 20, -35, 35, 3.4, 3.6, '#ff5500');
+    // 6. Orange Tip Base
+    drawBlock(-24, 24, -40, 40, 3.2, 3.4, '#cc3300');
+    
+    // 5. Barrel Rail
+    drawBlock(-8, 8, -42, -30, 1.8, 3.0, '#1a1a1a');
+    // 4. Barrel Main
+    drawBlock(-18, 18, -30, 25, 1.8, 3.2, '#333333');
+    
+    // 3. Receiver Front
+    drawBlock(-35, 35, -45, 60, 1.3, 1.8, gunColor);
+    
+    // 2. Ammo Clip (Visible on left side)
+    if (p.ammo > 0) {
+      drawBlock(-65, -35, -15, 45, 1.25, 1.45, '#ffaa00');
+      
+      // Dart detail on clip
+      const cDart = mix('#ff2200', 0.8);
+      drawFace(cDart, [ pt(-65,-15,1.25), pt(-65,-15,1.45), pt(-65,-5,1.45), pt(-65,-5,1.25) ]);
     }
+    
+    // 1. Receiver Back
+    drawBlock(-35, 35, -45, 60, 1.0, 1.3, gunColor);
+    
+    // 0. Grip
+    drawBlock(-15, 15, 60, 200, 1.0, 1.25, '#2a2a2a');
 
-    // ── Barrel ─────────────────────────────────────────────────
-    const bW1 = 90, bW2 = 44; // barrel width at base and tip
-    // Shadow (right edge)
-    trap('rgba(0,0,0,0.3)', bW1 - 10, yBrl1, bW2 - 6, yBrl2);
-    // Main barrel body
-    trap(this._mixColor(r,g,b,0.55), bW1, yBrl1, bW2, yBrl2);
-    // Central top-face highlight strip
-    trap('rgba(255,255,255,0.13)', bW1*0.28, yBrl1, bW2*0.28, yBrl2);
-    // Barrel top face
-    trap(this._mixColor(r,g,b,0.7), bW2, yBrl2, bW2-6, yBrl2-12);
-
-    // Horizontal vent lines (perspective spaced)
-    ctx.fillStyle = 'rgba(0,0,0,0.28)';
-    for (let i = 1; i < 8; i++) {
-      const t  = i / 8;
-      const y  = yBrl1 + (yBrl2 - yBrl1) * t;
-      const hw = (bW1 + (bW2 - bW1) * t) / 2 * 0.75;
-      const h  = Math.max(3, 9 * (1 - t * 0.5));
-      ctx.fillRect(-hw, y, hw*2, h);
-    }
-
-    // ── Orange Muzzle Tip ──────────────────────────────────────
-    trap('#cc3300', bW2 + 8, yTip1, bW2 + 2, yTip2);
-    trap('#ff5500', (bW2+8)*0.55, yTip1, (bW2+2)*0.55, yTip2);
-    // Muzzle end face (the "front" that the dart comes out of)
-    ctx.fillStyle = '#0a0a0a';
-    ctx.beginPath();
-    ctx.ellipse(0, yTip2, (bW2+2)/2, 7, 0, 0, Math.PI*2);
-    ctx.fill();
-
-    // ── Muzzle Flash ───────────────────────────────────────────
+    // ── Muzzle Flash ──
     if (p.muzzleFlash > 0) {
-      const mf  = p.muzzleFlash / 0.10;
-      const fx  = 0, fy = yTip2 - 20;
+      const mf = p.muzzleFlash / 0.10;
       ctx.save();
       ctx.globalAlpha = mf;
-      const glowG = ctx.createRadialGradient(fx, fy, 4, fx, fy, 130);
-      glowG.addColorStop(0,   'rgba(255,255,200,1)');
-      glowG.addColorStop(0.3, 'rgba(255,190,30,0.85)');
-      glowG.addColorStop(1,   'rgba(255,60,0,0)');
+      
+      // Project the flash exactly at the tip of the barrel
+      const [fx, fy] = pt(0, -5, 3.6);
+      
+      const glowG = ctx.createRadialGradient(fx, fy, 2, fx, fy, 120);
+      glowG.addColorStop(0, 'rgba(255,255,200,1)');
+      glowG.addColorStop(0.3, 'rgba(255,180,30,0.8)');
+      glowG.addColorStop(1, 'rgba(255,80,0,0)');
       ctx.fillStyle = glowG;
-      ctx.beginPath(); ctx.arc(fx, fy, 130, 0, Math.PI*2); ctx.fill();
-      ctx.strokeStyle = '#ffffcc';
-      ctx.lineWidth = 5;
+      ctx.beginPath(); ctx.arc(fx, fy, 120, 0, Math.PI*2); ctx.fill();
+      
+      ctx.strokeStyle = '#ffffbb';
+      ctx.lineWidth = 4;
       for (let a = 0; a < 8; a++) {
-        const ang = (a / 8) * Math.PI * 2;
-        const len2 = 45 + Math.random() * 55;
+        const ang = (a / 8) * Math.PI * 2 + (Math.random()*0.2);
+        const len2 = 40 + Math.random() * 40;
         ctx.beginPath();
         ctx.moveTo(fx, fy);
         ctx.lineTo(fx + Math.cos(ang)*len2, fy + Math.sin(ang)*len2);
         ctx.stroke();
       }
       ctx.fillStyle = '#ffffff';
-      ctx.beginPath(); ctx.arc(fx, fy, 16, 0, Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.arc(fx, fy, 15, 0, Math.PI*2); ctx.fill();
       ctx.restore();
     }
 
-    // ── Reload shimmer ─────────────────────────────────────────
+    // ── Reload Shimmer ──
     if (p.reloading) {
-      const pct   = 1 - p.reloadTimer / RELOAD_TIME;
-      const pulse = 0.07 + Math.abs(Math.sin(this.time * 14)) * 0.05;
-      trap(`rgba(255,220,0,${pulse})`, 240, yRec1, 140 * pct + 240 * (1-pct), yRec1 + (yRec2 - yRec1) * pct);
+      const pct = 1 - p.reloadTimer / RELOAD_TIME;
+      const pulse = 0.5 + Math.abs(Math.sin(this.time * 14)) * 0.5;
+      ctx.globalAlpha = 0.3 * pulse;
+      drawBlock(-38, 38, -48, 63, 1.0, 1.0 + pct * 2.2, '#ffff00');
+      ctx.globalAlpha = 1.0;
     }
 
     ctx.restore();
