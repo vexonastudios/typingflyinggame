@@ -41,19 +41,32 @@ const Model3D = {
   },
 
   // ─── Draw a 3D quad face ─────────────────────────────────────────────────────
-  drawFace(ctx, pts, color, W, H) {
+  drawFace(ctx, pts, color, baseAlpha, fog, W, H) {
     if (pts.length < 3) return;
     // All points must be in front of camera
     for (const p of pts) if (!p) return;
 
-    ctx.fillStyle = color;
     ctx.beginPath();
     ctx.moveTo(pts[0].sx, pts[0].sy);
     for (let i = 1; i < pts.length; i++) {
       ctx.lineTo(pts[i].sx, pts[i].sy);
     }
     ctx.closePath();
+
+    // Draw base color
+    ctx.globalAlpha = baseAlpha;
+    ctx.fillStyle = color;
     ctx.fill();
+
+    // Draw fog darkening overlay
+    if (fog > 0) {
+      ctx.globalAlpha = baseAlpha * (fog * 0.85);
+      ctx.fillStyle = '#000000';
+      ctx.fill();
+    }
+
+    // Restore
+    ctx.globalAlpha = baseAlpha;
   },
 
   // ─── Build a 3D Box (8 vertices, 6 faces) ────────────────────────────────────
@@ -419,6 +432,8 @@ const Model3D = {
     // Painter's algorithm: sort back-to-front
     allFaces.sort((a, b) => b.avgDepth - a.avgDepth);
 
+    const baseAlpha = ctx.globalAlpha; // Get alpha from caller (e.g. death fade)
+
     // Draw
     for (const face of allFaces) {
       // Z-buffer check: skip faces behind walls
@@ -428,12 +443,8 @@ const Model3D = {
 
       // Fog
       const fog = fogDepth ? Math.min(1, face.avgDepth / fogDepth) : 0;
-      const fogAlpha = 1 - fog * 0.85;
 
-      ctx.save();
-      ctx.globalAlpha = fogAlpha;
-      this.drawFace(ctx, face.pts, face.color, W, H);
-      ctx.restore();
+      this.drawFace(ctx, face.pts, face.color, baseAlpha, fog, W, H);
     }
   }
 };
