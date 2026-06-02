@@ -1,33 +1,36 @@
 'use strict';
 
 // ═══════════════════════════════════════════════════════════
-//  NERF ARENA — Split-Screen Raycasting FPS
-//  Classic Wolfenstein-style raycasting, 2-player keyboard duel
+//  NERF ARENA — Split-Screen Raycasting FPS  v3.0
+//  Pro rewrite: texture mapping, minimap, proper collision,
+//  invincibility frames, acceleration, muzzle flash, polish
 // ═══════════════════════════════════════════════════════════
 
 // ─── Constants ──────────────────────────────────────────────
-const FOV         = Math.PI / 2.8;   // field of view (~64°)
-const HALF_FOV    = FOV / 2;
-const MOVE_SPD    = 2.8;             // tiles/sec
-const TURN_SPD    = 2.2;             // rad/sec
-const DART_SPD    = 10.0;            // tiles/sec
-const MAX_AMMO    = 6;               // darts per clip
-const RELOAD_TIME = 1.8;             // seconds
-const HIT_DIST    = 0.55;            // hit radius in tiles
+const FOV          = Math.PI / 2.5;   // field of view (~72°)
+const HALF_FOV     = FOV / 2;
+const MOVE_SPD     = 3.5;             // tiles/sec
+const MOVE_ACCEL   = 14.0;            // acceleration smoothing
+const TURN_SPD     = 2.6;             // rad/sec
+const TURN_ACCEL   = 10.0;
+const DART_SPD     = 12.0;            // tiles/sec
+const MAX_AMMO     = 8;               // darts per clip
+const RELOAD_TIME  = 1.5;             // seconds
+const HIT_DIST     = 0.5;             // hit radius in tiles
+const WALL_MARGIN  = 0.28;            // collision margin
+const INVINCIBLE_T = 1.2;             // invincibility seconds after hit
 
-// Wall colour palette — Nerf orange/blue/green theme
+// ─── Palette: each arena has 8 wall variant colours ─────────
 const WALL_PALETTES = [
-  // Classic arena
-  [ null, '#ff6b20', '#1e88e5', '#43a047', '#9c27b0', '#e53935', '#ff9800', '#00acc1' ],
-  // Maze (cooler tones)
-  [ null, '#1565c0', '#0288d1', '#006064', '#4a148c', '#880e4f', '#1b5e20', '#e65100' ],
-  // Fortress (earthy)
-  [ null, '#5d4037', '#6d4c41', '#4e342e', '#795548', '#8d6e63', '#a1887f', '#bf360c' ],
+  [ null, '#c44a0a', '#1565c0', '#2e7d32', '#7b1fa2', '#b71c1c', '#e65100', '#00838f' ],
+  [ null, '#0d47a1', '#01579b', '#004d40', '#311b92', '#6a1b4d', '#1b5e20', '#bf360c' ],
+  [ null, '#4e342e', '#5d4037', '#3e2723', '#6d4c41', '#8d6e63', '#795548', '#bc5000' ],
 ];
 
-// ─── Arena Maps (0=empty, 1-7=wall colour index) ────────────
+// ─── Arena Maps ─────────────────────────────────────────────
+//  0=empty, 1-7=wall texture type (maps to palette + texture style)
 const MAPS = [
-  // 0: Classic Arena (20x20)
+  // 0: Classic Arena
   [
     [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
     [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
@@ -50,7 +53,7 @@ const MAPS = [
     [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
     [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
   ],
-  // 1: Maze (20x20)
+  // 1: Maze
   [
     [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
     [1,0,0,0,1,0,0,0,0,0,0,0,0,0,0,1,0,0,0,1],
@@ -73,7 +76,7 @@ const MAPS = [
     [1,0,0,0,1,0,0,0,0,0,0,0,0,0,0,1,0,0,0,1],
     [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
   ],
-  // 2: Fortress (20x20) — two bases at top/bottom
+  // 2: Fortress
   [
     [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
     [1,0,0,3,3,3,3,3,3,0,0,3,3,3,3,3,3,0,0,1],
@@ -98,137 +101,183 @@ const MAPS = [
   ],
 ];
 
-// Player start positions per arena
 const STARTS = [
   [ {x:2.5,y:2.5,a:Math.PI*0.25},  {x:17.5,y:17.5,a:Math.PI*1.25} ],
-  [ {x:1.5,y:1.5,a:0},              {x:18.5,y:18.5,a:Math.PI} ],
+  [ {x:1.5,y:1.5,a:0.1},           {x:18.5,y:18.5,a:Math.PI+0.1}  ],
   [ {x:2.5,y:2.5,a:Math.PI*0.25},  {x:17.5,y:17.5,a:Math.PI*1.25} ],
 ];
 
 const P_COLORS  = ['#ff6b35', '#38bdf8'];
 const P_NAMES   = ['Player 1', 'Player 2'];
-const GUN_COLORS = ['#ff6b35', '#38bdf8'];
 
-// ─── Audio ──────────────────────────────────────────────────
+// ─── Audio Engine ────────────────────────────────────────────
 const _ac = new (window.AudioContext || window.webkitAudioContext)();
 const Sfx = {
   _r() { if (_ac.state === 'suspended') _ac.resume(); },
-  _tone(f, type, dur, vol=0.07, slide=null) {
+
+  _osc(freq, type, dur, vol = 0.08, freqEnd = null, attack = 0.005) {
     try {
       this._r();
-      const o=_ac.createOscillator(), g=_ac.createGain();
-      o.type=type; o.frequency.setValueAtTime(f,_ac.currentTime);
-      if(slide) o.frequency.exponentialRampToValueAtTime(slide,_ac.currentTime+dur);
-      g.gain.setValueAtTime(vol,_ac.currentTime);
-      g.gain.exponentialRampToValueAtTime(0.001,_ac.currentTime+dur);
-      o.connect(g); g.connect(_ac.destination); o.start(); o.stop(_ac.currentTime+dur);
-    } catch(e){}
+      const o = _ac.createOscillator(), g = _ac.createGain();
+      o.type = type;
+      o.frequency.setValueAtTime(freq, _ac.currentTime);
+      if (freqEnd) o.frequency.exponentialRampToValueAtTime(freqEnd, _ac.currentTime + dur);
+      g.gain.setValueAtTime(0.001, _ac.currentTime);
+      g.gain.linearRampToValueAtTime(vol, _ac.currentTime + attack);
+      g.gain.exponentialRampToValueAtTime(0.001, _ac.currentTime + dur);
+      o.connect(g); g.connect(_ac.destination);
+      o.start(); o.stop(_ac.currentTime + dur);
+    } catch (e) {}
   },
-  _noise(dur,vol=0.05) {
+
+  _noise(dur, vol = 0.05, hiPass = 0) {
     try {
       this._r();
-      const buf=_ac.createBuffer(1,_ac.sampleRate*dur,_ac.sampleRate);
-      const d=buf.getChannelData(0);
-      for(let i=0;i<d.length;i++) d[i]=(Math.random()*2-1)*vol;
-      const src=_ac.createBufferSource(), g=_ac.createGain();
-      src.buffer=buf; g.gain.setValueAtTime(vol,_ac.currentTime);
-      g.gain.exponentialRampToValueAtTime(0.001,_ac.currentTime+dur);
-      src.connect(g); g.connect(_ac.destination); src.start();
-    } catch(e){}
+      const len = Math.ceil(_ac.sampleRate * dur);
+      const buf = _ac.createBuffer(1, len, _ac.sampleRate);
+      const d = buf.getChannelData(0);
+      for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1);
+      const src = _ac.createBufferSource();
+      src.buffer = buf;
+      const g = _ac.createGain();
+      g.gain.setValueAtTime(vol, _ac.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.001, _ac.currentTime + dur);
+      if (hiPass > 0) {
+        const f = _ac.createBiquadFilter();
+        f.type = 'highpass'; f.frequency.value = hiPass;
+        src.connect(f); f.connect(g);
+      } else {
+        src.connect(g);
+      }
+      g.connect(_ac.destination);
+      src.start();
+    } catch (e) {}
   },
-  shoot()    { this._tone(300,'sawtooth',0.06,0.08,180); this._noise(0.07,0.06); },
-  empty()    { this._tone(120,'square',0.1,0.06); },
-  reload()   { this._tone(200,'triangle',0.15,0.06,280); setTimeout(()=>this._tone(350,'triangle',0.15,0.07,420),200); },
-  hit()      { this._tone(600,'sine',0.12,0.09,300); this._noise(0.1,0.08); },
-  splat()    { this._tone(180,'sawtooth',0.2,0.1,50); this._noise(0.15,0.07); },
-  countdown(){ this._tone(440,'square',0.13,0.07); },
-  go()       { [523,659,784,1047].forEach((f,i)=>setTimeout(()=>this._tone(f,'sine',0.2,0.09),i*85)); },
-  win()      { [523,659,784,1047,1318].forEach((f,i)=>setTimeout(()=>this._tone(f,'sine',0.28,0.09),i*100)); },
-  click()    { this._tone(600,'sine',0.04,0.04); },
-  step()     { this._noise(0.04, 0.015); }, // Soft static burst for footsteps
+
+  // Nerf blaster pop — compressed air burst
+  shoot() {
+    this._osc(180, 'sawtooth', 0.06, 0.1, 60);
+    this._noise(0.05, 0.07, 800);
+    this._osc(90, 'square', 0.08, 0.05, 40);
+  },
+
+  // Hollow clunk of empty gun
+  empty() {
+    this._osc(140, 'square', 0.08, 0.05, 100);
+    this._noise(0.04, 0.03, 200);
+  },
+
+  // Satisfying click-clack reload
+  reload() {
+    this._noise(0.04, 0.04, 400);
+    setTimeout(() => { this._osc(260, 'triangle', 0.1, 0.06, 380); }, 120);
+    setTimeout(() => { this._noise(0.03, 0.05, 600); this._osc(320, 'triangle', 0.1, 0.07, 440); }, 350);
+  },
+
+  // Hit — meaty thwack
+  hit() {
+    this._osc(800, 'sine', 0.05, 0.1, 200);
+    this._noise(0.12, 0.09, 100);
+    this._osc(120, 'sawtooth', 0.15, 0.06, 60);
+  },
+
+  // Dart hitting a wall — soft splat
+  splat() {
+    this._noise(0.08, 0.06, 300);
+    this._osc(160, 'sine', 0.1, 0.04, 80);
+  },
+
+  // Countdown beep
+  countdown() { this._osc(520, 'sine', 0.15, 0.06); },
+
+  // GO fanfare
+  go() { [523, 659, 784, 1047].forEach((f, i) => setTimeout(() => this._osc(f, 'sine', 0.22, 0.08), i * 80)); },
+
+  // Victory fanfare
+  win() { [523, 659, 784, 1047, 1319, 1568].forEach((f, i) => setTimeout(() => this._osc(f, 'sine', 0.3, 0.09), i * 90)); },
+
+  // UI click
+  click() { this._osc(700, 'sine', 0.04, 0.04); },
+
+  // Footstep — muffled thud
+  step() { this._noise(0.035, 0.012, 80); this._osc(60, 'sine', 0.04, 0.015); },
 };
 
-// ─── Utilities ──────────────────────────────────────────────
-const clamp = (v,lo,hi) => Math.max(lo, Math.min(hi, v));
-const lerp  = (a,b,t)   => a+(b-a)*t;
+// ─── Utilities ───────────────────────────────────────────────
+const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 
 // ═══════════════════════════════════════════════════════════
-//  PLAYER
+//  PLAYER STATE
 // ═══════════════════════════════════════════════════════════
 class Player {
-  constructor(id, ctrl, startPos, palette) {
-    this.id      = id;
-    this.ctrl    = ctrl;
-    this.color   = P_COLORS[id];
-    this.name    = P_NAMES[id];
-    this.palette = palette;
-    this.x       = startPos.x;
-    this.y       = startPos.y;
-    this.angle   = startPos.a;
-    this.ammo    = MAX_AMMO;
-    this.reloading = false;
-    this.reloadTimer = 0;
-    this.hits    = 0;   // hits scored ON opponent
-    this.hitFlash = 0;  // screen flash when hit by opponent
-    this.shootFlash = 0;
-    this.darts   = []; // active dart projectiles {x,y,vx,vy,ownerId}
-    this.splatMarks = []; // { wx,wy, color, life }
-    this.bobTimer = 0;
-    this.gunRecoil = 0;
-    this.gunSwayX = 0;
-    this.gunSwayY = 0;
-    this._shootCd = 0;
+  constructor(id, ctrl, startPos) {
+    this.id         = id;
+    this.ctrl       = ctrl;
+    this.color      = P_COLORS[id];
+    this.name       = P_NAMES[id];
+    this.x          = startPos.x;
+    this.y          = startPos.y;
+    this.angle      = startPos.a;
+    this.velFwd     = 0;   // smoothed forward velocity
+    this.velTurn    = 0;   // smoothed turn rate
+
+    // Combat
+    this.ammo       = MAX_AMMO;
+    this.reloading  = false;
+    this.reloadTimer= 0;
+    this.hits       = 0;
+    this.invincible = 0;   // seconds of invincibility after being hit
+    this.darts      = [];  // {x,y,vx,vy,life}
+    this._shootCd   = 0;
+
+    // Visual / HUD
+    this.hitFlash   = 0;
+    this.muzzleFlash= 0;
+    this.bobTimer   = 0;
+    this.gunRecoil  = 0;
+    this.gunSwayX   = 0;
+    this.gunSwayY   = 0;
     this._stepTimer = 0;
-    this.alive = true;
+
+    // Score animation
+    this.hitPop     = 0;   // briefly enlarge score on hit
   }
 }
 
 // ═══════════════════════════════════════════════════════════
-//  RAYCASTER
+//  DDA RAYCASTER
 // ═══════════════════════════════════════════════════════════
 function castRay(map, px, py, angle) {
   const cosA = Math.cos(angle);
   const sinA = Math.sin(angle);
-
-  // DDA algorithm
   const mapX0 = Math.floor(px), mapY0 = Math.floor(py);
-  const stepX  = cosA > 0 ? 1 : -1;
-  const stepY  = sinA > 0 ? 1 : -1;
-  const deltaX = Math.abs(1 / (cosA || 1e-9));
-  const deltaY = Math.abs(1 / (sinA || 1e-9));
+  const stepX = cosA > 0 ? 1 : -1;
+  const stepY = sinA > 0 ? 1 : -1;
+  const dX = Math.abs(1 / (cosA || 1e-9));
+  const dY = Math.abs(1 / (sinA || 1e-9));
+  let sdX = cosA > 0 ? (mapX0 + 1 - px) * dX : (px - mapX0) * dX;
+  let sdY = sinA > 0 ? (mapY0 + 1 - py) * dY : (py - mapY0) * dY;
+  let mx = mapX0, my = mapY0, side = 0;
 
-  let sideDistX = cosA > 0 ? (mapX0+1-px)*deltaX : (px-mapX0)*deltaX;
-  let sideDistY = sinA > 0 ? (mapY0+1-py)*deltaY : (py-mapY0)*deltaY;
-
-  let mx = mapX0, my = mapY0;
-  let side = 0, dist = 0;
-  const MAX_DIST = 25;
-
-  for (let i = 0; i < 64; i++) {
-    if (sideDistX < sideDistY) {
-      sideDistX += deltaX; mx += stepX; side = 0;
-    } else {
-      sideDistY += deltaY; my += stepY; side = 1;
-    }
+  for (let i = 0; i < 80; i++) {
+    if (sdX < sdY) { sdX += dX; mx += stepX; side = 0; }
+    else           { sdY += dY; my += stepY; side = 1; }
     if (mx < 0 || my < 0 || my >= map.length || mx >= map[0].length) break;
     if (map[my][mx] > 0) {
-      dist = side === 0
-        ? (mx - px + (1-stepX)/2) / cosA
-        : (my - py + (1-stepY)/2) / sinA;
-
-      let wallX;
-      if (side === 0) wallX = py + dist * sinA;
-      else           wallX = px + dist * cosA;
+      const dist = side === 0
+        ? (mx - px + (1 - stepX) / 2) / cosA
+        : (my - py + (1 - stepY) / 2) / sinA;
+      const absDist = Math.abs(dist);
+      let wallX = side === 0 ? py + absDist * sinA : px + absDist * cosA;
       wallX -= Math.floor(wallX);
-
-      return { dist: Math.abs(dist), wallType: map[my][mx], side, wallX };
+      return { dist: absDist, wallType: map[my][mx], side, wallX };
     }
   }
-  return { dist: MAX_DIST, wallType: 0, side: 0, wallX: 0 };
+  return { dist: 30, wallType: 0, side: 0, wallX: 0 };
 }
 
 // ═══════════════════════════════════════════════════════════
-//  MAIN GAME
+//  MAIN GAME CLASS
 // ═══════════════════════════════════════════════════════════
 class NerfArena {
   constructor() {
@@ -238,26 +287,31 @@ class NerfArena {
     this.state  = 'setup';
     this.lastTs = 0;
     this.time   = 0;
+    this.textures = [];
 
-    this.players   = [];
-    this.map       = null;
-    this.palette   = null;
+    this.players    = [];
+    this.map        = null;
+    this.palette    = null;
     this.targetHits = 5;
-    this.arenaIdx  = 0;
+    this.arenaIdx   = 0;
 
-    this._cdCount = 3;
-    this._cdTimer = 0;
+    this._cdCount     = 3;
+    this._cdTimer     = 0;
     this._globalShake = 0;
+    this._shakeAngle  = 0;
 
     this._bindUI();
     this._resize();
     window.addEventListener('resize', () => this._resize());
+
+    const BLOCKED = ['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space',
+                     'KeyW','KeyS','KeyA','KeyD','KeyR','Enter','Slash'];
     window.addEventListener('keydown', e => {
       this.keys[e.code] = true;
-      const blocked = ['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space','KeyW','KeyS','KeyA','KeyD','KeyQ','KeyE','KeyR','Enter','Slash','Comma','Period'];
-      if (blocked.includes(e.code)) e.preventDefault();
+      if (BLOCKED.includes(e.code)) e.preventDefault();
     });
     window.addEventListener('keyup', e => { this.keys[e.code] = false; });
+
     requestAnimationFrame(ts => this._loop(ts));
   }
 
@@ -266,8 +320,11 @@ class NerfArena {
     this.canvas.height = window.innerHeight;
     this.W = this.canvas.width;
     this.H = this.canvas.height;
+    // Invalidate pre-drawn gradients on resize
+    this._floorCeilCache = null;
   }
 
+  // ─── UI Binding ────────────────────────────────────────────
   _bindUI() {
     document.querySelectorAll('.diff-opt').forEach(el => {
       el.addEventListener('click', () => {
@@ -278,19 +335,18 @@ class NerfArena {
         Sfx.click();
       });
     });
-    document.getElementById('startBtn').addEventListener('click',   () => this._startGame());
+    document.getElementById('startBtn').addEventListener('click', () => this._startGame());
     document.getElementById('restartBtn').addEventListener('click', () => this._goSetup());
   }
 
   _startGame() {
     Sfx._r();
-    const tEl = document.querySelector('input[name="target"]:checked');
-    const aEl = document.querySelector('input[name="arena"]:checked');
-    this.targetHits = parseInt(tEl?.value || '5');
-    this.arenaIdx   = parseInt(aEl?.value || '0');
-    this.map     = MAPS[this.arenaIdx];
-    this.palette = WALL_PALETTES[this.arenaIdx];
+    this.targetHits = parseInt(document.querySelector('input[name="target"]:checked')?.value || '5');
+    this.arenaIdx   = parseInt(document.querySelector('input[name="arena"]:checked')?.value  || '0');
+    this.map        = MAPS[this.arenaIdx];
+    this.palette    = WALL_PALETTES[this.arenaIdx];
     this._generateTextures();
+    this._floorCeilCache = null;
 
     document.getElementById('gameSetup').style.display   = 'none';
     document.getElementById('gameResults').style.display = 'none';
@@ -300,15 +356,14 @@ class NerfArena {
     const C2 = { fwd:'ArrowUp', back:'ArrowDown', turnL:'ArrowLeft', turnR:'ArrowRight', shoot:'Enter', reload:'Slash' };
 
     this.players = [
-      new Player(0, C1, starts[0], this.palette),
-      new Player(1, C2, starts[1], this.palette),
+      new Player(0, C1, starts[0]),
+      new Player(1, C2, starts[1]),
     ];
 
     this._cdCount = 3;
     this._cdTimer = 0.9;
     this.state = 'countdown';
     Sfx.countdown();
-
     this._showBanner('NERF ARENA!');
   }
 
@@ -326,118 +381,167 @@ class NerfArena {
     el.classList.add('show');
   }
 
-  // ─── Textures ────────────────────────────────────────────
+  // ─── Procedural Textures ────────────────────────────────────
   _generateTextures() {
     this.textures = [];
-    const size = 128; // 128x128 textures
-
+    const S = 128;
     for (let i = 0; i < 8; i++) {
-        const c = document.createElement('canvas');
-        c.width = size;
-        c.height = size;
-        const x = c.getContext('2d');
-        
-        // Base color
-        const baseColor = this.palette[i] || '#555';
-        x.fillStyle = baseColor;
-        x.fillRect(0, 0, size, size);
+      const c = document.createElement('canvas');
+      c.width = c.height = S;
+      const g = c.getContext('2d');
+      const base = this.palette[i] || '#444';
 
-        if (i === 0) {
-            // Empty
-        }
-        else if (i === 1 || i === 6 || i === 7) {
-            // Sci-Fi Panel (Rivets and borders)
-            x.fillStyle = this._shadeColor(baseColor, 0.7);
-            x.fillRect(0,0, size, 6); // top border
-            x.fillRect(0,size-6, size, 6); // bottom
-            x.fillRect(0,0, 6, size); // left
-            x.fillRect(size-6,0, 6, size); // right
-            // horizontal line
-            x.fillRect(0, size/2 - 3, size, 6);
-            // rivets
-            x.fillStyle = '#111';
-            const r = 8;
-            x.fillRect(r, r, 4, 4); x.fillRect(size-r-4, r, 4, 4);
-            x.fillRect(r, size-r-4, 4, 4); x.fillRect(size-r-4, size-r-4, 4, 4);
-        }
-        else if (i === 2) {
-            // Grate/Vent (Horizontal slats)
-            for (let y = 0; y < size; y += 16) {
-                x.fillStyle = this._shadeColor(baseColor, 0.3);
-                x.fillRect(0, y+8, size, 8);
-            }
-            // Vertical supports
-            x.fillStyle = this._shadeColor(baseColor, 0.6);
-            x.fillRect(32, 0, 16, size);
-            x.fillRect(80, 0, 16, size);
-            x.fillStyle = '#222'; x.fillRect(40,0,2,size); x.fillRect(88,0,2,size);
-        }
-        else if (i === 3) {
-            // Hazard Stripes (yellow/black)
-            x.fillStyle = '#eab308'; // Warning yellow
-            x.fillRect(0, 0, size, size);
-            x.fillStyle = '#111';
-            for (let j = -size; j < size*2; j += 32) {
-                x.beginPath();
-                x.moveTo(j, 0); x.lineTo(j + 32, 0);
-                x.lineTo(j - size + 32, size); x.lineTo(j - size, size);
-                x.fill();
-            }
-            // Add a border frame so it looks like a panel
-            x.fillStyle = 'rgba(0,0,0,0.4)';
-            x.fillRect(0,0,size,8); x.fillRect(0,size-8,size,8);
-            x.fillRect(0,0,8,size); x.fillRect(size-8,0,8,size);
-        }
-        else if (i === 4) {
-            // Door / Light
-            x.fillStyle = this._shadeColor(baseColor, 0.8);
-            x.fillRect(16, 16, size-32, size-32);
-            // Glowing neon light in center
-            x.shadowColor = '#00ffff';
-            x.shadowBlur = 15;
-            x.fillStyle = '#e0ffff';
-            x.fillRect(48, 32, size-96, size-64);
-            x.shadowBlur = 0;
-            // Handle
-            x.fillStyle = '#111';
-            x.fillRect(size-32, size/2 - 16, 8, 32);
-        }
-        else if (i === 5) {
-            // Server / Tech Core
-            x.fillStyle = '#1a1a1a';
-            x.fillRect(0,0,size,size);
-            for(let j=8; j<size; j+=24) {
-                // Racks
-                x.fillStyle = '#333';
-                x.fillRect(j, 8, 16, size-16);
-                // Lights
-                for(let k=16; k<size-16; k+=12) {
-                    if (Math.random() > 0.3) {
-                        x.fillStyle = Math.random()>0.5 ? '#ff3333' : '#33ff33';
-                        if (Math.random()>0.8) x.fillStyle = '#33ccff';
-                        x.fillRect(j+4, k, 8, 4);
-                    }
-                }
-            }
-        }
-        
-        // Apply grit/noise to all textures for texture
-        if (i > 0) {
-            x.fillStyle = 'rgba(0,0,0,0.15)';
-            for(let n=0; n<500; n++) {
-                x.fillRect(Math.random()*size, Math.random()*size, 2, 2);
-            }
-            x.fillStyle = 'rgba(255,255,255,0.05)';
-            for(let n=0; n<300; n++) {
-                x.fillRect(Math.random()*size, Math.random()*size, 2, 2);
-            }
-        }
+      // Parse base color for tinting
+      const r0 = parseInt(base.slice(1,3),16);
+      const g0 = parseInt(base.slice(3,5),16);
+      const b0 = parseInt(base.slice(5,7),16);
 
+      if (i === 0) {
+        // Transparent / empty
         this.textures.push(c);
+        continue;
+      }
+
+      // Fill base
+      g.fillStyle = base;
+      g.fillRect(0, 0, S, S);
+
+      // ── Sci-Fi Panel Wall (types 1, 6, 7)
+      if (i === 1 || i === 6 || i === 7) {
+        // Gradient overlay (lighter top, darker bottom)
+        const grad = g.createLinearGradient(0,0,0,S);
+        grad.addColorStop(0, `rgba(255,255,255,0.12)`);
+        grad.addColorStop(1, `rgba(0,0,0,0.2)`);
+        g.fillStyle = grad;
+        g.fillRect(0, 0, S, S);
+
+        // Panel frame (dark inset)
+        g.fillStyle = `rgba(0,0,0,0.5)`;
+        g.fillRect(0, 0, S, 7); g.fillRect(0, S-7, S, 7);
+        g.fillRect(0, 0, 7, S); g.fillRect(S-7, 0, 7, S);
+        // Inner highlight
+        g.fillStyle = `rgba(255,255,255,0.08)`;
+        g.fillRect(7, 7, S-14, 4);
+
+        // Center divider
+        g.fillStyle = `rgba(0,0,0,0.35)`;
+        g.fillRect(0, S/2-2, S, 4);
+        // Light trim on divider
+        g.fillStyle = `rgba(255,255,255,0.06)`;
+        g.fillRect(0, S/2-2, S, 1);
+
+        // Rivets (rounded squares)
+        g.fillStyle = `rgba(0,0,0,0.6)`;
+        const rv = [[10,10],[S-14,10],[10,S-14],[S-14,S-14]];
+        rv.forEach(([rx,ry]) => {
+          g.beginPath(); g.roundRect(rx, ry, 4, 4, 1); g.fill();
+        });
+        // Rivet shine
+        g.fillStyle = `rgba(255,255,255,0.25)`;
+        rv.forEach(([rx,ry]) => { g.fillRect(rx, ry, 2, 1); });
+      }
+
+      // ── Grate / Vent (type 2)
+      else if (i === 2) {
+        // Dark background
+        g.fillStyle = `rgba(0,0,0,0.55)`;
+        g.fillRect(0, 0, S, S);
+        // Horizontal slats
+        for (let y = 0; y < S; y += 14) {
+          g.fillStyle = base;
+          g.fillRect(0, y, S, 7);
+          // Slat highlight
+          g.fillStyle = `rgba(255,255,255,0.1)`;
+          g.fillRect(0, y, S, 1);
+          g.fillStyle = `rgba(0,0,0,0.3)`;
+          g.fillRect(0, y+6, S, 1);
+        }
+        // Vertical supports
+        g.fillStyle = this._mixColor(r0,g0,b0, 0.65);
+        g.fillRect(28, 0, 14, S); g.fillRect(86, 0, 14, S);
+        g.fillStyle = `rgba(0,0,0,0.4)`;
+        g.fillRect(28, 0, 1, S); g.fillRect(41, 0, 1, S);
+        g.fillRect(86, 0, 1, S); g.fillRect(99, 0, 1, S);
+      }
+
+      // ── Hazard Stripes (type 3)
+      else if (i === 3) {
+        g.fillStyle = '#e0a800';
+        g.fillRect(0, 0, S, S);
+        g.fillStyle = '#111';
+        for (let j = -S; j < S*2; j += 30) {
+          g.beginPath();
+          g.moveTo(j, 0); g.lineTo(j+30, 0);
+          g.lineTo(j-S+30, S); g.lineTo(j-S, S);
+          g.closePath(); g.fill();
+        }
+        // Heavy border
+        g.fillStyle = `rgba(0,0,0,0.55)`;
+        g.fillRect(0,0,S,8); g.fillRect(0,S-8,S,8);
+        g.fillRect(0,0,8,S); g.fillRect(S-8,0,8,S);
+        g.fillStyle = `rgba(255,255,255,0.06)`;
+        g.fillRect(8, 8, S-16, 2);
+      }
+
+      // ── Blast Door (type 4)
+      else if (i === 4) {
+        // Recessed panel
+        g.fillStyle = this._mixColor(r0,g0,b0, 0.75);
+        g.fillRect(12, 12, S-24, S-24);
+        g.fillStyle = `rgba(255,255,255,0.07)`;
+        g.fillRect(12, 12, S-24, 2);
+
+        // Glowing neon indicator light in centre
+        const lx = S/2-6, ly = S/2-20, lw = 12, lh = 40;
+        g.shadowColor = '#00e5ff'; g.shadowBlur = 20;
+        g.fillStyle = '#00e5ff';
+        g.fillRect(lx, ly, lw, lh);
+        g.shadowBlur = 0;
+        // Lock symbol
+        g.fillStyle = `rgba(0,0,0,0.7)`;
+        g.fillRect(lx+2, ly+lh*0.5, lw-4, lh*0.45);
+
+        // Bolts along sides
+        [0.2, 0.5, 0.8].forEach(t => {
+          g.fillStyle = `rgba(0,0,0,0.5)`;
+          g.beginPath(); g.roundRect(4, t*S-3, 8, 6, 1); g.fill();
+          g.beginPath(); g.roundRect(S-12, t*S-3, 8, 6, 1); g.fill();
+        });
+      }
+
+      // ── Server / Tech Core (type 5)
+      else if (i === 5) {
+        g.fillStyle = '#111';
+        g.fillRect(0, 0, S, S);
+        for (let cx = 6; cx < S-6; cx += 22) {
+          g.fillStyle = '#2a2a2a';
+          g.fillRect(cx, 4, 16, S-8);
+          g.fillStyle = '#1a1a1a';
+          g.fillRect(cx, 4, 1, S-8);
+          g.fillRect(cx+15, 4, 1, S-8);
+          // Blinking server lights
+          for (let cy = 10; cy < S-10; cy += 10) {
+            const lit = Math.random() > 0.28;
+            if (lit) {
+              const colors = ['#ff2020','#20ff40','#2090ff','#ffaa00'];
+              g.fillStyle = colors[Math.floor(Math.random()*colors.length)];
+              g.fillRect(cx+4, cy, 8, 4);
+            }
+          }
+        }
+      }
+
+      // ── Add surface grit / noise to all non-empty textures ──
+      g.fillStyle = 'rgba(0,0,0,0.08)';
+      for (let n = 0; n < 400; n++) g.fillRect(Math.random()*S, Math.random()*S, 2, 2);
+      g.fillStyle = 'rgba(255,255,255,0.035)';
+      for (let n = 0; n < 250; n++) g.fillRect(Math.random()*S, Math.random()*S, 2, 2);
+
+      this.textures.push(c);
     }
   }
 
-  // ─── Loop ────────────────────────────────────────────────
+  // ─── Game Loop ───────────────────────────────────────────────
   _loop(ts) {
     const dt = clamp((ts - this.lastTs) / 1000, 0, 0.05);
     this.lastTs = ts;
@@ -447,7 +551,7 @@ class NerfArena {
     requestAnimationFrame(ts2 => this._loop(ts2));
   }
 
-  // ─── Update ──────────────────────────────────────────────
+  // ─── Update ─────────────────────────────────────────────────
   _update(dt) {
     if (this.state === 'setup' || this.state === 'results') return;
 
@@ -461,152 +565,137 @@ class NerfArena {
       return;
     }
 
-    this._globalShake *= Math.pow(0.65, dt * 60);
-    if (this._globalShake < 0.15) this._globalShake = 0;
+    // Decay screen shake
+    this._globalShake = Math.max(0, this._globalShake - dt * 18);
+    this._shakeAngle += dt * 37;
 
-    this.players.forEach((p, i) => {
-      const opp = this.players[1 - i];
-      this._updatePlayer(p, opp, dt);
-    });
+    this.players.forEach((p, i) => this._updatePlayer(p, this.players[1-i], dt));
 
     // Win check
-    const winner = this.players.find(p => p.hits >= this.targetHits);
-    if (winner && this.state === 'playing') {
-      this.state = 'done';
-      Sfx.win();
-      setTimeout(() => this._showResults(winner), 1500);
+    if (this.state === 'playing') {
+      const winner = this.players.find(p => p.hits >= this.targetHits);
+      if (winner) {
+        this.state = 'done';
+        Sfx.win();
+        setTimeout(() => this._showResults(winner), 1800);
+      }
     }
   }
 
   _updatePlayer(p, opp, dt) {
-    const keys = this.keys;
-    const map  = this.map;
+    const k = this.keys;
 
-    p.hitFlash   = Math.max(0, p.hitFlash   - dt);
-    p.shootFlash = Math.max(0, p.shootFlash - dt);
-    p.gunRecoil  = Math.max(0, p.gunRecoil  - dt * 5);
-    p._shootCd   = Math.max(0, p._shootCd   - dt);
+    // Timers
+    p.hitFlash    = Math.max(0, p.hitFlash    - dt);
+    p.muzzleFlash = Math.max(0, p.muzzleFlash - dt);
+    p.gunRecoil   = Math.max(0, p.gunRecoil   - dt * 6);
+    p._shootCd    = Math.max(0, p._shootCd    - dt);
+    p.invincible  = Math.max(0, p.invincible  - dt);
+    p.hitPop      = Math.max(0, p.hitPop      - dt * 3);
 
     // ── Reload ──
     if (p.reloading) {
       p.reloadTimer -= dt;
-      if (p.reloadTimer <= 0) {
-        p.ammo = MAX_AMMO;
-        p.reloading = false;
-      }
+      if (p.reloadTimer <= 0) { p.ammo = MAX_AMMO; p.reloading = false; }
     }
-    if (!p.reloading && keys[p.ctrl.reload] && p.ammo < MAX_AMMO) {
-      p.reloading = true;
-      p.reloadTimer = RELOAD_TIME;
-      Sfx.reload();
+    if (!p.reloading && k[p.ctrl.reload] && p.ammo < MAX_AMMO) {
+      p.reloading = true; p.reloadTimer = RELOAD_TIME; Sfx.reload();
     }
 
     // ── Shoot ──
-    if (keys[p.ctrl.shoot] && !p.reloading && p._shootCd <= 0) {
+    if (k[p.ctrl.shoot] && !p.reloading && p._shootCd <= 0) {
       if (p.ammo > 0) {
         p.ammo--;
-        p._shootCd = 0.22;
-        p.shootFlash = 0.08;
-        p.gunRecoil  = 0.35;
+        p._shootCd    = 0.18;
+        p.muzzleFlash = 0.10;
+        p.gunRecoil   = 0.4;
         Sfx.shoot();
-        // Spawn dart in world space
-        const spread = (Math.random() - 0.5) * 0.04; // tiny spread
+        // Small random spread
+        const spread = (Math.random() - 0.5) * 0.03;
         p.darts.push({
           x: p.x, y: p.y,
           vx: Math.cos(p.angle + spread) * DART_SPD,
           vy: Math.sin(p.angle + spread) * DART_SPD,
-          ownerId: p.id,
           life: 3.0,
-          trail: [],
         });
-      } else if (p._shootCd <= 0) {
+      } else {
         p._shootCd = 0.4;
         Sfx.empty();
-        // auto-reload on empty
         if (!p.reloading) { p.reloading = true; p.reloadTimer = RELOAD_TIME; Sfx.reload(); }
       }
     }
 
-    // ── Move & turn ──
+    // ── Movement (acceleration model) ──
     if (this.state !== 'playing') return;
 
-    let speed = 0, strafe = 0, turn = 0;
-    if (keys[p.ctrl.fwd])   speed  =  MOVE_SPD;
-    if (keys[p.ctrl.back])  speed  = -MOVE_SPD * 0.65;
-    if (keys[p.ctrl.turnL]) turn   = -TURN_SPD;
-    if (keys[p.ctrl.turnR]) turn   =  TURN_SPD;
+    const targetFwd  = k[p.ctrl.fwd]   ? MOVE_SPD : k[p.ctrl.back] ? -MOVE_SPD * 0.6 : 0;
+    const targetTurn = k[p.ctrl.turnL] ? -TURN_SPD : k[p.ctrl.turnR] ? TURN_SPD : 0;
 
-    p.angle += turn * dt;
+    p.velFwd  += (targetFwd  - p.velFwd)  * Math.min(1, MOVE_ACCEL  * dt);
+    p.velTurn += (targetTurn - p.velTurn) * Math.min(1, TURN_ACCEL  * dt);
 
+    p.angle += p.velTurn * dt;
+
+    // AABB collision with margin
     const cosA = Math.cos(p.angle), sinA = Math.sin(p.angle);
-    const cosS = Math.cos(p.angle + Math.PI/2), sinS = Math.sin(p.angle + Math.PI/2);
+    const nx = p.x + cosA * p.velFwd * dt;
+    const ny = p.y + sinA * p.velFwd * dt;
+    const m  = WALL_MARGIN;
 
-    let nx = p.x + (cosA * speed + cosS * strafe) * dt;
-    let ny = p.y + (sinA * speed + sinS * strafe) * dt;
+    // Axis-separated collision (allows sliding along walls)
+    if (!this._wallAt(nx + m*Math.sign(cosA), p.y) &&
+        !this._wallAt(nx - m*Math.sign(cosA), p.y)) p.x = nx;
+    if (!this._wallAt(p.x, ny + m*Math.sign(sinA)) &&
+        !this._wallAt(p.x, ny - m*Math.sign(sinA))) p.y = ny;
 
-    const MARGIN = 0.3;
-    if (!this._wallAt(Math.floor(nx), Math.floor(p.y))) p.x = nx;
-    if (!this._wallAt(Math.floor(p.x), Math.floor(ny))) p.y = ny;
-
-    // Gun bob & footsteps
-    if (speed !== 0 || strafe !== 0) {
-      p.bobTimer += dt * 6;
-      p.gunSwayX = Math.sin(p.bobTimer) * 4;
-      p.gunSwayY = Math.abs(Math.sin(p.bobTimer)) * 3;
-      
+    // Gun bob / step sounds
+    const moving = Math.abs(p.velFwd) > 0.15;
+    if (moving) {
+      p.bobTimer  += dt * 7;
+      p.gunSwayX   = Math.sin(p.bobTimer) * 5;
+      p.gunSwayY   = Math.abs(Math.sin(p.bobTimer)) * 4;
       p._stepTimer -= dt;
-      if (p._stepTimer <= 0) {
-        Sfx.step();
-        p._stepTimer = 0.35; // play step sound every 0.35s while walking
-      }
+      if (p._stepTimer <= 0) { Sfx.step(); p._stepTimer = 0.32; }
     } else {
-      p.bobTimer += dt * 1.5;
-      p.gunSwayX = Math.sin(p.bobTimer) * 0.8;
-      p.gunSwayY = 0;
+      p.bobTimer  += dt * 1.2;
+      p.gunSwayX   = Math.sin(p.bobTimer) * 0.9;
+      p.gunSwayY   = 0;
       p._stepTimer = 0;
     }
 
-    // ── Update darts ──
+    // ── Dart physics ──
     p.darts = p.darts.filter(dart => {
       dart.x += dart.vx * dt;
       dart.y += dart.vy * dt;
       dart.life -= dt;
-      dart.trail.push({ x: dart.x, y: dart.y });
-      if (dart.trail.length > 5) dart.trail.shift();
 
-      // Hit wall?
       if (this._wallAt(Math.floor(dart.x), Math.floor(dart.y))) {
-        // Leave a splat mark at impact
-        p.splatMarks.push({
-          wx: dart.x, wy: dart.y,
-          color: p.color,
-          life: 20.0,
-        });
-        Sfx.splat();
-        return false;
+        Sfx.splat(); return false;
       }
-
-      // Hit opponent?
-      const dx = dart.x - opp.x, dy = dart.y - opp.y;
-      if (Math.sqrt(dx*dx + dy*dy) < HIT_DIST) {
-        p.hits++;
-        opp.hitFlash = 0.45;
-        this._globalShake = 8;
-        Sfx.hit();
-        this._showBanner(p.hits >= this.targetHits ? '🏆 GAME OVER!' : `🎯 HIT! ${p.name}: ${p.hits}/${this.targetHits}`);
-        return false;
+      // Hit opponent (only if opponent is not invincible)
+      if (opp.invincible <= 0) {
+        const ddx = dart.x - opp.x, ddy = dart.y - opp.y;
+        if (ddx*ddx + ddy*ddy < HIT_DIST*HIT_DIST) {
+          p.hits++;
+          opp.hitFlash   = 0.55;
+          opp.invincible = INVINCIBLE_T;
+          p.hitPop       = 1.0;
+          this._globalShake = 7;
+          Sfx.hit();
+          const msg = p.hits >= this.targetHits
+            ? `🏆 ${p.name} WINS!`
+            : `🎯 ${p.name} hits! ${p.hits}/${this.targetHits}`;
+          this._showBanner(msg);
+          return false;
+        }
       }
-
       return dart.life > 0;
     });
-
-    // Age splat marks
-    p.splatMarks = p.splatMarks.filter(s => { s.life -= dt; return s.life > 0; });
   }
 
   _wallAt(mx, my) {
     if (my < 0 || my >= this.map.length || mx < 0 || mx >= this.map[0].length) return true;
-    return this.map[my][mx] > 0;
+    return this.map[Math.floor(my)][Math.floor(mx)] > 0;
   }
 
   _showResults(winner) {
@@ -614,11 +703,9 @@ class NerfArena {
     document.getElementById('gameResults').style.display = 'flex';
     const list = document.getElementById('resultsList');
     list.innerHTML = '';
-
-    const sorted = [...this.players].sort((a,b) => b.hits - a.hits);
-    document.getElementById('resultsIcon').textContent = '🏆';
+    document.getElementById('resultsIcon').textContent  = '🏆';
     document.getElementById('resultsTitle').textContent = `${winner.name} Wins!`;
-    sorted.forEach((p, i) => {
+    [...this.players].sort((a,b) => b.hits - a.hits).forEach((p, i) => {
       const e = document.createElement('div');
       e.className = 'result-entry';
       e.innerHTML = `
@@ -631,19 +718,24 @@ class NerfArena {
   }
 
   // ═══════════════════════════════════════════════════════════
-  //  DRAWING
+  //  RENDERING
   // ═══════════════════════════════════════════════════════════
   _draw() {
     const ctx = this.ctx;
     ctx.save();
-    if (this._globalShake > 0.1) {
-      ctx.translate((Math.random()-0.5)*this._globalShake, (Math.random()-0.5)*this._globalShake);
+
+    // Screen shake (directional, not random every frame for smoother feel)
+    if (this._globalShake > 0.05) {
+      const sx = Math.cos(this._shakeAngle) * this._globalShake;
+      const sy = Math.sin(this._shakeAngle * 1.3) * this._globalShake * 0.6;
+      ctx.translate(sx, sy);
     }
-    ctx.clearRect(-20,-20,this.W+40,this.H+40);
+
+    ctx.clearRect(-20, -20, this.W+40, this.H+40);
 
     if (this.state === 'setup' || this.state === 'results') {
       ctx.fillStyle = '#060c1a';
-      ctx.fillRect(0,0,this.W,this.H);
+      ctx.fillRect(0, 0, this.W, this.H);
       ctx.restore();
       return;
     }
@@ -651,156 +743,173 @@ class NerfArena {
     const vpW = Math.floor(this.W / 2);
     const vpH = this.H;
 
-    // Draw P1 view (left half)
+    // P1 — left half
     ctx.save();
     ctx.beginPath(); ctx.rect(0, 0, vpW, vpH); ctx.clip();
     this._drawView(ctx, this.players[0], this.players[1], 0, 0, vpW, vpH);
+    this._drawMinimap(ctx, this.players[0], 0, vpW, vpH);
     ctx.restore();
 
-    // Draw P2 view (right half)
+    // P2 — right half
     ctx.save();
     ctx.beginPath(); ctx.rect(vpW, 0, vpW, vpH); ctx.clip();
     this._drawView(ctx, this.players[1], this.players[0], vpW, 0, vpW, vpH);
+    this._drawMinimap(ctx, this.players[1], vpW, vpW, vpH);
     ctx.restore();
 
-    // Center divider
+    // Divider — a glowing seam
     ctx.fillStyle = '#000';
     ctx.fillRect(vpW-2, 0, 4, vpH);
-    ctx.fillStyle = 'rgba(255,255,255,0.12)';
-    ctx.fillRect(vpW, 0, 1, vpH);
+    const divGrad = ctx.createLinearGradient(vpW-2, 0, vpW+2, 0);
+    divGrad.addColorStop(0, 'rgba(255,255,255,0)');
+    divGrad.addColorStop(0.5, 'rgba(255,255,255,0.15)');
+    divGrad.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = divGrad;
+    ctx.fillRect(vpW-2, 0, 4, vpH);
 
-    // Countdown overlay
-    if (this.state === 'countdown') {
-      this._drawCountdown(ctx);
-    }
+    if (this.state === 'countdown') this._drawCountdown(ctx);
 
     ctx.restore();
   }
 
   _drawView(ctx, p, opp, ox, oy, vpW, vpH) {
     const halfH = vpH / 2;
-    const rays   = vpW; // one ray per pixel column
 
     // ── Ceiling ──
-    const ceilGrad = ctx.createLinearGradient(ox, oy, ox, oy + halfH);
-    ceilGrad.addColorStop(0, '#0a0a0f');
-    ceilGrad.addColorStop(1, '#1c1c28');
-    ctx.fillStyle = ceilGrad;
+    const ceilG = ctx.createLinearGradient(0, oy, 0, oy + halfH);
+    ceilG.addColorStop(0, '#060609');
+    ceilG.addColorStop(1, '#141420');
+    ctx.fillStyle = ceilG;
     ctx.fillRect(ox, oy, vpW, halfH);
 
     // ── Floor ──
-    const floorGrad = ctx.createLinearGradient(ox, oy + halfH, ox, oy + vpH);
-    floorGrad.addColorStop(0, '#050505'); // dark at horizon
-    floorGrad.addColorStop(0.5, '#111116');
-    floorGrad.addColorStop(1, '#1f2029'); // lighter near camera
-    ctx.fillStyle = floorGrad;
+    const floorG = ctx.createLinearGradient(0, oy + halfH, 0, oy + vpH);
+    floorG.addColorStop(0, '#030303');
+    floorG.addColorStop(0.45, '#0d0d12');
+    floorG.addColorStop(1, '#191926');
+    ctx.fillStyle = floorG;
     ctx.fillRect(ox, oy + halfH, vpW, halfH);
 
-    // Floor grid (neon effect)
-    ctx.strokeStyle = 'rgba(0, 200, 255, 0.12)';
+    // ── Neon floor grid (horizontal + vanishing verticals) ──
+    ctx.save();
+    ctx.strokeStyle = 'rgba(0, 210, 255, 0.1)';
     ctx.lineWidth = 1;
-    for (let i = 0; i < 16; i++) {
-      const perspective = Math.pow(i / 16, 2);
-      const y = oy + halfH + perspective * halfH;
+    for (let i = 1; i < 18; i++) {
+      const t = Math.pow(i / 18, 1.8);
+      const y = oy + halfH + t * halfH;
       if (y > oy + vpH) break;
-      ctx.beginPath(); ctx.moveTo(ox, y); ctx.lineTo(ox+vpW, y); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(ox, y); ctx.lineTo(ox + vpW, y); ctx.stroke();
     }
+    // Vertical grid lines (perspective-converging)
+    ctx.strokeStyle = 'rgba(0, 210, 255, 0.07)';
+    for (let j = -6; j <= 6; j++) {
+      const px2 = ox + vpW/2 + j * vpW * 0.16;
+      ctx.beginPath();
+      ctx.moveTo(ox + vpW/2, oy + halfH);
+      ctx.lineTo(px2, oy + vpH);
+      ctx.stroke();
+    }
+    ctx.restore();
 
-    // ── Walls (textured raycasting) ──
-    const zBuffer = new Float32Array(vpW);
+    // ── Textured Walls ──
+    const zBuf = new Float32Array(vpW);
 
     for (let col = 0; col < vpW; col++) {
       const rayAngle = p.angle - HALF_FOV + (col / vpW) * FOV;
       const { dist, wallType, side, wallX } = castRay(this.map, p.x, p.y, rayAngle);
 
-      // Fix fisheye
-      const corrDist = Math.max(0.05, dist * Math.cos(rayAngle - p.angle));
-      zBuffer[col] = corrDist;
+      // Fisheye correction
+      const cDist = Math.max(0.04, dist * Math.cos(rayAngle - p.angle));
+      zBuf[col] = cDist;
 
-      const wallH  = Math.min(vpH * 3.5, vpH / corrDist);
-      const wallY  = (vpH - wallH) / 2;
+      if (wallType === 0) continue;
 
-      // Map texture column
-      const texCanvas = this.textures[wallType] || this.textures[1];
-      const TEX_W = texCanvas.width;
-      const TEX_H = texCanvas.height;
+      const wallH = Math.min(vpH * 4, vpH / cDist);
+      const wallY = (vpH - wallH) / 2;
 
-      let texX = Math.floor(wallX * TEX_W);
-      // Flip texture depending on facing direction to align adjacent blocks
-      if (side === 0 && Math.cos(rayAngle) > 0) texX = TEX_W - texX - 1;
-      if (side === 1 && Math.sin(rayAngle) < 0) texX = TEX_W - texX - 1;
+      const tex = this.textures[wallType] || this.textures[1];
+      const TW = tex.width, TH = tex.height;
+      let texX = Math.floor(wallX * TW);
+      // Flip correction to prevent seams at wall faces
+      if (side === 0 && Math.cos(rayAngle) > 0) texX = TW - texX - 1;
+      if (side === 1 && Math.sin(rayAngle) < 0) texX = TW - texX - 1;
+      texX = clamp(texX, 0, TW-1);
 
-      // Draw the texture slice
-      ctx.drawImage(
-          texCanvas,
-          texX, 0, 1, TEX_H,
-          ox + col, oy + wallY, 1, wallH
-      );
+      // Draw 1px wide texture slice
+      ctx.drawImage(tex, texX, 0, 1, TH, ox+col, oy+wallY, 1, wallH);
 
-      // Distance Fog / Ambient Occlusion
-      // Overlay a black rect with alpha that increases with distance
-      let fogAlpha = Math.max(0, 1 - (12 / corrDist));
-      // Directional shadow: Side 1 is darker to simulate light source
-      if (side === 1) fogAlpha = Math.min(1, fogAlpha + 0.35);
+      // ── Distance Fog ──
+      // Correct formula: fog = 0 at distance 0, 1 at max draw distance
+      let fog = clamp(cDist / 14, 0, 1) * 0.92;
+      // Side walls (N/S faces) get extra darkening for directional lighting
+      if (side === 1) fog = clamp(fog + 0.22, 0, 1);
 
-      if (fogAlpha > 0) {
-          ctx.fillStyle = `rgba(0,0,0,${fogAlpha})`;
-          ctx.fillRect(ox + col, oy + wallY, 1, wallH);
+      if (fog > 0.01) {
+        ctx.fillStyle = `rgba(0,0,0,${fog.toFixed(2)})`;
+        ctx.fillRect(ox+col, oy+wallY, 1, wallH);
       }
-      
-      // Bottom ambient occlusion (fake shadow where wall meets floor)
-      if (wallH > 0 && wallY + wallH > vpH / 2) {
-          const aoH = Math.min(wallH * 0.15, 60);
-          const drawY = Math.max(0, oy + wallY + wallH - aoH);
-          if (drawY < oy + vpH) {
-              const grad = ctx.createLinearGradient(0, drawY, 0, drawY + aoH);
-              grad.addColorStop(0, 'rgba(0,0,0,0)');
-              grad.addColorStop(1, 'rgba(0,0,0,0.7)');
-              ctx.fillStyle = grad;
-              ctx.fillRect(ox + col, drawY, 1, aoH);
-          }
+
+      // ── Ambient Occlusion at base of walls ──
+      const aoY = oy + wallY + wallH;
+      if (aoY > oy + halfH && aoY < oy + vpH) {
+        const aoH = Math.min(wallH * 0.18, 55);
+        ctx.fillStyle = `rgba(0,0,0,0.5)`;
+        ctx.fillRect(ox+col, aoY - aoH, 1, aoH);
       }
     }
 
     // ── Opponent sprite ──
-    this._drawSprite(ctx, p, opp, ox, oy, vpW, vpH, zBuffer);
+    this._drawSprite(ctx, p, opp, ox, oy, vpW, vpH, zBuf);
 
-    // ── Active darts (from all players, projected into this view) ──
+    // ── Dart projectiles ──
     this.players.forEach(shooter => {
       shooter.darts.forEach(dart => {
-        this._drawDartSprite(ctx, p, dart, shooter.color, ox, oy, vpW, vpH, zBuffer);
+        this._drawDart(ctx, p, dart, shooter.color, ox, oy, vpW, vpH, zBuf);
       });
     });
 
-    // ── Hit flash overlay ──
-    if (p.hitFlash > 0) {
-      const alpha = p.hitFlash * 0.65;
-      ctx.fillStyle = `rgba(255,40,40,${alpha})`;
+    // ── Muzzle flash ──
+    if (p.muzzleFlash > 0) {
+      const mf = p.muzzleFlash / 0.10;
+      ctx.fillStyle = `rgba(255,220,80,${mf * 0.18})`;
       ctx.fillRect(ox, oy, vpW, vpH);
-
-      // Hit marker (crosshair flash)
-      ctx.strokeStyle = `rgba(255,80,80,${alpha*2})`;
-      ctx.lineWidth = 2;
-      const cx = ox + vpW/2, cy = oy + vpH/2;
-      ctx.beginPath(); ctx.moveTo(cx-20,cy); ctx.lineTo(cx+20,cy); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(cx,cy-20); ctx.lineTo(cx,cy+20); ctx.stroke();
     }
 
-    // ── Shoot flash ──
-    if (p.shootFlash > 0) {
-      ctx.fillStyle = `rgba(255,200,80,${p.shootFlash * 4})`;
+    // ── Hit damage overlay ──
+    if (p.hitFlash > 0) {
+      // Pulsing red vignette
+      const hf = p.hitFlash / 0.55;
+      const vigG = ctx.createRadialGradient(
+        ox+vpW/2, oy+vpH/2, vpH*0.1,
+        ox+vpW/2, oy+vpH/2, vpH*0.85
+      );
+      vigG.addColorStop(0, `rgba(200,0,0,0)`);
+      vigG.addColorStop(1, `rgba(220,0,0,${hf * 0.55})`);
+      ctx.fillStyle = vigG;
+      ctx.fillRect(ox, oy, vpW, vpH);
+
+      // Center "you got hit" flash
+      ctx.fillStyle = `rgba(255,30,30,${hf * 0.15})`;
+      ctx.fillRect(ox, oy, vpW, vpH);
+
+      // Hit direction markers (4 corners flash)
+      ctx.strokeStyle = `rgba(255,60,60,${hf * 0.8})`;
+      ctx.lineWidth   = 2.5;
+      const cx2 = ox+vpW/2, cy2 = oy+vpH/2, mk = 18, mg = 5;
+      ctx.beginPath(); ctx.moveTo(cx2-mk-mg, cy2); ctx.lineTo(cx2-mg, cy2); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(cx2+mg, cy2);     ctx.lineTo(cx2+mk+mg, cy2); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(cx2, cy2-mk-mg);  ctx.lineTo(cx2, cy2-mg); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(cx2, cy2+mg);     ctx.lineTo(cx2, cy2+mk+mg); ctx.stroke();
+    }
+
+    // ── Invincibility flicker ──
+    if (p.invincible > 0 && Math.floor(this.time * 12) % 2 === 0) {
+      ctx.fillStyle = 'rgba(255,255,255,0.03)';
       ctx.fillRect(ox, oy, vpW, vpH);
     }
 
     // ── Crosshair ──
-    const cxr = ox + vpW/2, cyr = oy + vpH/2;
-    ctx.strokeStyle = 'rgba(255,255,255,0.7)';
-    ctx.lineWidth = 1.5;
-    ctx.beginPath(); ctx.moveTo(cxr-10,cyr); ctx.lineTo(cxr-4,cyr); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(cxr+4,cyr);  ctx.lineTo(cxr+10,cyr); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(cxr,cyr-10); ctx.lineTo(cxr,cyr-4); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(cxr,cyr+4);  ctx.lineTo(cxr,cyr+10); ctx.stroke();
-    ctx.beginPath(); ctx.arc(cxr,cyr,2,0,Math.PI*2); ctx.stroke();
+    this._drawCrosshair(ctx, p, ox, oy, vpW, vpH);
 
     // ── Gun sprite ──
     this._drawGun(ctx, p, ox, oy, vpW, vpH);
@@ -809,346 +918,455 @@ class NerfArena {
     this._drawHUD(ctx, p, ox, oy, vpW, vpH);
   }
 
-  _drawSprite(ctx, viewer, sprite, ox, oy, vpW, vpH, zBuffer) {
-    const dx = sprite.x - viewer.x;
-    const dy = sprite.y - viewer.y;
+  // ─── Opponent Sprite ────────────────────────────────────────
+  _drawSprite(ctx, viewer, sprite, ox, oy, vpW, vpH, zBuf) {
+    const dx = sprite.x - viewer.x, dy = sprite.y - viewer.y;
     const dist = Math.sqrt(dx*dx + dy*dy);
-    if (dist < 0.3) return;
+    if (dist < 0.25) return;
 
-    // Angle to sprite relative to viewer facing
     const spriteAngle = Math.atan2(dy, dx) - viewer.angle;
     const normAngle   = Math.atan2(Math.sin(spriteAngle), Math.cos(spriteAngle));
+    if (Math.abs(normAngle) > HALF_FOV + 0.25) return;
 
-    if (Math.abs(normAngle) > HALF_FOV + 0.2) return;
-
-    const screenX = (normAngle / FOV + 0.5) * vpW;
-    const spriteH = Math.min(vpH * 1.8, vpH / dist);
-    const spriteW = spriteH * 0.6;
+    const screenX  = (normAngle / FOV + 0.5) * vpW;
+    const spriteH  = Math.min(vpH * 1.9, vpH / dist);
+    const spriteW  = spriteH * 0.62;
     const spriteTop = (vpH - spriteH) / 2;
+    const brt      = Math.max(0.35, 1 - dist / 11);
 
-    const startCol = Math.floor(screenX - spriteW / 2);
-    const endCol   = Math.floor(screenX + spriteW / 2);
+    const startCol = Math.floor(screenX - spriteW/2);
+    const endCol   = Math.floor(screenX + spriteW/2);
+
+    // Invincibility flicker on the sprite too
+    const flickOff = sprite.invincible > 0 && Math.floor(this.time * 12) % 2 === 0;
+    if (flickOff) return;
 
     for (let col = Math.max(0, startCol); col < Math.min(vpW, endCol); col++) {
-      if (zBuffer[col] < dist) continue; // hidden behind wall
+      if (zBuf[col] < dist) continue;
 
-      const texU = (col - startCol) / (endCol - startCol);
+      const u = (col - startCol) / Math.max(1, endCol - startCol);
 
-      // ── Pro Sci-Fi Armor Sprite Redesign ──
-      
-      // Head (top 22%)
-      if (texU > 0.3 && texU < 0.7) {
-        const headTop = spriteTop;
-        const headH = spriteH * 0.22;
-        
-        // Outline (left/right edges)
-        if (texU < 0.35 || texU > 0.65) {
-            ctx.fillStyle = `rgba(10,10,15,${Math.max(0.4, 1-dist/10)})`; // Dark outline
-            ctx.fillRect(ox+col, oy+headTop, 1, headH);
+      // ── Head / Helmet ──
+      if (u > 0.28 && u < 0.72) {
+        const hTop = spriteTop, hH = spriteH * 0.22;
+        if (u < 0.33 || u > 0.67) {
+          // Dark outline
+          ctx.fillStyle = `rgba(8,8,12,${brt})`;
         } else {
-            // Helmet Base (White/Light Grey armor)
-            ctx.fillStyle = `rgba(240,245,255,${Math.max(0.4, 1-dist/10)})`;
-            ctx.fillRect(ox+col, oy+headTop, 1, headH);
-            
-            // Glowing Visor
-            if (texU > 0.38 && texU < 0.62) {
-                const visorTop = headTop + headH * 0.3;
-                const visorH = headH * 0.35;
-                // Bright glowing team color (NO distance fading so it POPS)
-                ctx.fillStyle = sprite.color; 
-                ctx.fillRect(ox+col, oy+visorTop, 1, visorH);
-                // White hot center of visor
-                if (texU > 0.45 && texU < 0.55) {
-                    ctx.fillStyle = '#ffffff';
-                    ctx.fillRect(ox+col, oy+visorTop + visorH*0.2, 1, visorH*0.6);
-                }
-            }
+          ctx.fillStyle = `rgba(235,240,255,${brt})`;
+        }
+        ctx.fillRect(ox+col, oy+hTop, 1, hH);
+
+        // Glowing visor strip
+        if (u > 0.37 && u < 0.63) {
+          const vTop = hTop + hH*0.28, vH = hH*0.38;
+          ctx.fillStyle = sprite.color;
+          ctx.fillRect(ox+col, oy+vTop, 1, vH);
+          if (u > 0.44 && u < 0.56) {
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(ox+col, oy+vTop+2, 1, vH-4);
+          }
+        }
+        // Helmet chin detail
+        if (u > 0.35 && u < 0.65) {
+          const cTop = hTop + hH * 0.75, cH = hH * 0.25;
+          ctx.fillStyle = `rgba(180,185,200,${brt})`;
+          ctx.fillRect(ox+col, oy+cTop, 1, cH);
         }
       }
 
-      // Shoulders & Arms (Outer 15%)
-      if ((texU > 0.15 && texU <= 0.3) || (texU >= 0.7 && texU < 0.85)) {
-        const armTop = spriteTop + spriteH * 0.22;
-        const armH   = spriteH * 0.45;
-        
-        if (texU < 0.2 || texU > 0.8) {
-             // Outline
-             ctx.fillStyle = `rgba(10,10,15,${Math.max(0.4, 1-dist/10)})`;
-             ctx.fillRect(ox+col, oy+armTop, 1, armH);
+      // ── Arms / Shoulder pads ──
+      if ((u > 0.12 && u <= 0.28) || (u >= 0.72 && u < 0.88)) {
+        const aTop = spriteTop + spriteH*0.21, aH = spriteH*0.46;
+        if (u < 0.17 || u > 0.83) {
+          ctx.fillStyle = `rgba(8,8,12,${brt})`;
         } else {
-             // Shoulder pad (Team color)
-             const padH = armH * 0.35;
-             ctx.fillStyle = sprite.color;
-             ctx.fillRect(ox+col, oy+armTop, 1, padH);
-             
-             // Lower arm (Dark grey body suit)
-             ctx.fillStyle = `rgba(60,65,70,${Math.max(0.3, 1-dist/10)})`;
-             ctx.fillRect(ox+col, oy+armTop+padH, 1, armH-padH);
+          const isPad = (u < 0.28 && u > 0.17) || (u > 0.72 && u < 0.83);
+          ctx.fillStyle = isPad ? sprite.color : `rgba(55,60,65,${brt})`;
         }
-        
-        // Blaster in right hand (viewer's left side)
-        if (texU > 0.15 && texU <= 0.3) {
-            const gunTop = armTop + armH - spriteH*0.1;
-            const gunH = spriteH * 0.22;
-            ctx.fillStyle = `rgba(10,10,15,${Math.max(0.4, 1-dist/10)})`; // Gun outline
-            ctx.fillRect(ox+col, oy+gunTop-1, 1, gunH+2);
-            ctx.fillStyle = '#ff6600'; // Bright Nerf Orange (no fade)
-            ctx.fillRect(ox+col, oy+gunTop, 1, gunH);
+        ctx.fillRect(ox+col, oy+aTop, 1, aH);
+        // Hand
+        const handTop = aTop + aH*0.8;
+        ctx.fillStyle = `rgba(225,175,115,${brt})`;
+        ctx.fillRect(ox+col, oy+handTop, 1, aH*0.2);
+        // Blaster in right hand
+        if (u > 0.14 && u <= 0.28) {
+          const gTop = handTop - spriteH*0.04, gH = spriteH*0.2;
+          ctx.fillStyle = `rgba(8,8,12,${brt})`;
+          ctx.fillRect(ox+col, oy+gTop-1, 1, gH+2);
+          ctx.fillStyle = '#ff6600';
+          ctx.fillRect(ox+col, oy+gTop, 1, gH);
         }
       }
 
-      // Torso (middle 40%)
-      if (texU > 0.3 && texU < 0.7) {
-        const bodyTop = spriteTop + spriteH*0.22;
-        const bodyH   = spriteH * 0.45;
-        
-        // Outline
-        if (texU < 0.35 || texU > 0.65) {
-            ctx.fillStyle = `rgba(10,10,15,${Math.max(0.4, 1-dist/10)})`;
-            ctx.fillRect(ox+col, oy+bodyTop, 1, bodyH);
+      // ── Torso ──
+      if (u > 0.28 && u < 0.72) {
+        const tTop = spriteTop + spriteH*0.22, tH = spriteH*0.45;
+        if (u < 0.33 || u > 0.67) {
+          ctx.fillStyle = `rgba(8,8,12,${brt})`;
         } else {
-            // White armor plate
-            ctx.fillStyle = `rgba(240,245,255,${Math.max(0.4, 1-dist/10)})`;
-            ctx.fillRect(ox+col, oy+bodyTop, 1, bodyH);
-            
-            // Glowing chest core
-            if (texU > 0.45 && texU < 0.55) {
-                const coreTop = bodyTop + bodyH * 0.2;
-                const coreH = bodyH * 0.3;
-                ctx.fillStyle = sprite.color; // Emissive team color
-                ctx.fillRect(ox+col, oy+coreTop, 1, coreH);
-            }
-            
-            // Dark tactical belt
-            const beltTop = bodyTop + bodyH - spriteH * 0.08;
-            const beltH = spriteH * 0.08;
-            ctx.fillStyle = `rgba(30,30,35,${Math.max(0.4, 1-dist/10)})`;
-            ctx.fillRect(ox+col, oy+beltTop, 1, beltH);
+          ctx.fillStyle = `rgba(235,240,255,${brt})`;
         }
+        ctx.fillRect(ox+col, oy+tTop, 1, tH);
+        // Chest reactor
+        if (u > 0.44 && u < 0.56) {
+          const rTop = tTop+tH*0.18, rH = tH*0.32;
+          ctx.fillStyle = sprite.color;
+          ctx.fillRect(ox+col, oy+rTop, 1, rH);
+        }
+        // Belt
+        const bTop = tTop+tH-spriteH*0.07, bH = spriteH*0.07;
+        ctx.fillStyle = `rgba(25,25,30,${brt})`;
+        ctx.fillRect(ox+col, oy+bTop, 1, bH);
       }
 
-      // Legs (bottom 33%)
-      if (texU > 0.3 && texU < 0.7) {
-        if (texU > 0.45 && texU < 0.55) {
-            // Gap between legs
+      // ── Legs ──
+      if (u > 0.3 && u < 0.7 && !(u > 0.46 && u < 0.54)) {
+        const lTop = spriteTop+spriteH*0.67, lH = spriteH*0.33;
+        if (u < 0.34 || u > 0.66 || (u > 0.43 && u < 0.46) || (u > 0.54 && u < 0.57)) {
+          ctx.fillStyle = `rgba(8,8,12,${brt})`;
         } else {
-            const legTop = spriteTop + spriteH * 0.67;
-            const legH   = spriteH * 0.33;
-            
-            // Outline around each leg
-            if (texU < 0.35 || texU > 0.65 || (texU > 0.42 && texU < 0.45) || (texU > 0.55 && texU < 0.58)) {
-                ctx.fillStyle = `rgba(10,10,15,${Math.max(0.4, 1-dist/10)})`;
-                ctx.fillRect(ox+col, oy+legTop, 1, legH);
-            } else {
-                // Leg armor (Dark Grey)
-                ctx.fillStyle = `rgba(80,85,90,${Math.max(0.3, 1-dist/10)})`;
-                ctx.fillRect(ox+col, oy+legTop, 1, legH);
-                
-                // Glowing knee pads
-                const kneeTop = legTop + legH * 0.3;
-                const kneeH = legH * 0.25;
-                ctx.fillStyle = sprite.color; // Emissive team color
-                ctx.fillRect(ox+col, oy+kneeTop, 1, kneeH);
-            }
+          ctx.fillStyle = `rgba(75,80,88,${brt})`;
         }
+        ctx.fillRect(ox+col, oy+lTop, 1, lH);
+        // Knee pads
+        const kTop = lTop+lH*0.28, kH = lH*0.26;
+        ctx.fillStyle = sprite.color;
+        ctx.fillRect(ox+col, oy+kTop, 1, kH);
       }
     }
   }
 
-  _drawDartSprite(ctx, viewer, dart, dartColor, ox, oy, vpW, vpH, zBuffer) {
-    const dx = dart.x - viewer.x;
-    const dy = dart.y - viewer.y;
+  // ─── Dart Projectile ────────────────────────────────────────
+  _drawDart(ctx, viewer, dart, color, ox, oy, vpW, vpH, zBuf) {
+    const dx = dart.x - viewer.x, dy = dart.y - viewer.y;
     const dist = Math.sqrt(dx*dx + dy*dy);
-    if (dist < 0.2 || dist > 18) return;
+    if (dist < 0.18 || dist > 20) return;
 
-    const spriteAngle = Math.atan2(dy, dx) - viewer.angle;
-    const normAngle   = Math.atan2(Math.sin(spriteAngle), Math.cos(spriteAngle));
-    if (Math.abs(normAngle) > HALF_FOV + 0.1) return;
+    const sa = Math.atan2(dy, dx) - viewer.angle;
+    const na = Math.atan2(Math.sin(sa), Math.cos(sa));
+    if (Math.abs(na) > HALF_FOV + 0.12) return;
 
-    const screenX = (normAngle / FOV + 0.5) * vpW;
-    const dartH   = Math.min(vpH * 0.5, 8 / dist * 6);
-    const dartW   = dartH * 3;
-    const dartY   = vpH / 2 - dartH / 2;
+    const sx = (na / FOV + 0.5) * vpW;
+    const dH = clamp(7 / dist * 5, 3, vpH * 0.4);
+    const dW = dH * 2.8;
+    const dY = vpH / 2 - dH / 2;
 
-    const startCol = Math.floor(screenX - dartW/2);
-    const endCol   = Math.floor(screenX + dartW/2);
-
-    for (let col = Math.max(0, startCol); col < Math.min(vpW, endCol); col++) {
-      if (zBuffer[col] < dist) continue;
-      const t = (col - startCol) / Math.max(1, endCol - startCol);
-      // Dart body: orange/yellow gradient, tip darker
-      const brightness = Math.max(0.4, 1 - dist/14);
-      ctx.fillStyle = t < 0.3
-        ? `rgba(80,40,20,${brightness})`  // tip (suction cup)
-        : `rgba(255,160,30,${brightness})`; // foam body
-      ctx.fillRect(ox+col, oy+dartY, 1, dartH);
+    const sC = Math.floor(sx - dW/2), eC = Math.floor(sx + dW/2);
+    for (let col = Math.max(0, sC); col < Math.min(vpW, eC); col++) {
+      if (zBuf[col] < dist) continue;
+      const t = (col - sC) / Math.max(1, eC - sC);
+      const brt = Math.max(0.5, 1 - dist/12);
+      if (t < 0.22) {
+        ctx.fillStyle = `rgba(60,30,15,${brt})`;  // suction cup tip
+      } else if (t < 0.5) {
+        ctx.fillStyle = `rgba(255,200,40,${brt})`; // foam body - yellow
+      } else {
+        ctx.fillStyle = `rgba(255,130,20,${brt})`; // foam body - orange
+      }
+      ctx.fillRect(ox+col, oy+dY, 1, dH);
     }
   }
 
-  _drawGun(ctx, p, ox, oy, vpW, vpH) {
-    const gx = ox + vpW/2 + p.gunSwayX + (p.id === 0 ? -40 : -40);
-    const gy = oy + vpH - 130 + p.gunSwayY + p.gunRecoil * 30;
+  // ─── Crosshair ──────────────────────────────────────────────
+  _drawCrosshair(ctx, p, ox, oy, vpW, vpH) {
+    const cx = ox + vpW/2, cy = oy + vpH/2;
     const reloading = p.reloading;
 
-    // Gun body
-    const gunColor = GUN_COLORS[p.id];
-
-    // Main body
-    ctx.fillStyle = gunColor;
-    ctx.beginPath();
-    ctx.roundRect(gx-18, gy+10, 90, 28, 6);
-    ctx.fill();
-
-    // Barrel
-    ctx.fillStyle = this._shadeColor(gunColor, 0.7);
-    ctx.beginPath();
-    ctx.roundRect(gx+55, gy+16, 48, 14, 4);
-    ctx.fill();
-
-    // Barrel tip (orange tip, classic Nerf)
-    ctx.fillStyle = '#ff6600';
-    ctx.beginPath();
-    ctx.roundRect(gx+99, gy+16, 10, 14, 2);
-    ctx.fill();
-
-    // Handle
-    ctx.fillStyle = this._shadeColor(gunColor, 0.6);
-    ctx.beginPath();
-    ctx.roundRect(gx+5, gy+34, 22, 36, 5);
-    ctx.fill();
-
-    // Trigger
-    ctx.fillStyle = '#ffcc00';
-    ctx.beginPath();
-    ctx.roundRect(gx+18, gy+44, 6, 16, 2);
-    ctx.fill();
-
-    // Dart chamber (shows loaded darts)
-    for (let i = 0; i < p.ammo; i++) {
-      const dx2 = gx + 10 + i * 10;
-      const dy2 = gy + 14;
-      ctx.fillStyle = '#ffaa00';
-      ctx.beginPath();
-      ctx.roundRect(dx2, dy2, 7, 10, 2);
-      ctx.fill();
-      ctx.fillStyle = 'rgba(255,60,0,0.7)';
-      ctx.beginPath();
-      ctx.roundRect(dx2, dy2, 4, 4, 1);
-      ctx.fill();
-    }
-
-    // Reload flash
-    if (reloading) {
-      const rProgress = 1 - p.reloadTimer / RELOAD_TIME;
-      ctx.fillStyle = `rgba(255,255,100,${0.15 + Math.sin(this.time * 18) * 0.1})`;
-      ctx.beginPath();
-      ctx.roundRect(gx-18, gy+10, 90 * rProgress, 28, 6);
-      ctx.fill();
-    }
-  }
-
-  _drawHUD(ctx, p, ox, oy, vpW, vpH) {
-    // Score display
-    ctx.font = 'bold 26px Outfit';
-    ctx.fillStyle = p.color;
-    ctx.textAlign = 'center';
-    ctx.strokeStyle = 'rgba(0,0,0,0.7)';
-    ctx.lineWidth = 3;
-    ctx.strokeText(`${p.hits}`, ox + vpW/2, oy + 44);
-    ctx.fillText(`${p.hits}`, ox + vpW/2, oy + 44);
-
-    ctx.font = '11px Outfit';
-    ctx.fillStyle = 'rgba(255,255,255,0.5)';
-    ctx.fillText(`/ ${this.targetHits} hits`, ox + vpW/2, oy + 59);
-
-    // Player name
-    ctx.font = 'bold 13px Outfit';
-    ctx.fillStyle = p.color;
-    ctx.textAlign = 'left';
-    ctx.fillText(p.name, ox + 12, oy + 24);
-
-    // Ammo (foam dart icons)
-    const dartIconW = 10, dartIconH = 5, dartGap = 4;
-    const ammoStartX = ox + 14;
-    const ammoY = oy + vpH - 70;
-    for (let i = 0; i < MAX_AMMO; i++) {
-      const dx2 = ammoStartX + i * (dartIconW + dartGap);
-      const loaded = i < p.ammo;
-      ctx.fillStyle = loaded ? '#ffaa00' : 'rgba(255,255,255,0.15)';
-      ctx.beginPath();
-      ctx.roundRect(dx2, ammoY, dartIconW, dartIconH, 2);
-      ctx.fill();
-      if (loaded) {
-        ctx.fillStyle = 'rgba(255,60,0,0.6)';
-        ctx.beginPath();
-        ctx.roundRect(dx2, ammoY, 4, dartIconH, 1);
-        ctx.fill();
-      }
-    }
-
-    // Ammo label
-    ctx.font = '11px Outfit';
-    ctx.fillStyle = 'rgba(255,255,255,0.4)';
-    ctx.textAlign = 'left';
-    ctx.fillText('AMMO', ammoStartX, ammoY - 4);
-
-    // Reload indicator
-    if (p.reloading) {
-      const pct = 1 - p.reloadTimer / RELOAD_TIME;
-      const barW = 90, barH = 6;
-      const barX = ox + vpW/2 - barW/2, barY = oy + vpH - 90;
-
-      ctx.fillStyle = 'rgba(0,0,0,0.5)';
-      ctx.beginPath(); ctx.roundRect(barX-1, barY-1, barW+2, barH+2, 4); ctx.fill();
-
-      ctx.fillStyle = 'rgba(255,255,255,0.12)';
-      ctx.beginPath(); ctx.roundRect(barX, barY, barW, barH, 3); ctx.fill();
-
-      ctx.fillStyle = '#ffcc00';
-      ctx.beginPath(); ctx.roundRect(barX, barY, barW * pct, barH, 3); ctx.fill();
-
-      ctx.font = 'bold 11px Outfit';
-      ctx.fillStyle = 'rgba(255,220,0,0.9)';
-      ctx.textAlign = 'center';
-      ctx.fillText('RELOADING…', ox + vpW/2, barY - 5);
-    }
-
-    // Hit streak
-    if (p.hits > 0) {
-      ctx.font = 'bold 11px Outfit';
-      ctx.fillStyle = 'rgba(255,255,255,0.45)';
-      ctx.textAlign = 'right';
-      ctx.fillText(`🎯 ${p.hits} hit${p.hits>1?'s':''}`, ox + vpW - 12, oy + 24);
-    }
-  }
-
-  _drawCountdown(ctx) {
-    const text  = this._cdCount > 0 ? String(this._cdCount) : 'GO!';
-    const scale = 1 + (1 - this._cdTimer / 0.9) * 0.25;
     ctx.save();
-    ctx.translate(this.W/2, this.H/2 - 30);
-    ctx.scale(scale, scale);
-    ctx.font = `bold 72px Outfit`;
-    ctx.fillStyle = this._cdCount > 0 ? '#fff' : '#ffcc00';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.shadowColor = 'rgba(255,200,0,0.4)';
-    ctx.shadowBlur = 20;
-    ctx.fillText(text, 0, 0);
-    ctx.shadowBlur = 0;
+    ctx.strokeStyle = reloading ? 'rgba(255,200,0,0.6)' : 'rgba(255,255,255,0.75)';
+    ctx.lineWidth = 1.5;
+
+    if (reloading) {
+      // Show reload arc instead of crosshair
+      const pct = 1 - p.reloadTimer / RELOAD_TIME;
+      ctx.beginPath();
+      ctx.arc(cx, cy, 12, -Math.PI/2, -Math.PI/2 + pct * Math.PI * 2);
+      ctx.stroke();
+      ctx.fillStyle = 'rgba(255,200,0,0.5)';
+      ctx.font = 'bold 9px Outfit';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('R', cx, cy);
+    } else {
+      // Classic tactical crosshair with dot
+      const gap = 5, len = 10;
+      ctx.beginPath(); ctx.moveTo(cx-gap-len, cy); ctx.lineTo(cx-gap, cy); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(cx+gap, cy);     ctx.lineTo(cx+gap+len, cy); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(cx, cy-gap-len); ctx.lineTo(cx, cy-gap); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(cx, cy+gap);     ctx.lineTo(cx, cy+gap+len); ctx.stroke();
+      ctx.fillStyle = 'rgba(255,255,255,0.8)';
+      ctx.beginPath(); ctx.arc(cx, cy, 1.5, 0, Math.PI*2); ctx.fill();
+    }
     ctx.restore();
   }
 
+  // ─── Gun Sprite ─────────────────────────────────────────────
+  _drawGun(ctx, p, ox, oy, vpW, vpH) {
+    const gunColor = p.color;
+    const gx = ox + vpW/2 + p.gunSwayX;
+    const gy = oy + vpH - 145 + p.gunSwayY + p.gunRecoil * 35;
+
+    ctx.save();
+
+    // ── Gun shadow (ground projection) ──
+    ctx.fillStyle = 'rgba(0,0,0,0.2)';
+    ctx.beginPath();
+    ctx.ellipse(gx + 45, oy + vpH - 4, 55, 8, 0, 0, Math.PI*2);
+    ctx.fill();
+
+    // ── Main body ──
+    ctx.fillStyle = gunColor;
+    ctx.beginPath(); ctx.roundRect(gx - 15, gy + 12, 95, 30, 7); ctx.fill();
+
+    // Highlight on top
+    ctx.fillStyle = 'rgba(255,255,255,0.18)';
+    ctx.beginPath(); ctx.roundRect(gx - 12, gy + 13, 89, 6, [6,6,0,0]); ctx.fill();
+
+    // ── Barrel ──
+    ctx.fillStyle = this._mixColor(...this._hexToRgb(gunColor), 0.65);
+    ctx.beginPath(); ctx.roundRect(gx + 60, gy + 18, 55, 15, 5); ctx.fill();
+
+    // Barrel top rail
+    ctx.fillStyle = this._mixColor(...this._hexToRgb(gunColor), 0.55);
+    ctx.beginPath(); ctx.roundRect(gx + 58, gy + 13, 58, 6, 3); ctx.fill();
+
+    // ── Orange tip ──
+    ctx.fillStyle = '#ff5500';
+    ctx.beginPath(); ctx.roundRect(gx + 111, gy + 18, 12, 15, 3); ctx.fill();
+    ctx.fillStyle = '#ff8833';
+    ctx.beginPath(); ctx.roundRect(gx + 112, gy + 18, 6, 3, 1); ctx.fill();
+
+    // ── Handle ──
+    ctx.fillStyle = this._mixColor(...this._hexToRgb(gunColor), 0.6);
+    ctx.beginPath(); ctx.roundRect(gx + 8, gy + 38, 24, 40, 6); ctx.fill();
+    // Grip texture lines
+    ctx.fillStyle = 'rgba(0,0,0,0.2)';
+    for (let i = 0; i < 3; i++) {
+      ctx.beginPath(); ctx.roundRect(gx+11, gy+44+i*8, 16, 3, 1); ctx.fill();
+    }
+
+    // ── Trigger guard ──
+    ctx.strokeStyle = this._mixColor(...this._hexToRgb(gunColor), 0.55);
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.moveTo(gx+20, gy+40);
+    ctx.quadraticCurveTo(gx+38, gy+62, gx+48, gy+42);
+    ctx.stroke();
+
+    // ── Trigger ──
+    ctx.fillStyle = '#ffcc00';
+    ctx.beginPath(); ctx.roundRect(gx + 22, gy + 46, 6, 16, 2); ctx.fill();
+
+    // ── Ammo chamber (dart pegs) ──
+    for (let i = 0; i < MAX_AMMO; i++) {
+      const lx = gx - 10 + i * 11;
+      const ly = gy + 15;
+      const loaded = i < p.ammo;
+      ctx.fillStyle = loaded ? '#ffaa00' : 'rgba(255,255,255,0.1)';
+      ctx.beginPath(); ctx.roundRect(lx, ly, 8, 11, 2); ctx.fill();
+      if (loaded) {
+        ctx.fillStyle = 'rgba(255,60,0,0.7)';
+        ctx.beginPath(); ctx.roundRect(lx, ly, 5, 4, 1); ctx.fill();
+      }
+    }
+
+    // ── Muzzle flash ──
+    if (p.muzzleFlash > 0) {
+      const mf = p.muzzleFlash / 0.10;
+      ctx.save();
+      ctx.globalAlpha = mf;
+      // Star burst at barrel tip
+      const mx2 = gx + 118, my2 = gy + 25;
+      ctx.fillStyle = '#ffee44';
+      for (let a = 0; a < 6; a++) {
+        const angle = (a / 6) * Math.PI * 2;
+        const len2 = 10 + Math.random() * 8;
+        ctx.beginPath();
+        ctx.moveTo(mx2, my2);
+        ctx.lineTo(mx2 + Math.cos(angle) * len2, my2 + Math.sin(angle) * len2);
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = '#fff8aa';
+        ctx.stroke();
+      }
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath(); ctx.arc(mx2, my2, 4, 0, Math.PI*2); ctx.fill();
+      ctx.restore();
+    }
+
+    // ── Reload progress overlay ──
+    if (p.reloading) {
+      const pct = 1 - p.reloadTimer / RELOAD_TIME;
+      ctx.fillStyle = `rgba(255,220,0,${0.1 + Math.abs(Math.sin(this.time * 14)) * 0.08})`;
+      ctx.beginPath(); ctx.roundRect(gx-15, gy+12, 95 * pct, 30, 7); ctx.fill();
+    }
+
+    ctx.restore();
+  }
+
+  // ─── HUD ────────────────────────────────────────────────────
+  _drawHUD(ctx, p, ox, oy, vpW, vpH) {
+    ctx.save();
+
+    const px2 = ox + 14;
+
+    // ── Player tag (top left) ──
+    ctx.font = 'bold 13px Outfit';
+    ctx.fillStyle = p.color;
+    ctx.textAlign = 'left';
+    ctx.fillText(p.name, px2, oy + 24);
+
+    // ── Score (top center) — animates on hit ──
+    const scorePop = 1 + p.hitPop * 0.35;
+    ctx.save();
+    ctx.translate(ox + vpW/2, oy + 46);
+    ctx.scale(scorePop, scorePop);
+    ctx.font = 'bold 30px Outfit';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'alphabetic';
+    ctx.strokeStyle = 'rgba(0,0,0,0.8)';
+    ctx.lineWidth = 4;
+    ctx.strokeText(`${p.hits}`, 0, 0);
+    ctx.fillStyle = p.color;
+    ctx.fillText(`${p.hits}`, 0, 0);
+    ctx.restore();
+
+    ctx.font = '11px Outfit';
+    ctx.fillStyle = 'rgba(255,255,255,0.45)';
+    ctx.textAlign = 'center';
+    ctx.fillText(`/ ${this.targetHits} to win`, ox + vpW/2, oy + 62);
+
+    // ── Ammo bar (bottom left) ──
+    const aX = ox + 14, aY = oy + vpH - 68;
+    ctx.font = '10px Outfit';
+    ctx.fillStyle = 'rgba(255,255,255,0.35)';
+    ctx.textAlign = 'left';
+    ctx.fillText('AMMO', aX, aY - 5);
+
+    const dW2 = 11, dH2 = 6, dGap = 3;
+    for (let i = 0; i < MAX_AMMO; i++) {
+      const lx = aX + i * (dW2 + dGap);
+      const loaded = i < p.ammo;
+      // Shadow
+      ctx.fillStyle = 'rgba(0,0,0,0.4)';
+      ctx.beginPath(); ctx.roundRect(lx+1, aY+1, dW2, dH2, 2); ctx.fill();
+      // Dart pip
+      ctx.fillStyle = loaded ? '#ffaa00' : 'rgba(255,255,255,0.1)';
+      ctx.beginPath(); ctx.roundRect(lx, aY, dW2, dH2, 2); ctx.fill();
+      if (loaded) {
+        ctx.fillStyle = '#ff5500';
+        ctx.beginPath(); ctx.roundRect(lx, aY, 4, dH2, [2,0,0,2]); ctx.fill();
+      }
+    }
+
+    // ── Bottom right: controls reminder ──
+    ctx.font = '9px Outfit';
+    ctx.fillStyle = 'rgba(255,255,255,0.2)';
+    ctx.textAlign = 'right';
+    const ctrlStr = p.id === 0 ? 'WASD·Turn | SPC·Fire | R·Reload' : '↑↓←→·Turn | ENT·Fire | /·Reload';
+    ctx.fillText(ctrlStr, ox+vpW-10, oy+vpH-10);
+
+    ctx.restore();
+  }
+
+  // ─── Minimap ────────────────────────────────────────────────
+  _drawMinimap(ctx, p, ox, vpW, vpH) {
+    const map  = this.map;
+    const ROWS = map.length, COLS = map[0].length;
+    const S    = 4.5;   // pixels per cell
+    const mW   = COLS * S, mH = ROWS * S;
+    const mx   = ox + vpW - mW - 12;
+    const my   = vpH - mH - 12;
+
+    ctx.save();
+    ctx.globalAlpha = 0.72;
+
+    // Background
+    ctx.fillStyle = 'rgba(0,0,0,0.65)';
+    ctx.beginPath();
+    ctx.roundRect(mx - 4, my - 4, mW + 8, mH + 8, 5);
+    ctx.fill();
+
+    // Border
+    ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.roundRect(mx - 4, my - 4, mW + 8, mH + 8, 5);
+    ctx.stroke();
+
+    // Cells
+    for (let row = 0; row < ROWS; row++) {
+      for (let col = 0; col < COLS; col++) {
+        const cell = map[row][col];
+        if (cell > 0) {
+          const baseColor = this.palette[cell] || '#555';
+          ctx.fillStyle = this._mixColor(...this._hexToRgb(baseColor), 0.6);
+          ctx.fillRect(mx + col*S, my + row*S, S-0.5, S-0.5);
+        }
+      }
+    }
+
+    // Opponent dot
+    const opp = this.players.find(pl => pl.id !== p.id);
+    if (opp) {
+      ctx.fillStyle = opp.color;
+      ctx.beginPath();
+      ctx.arc(mx + opp.x*S, my + opp.y*S, 2.5, 0, Math.PI*2);
+      ctx.fill();
+    }
+
+    // Player dot + direction arrow
+    ctx.fillStyle = p.color;
+    ctx.beginPath();
+    ctx.arc(mx + p.x*S, my + p.y*S, 3, 0, Math.PI*2);
+    ctx.fill();
+
+    // Direction indicator
+    ctx.strokeStyle = p.color;
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(mx + p.x*S, my + p.y*S);
+    ctx.lineTo(mx + p.x*S + Math.cos(p.angle)*6, my + p.y*S + Math.sin(p.angle)*6);
+    ctx.stroke();
+
+    ctx.restore();
+  }
+
+  // ─── Countdown ──────────────────────────────────────────────
+  _drawCountdown(ctx) {
+    const txt = this._cdCount > 0 ? String(this._cdCount) : 'GO!';
+    const scale = 1 + (1 - this._cdTimer / 0.9) * 0.22;
+    ctx.save();
+    ctx.translate(this.W/2, this.H/2 - 20);
+    ctx.scale(scale, scale);
+    ctx.font = `900 80px Outfit`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = this._cdCount > 0 ? '#fff' : '#ffcc00';
+    ctx.shadowColor = this._cdCount > 0 ? 'rgba(255,255,255,0.3)' : 'rgba(255,200,0,0.5)';
+    ctx.shadowBlur = 28;
+    ctx.fillText(txt, 0, 0);
+    ctx.restore();
+  }
+
+  // ─── Colour Helpers ─────────────────────────────────────────
+  _hexToRgb(hex) {
+    return [
+      parseInt(hex.slice(1,3),16),
+      parseInt(hex.slice(3,5),16),
+      parseInt(hex.slice(5,7),16),
+    ];
+  }
+
+  _mixColor(r, g, b, amt) {
+    return `rgb(${Math.round(r*amt)},${Math.round(g*amt)},${Math.round(b*amt)})`;
+  }
+
   _shadeColor(hex, amt) {
-    let r = parseInt(hex.slice(1,3),16);
-    let g = parseInt(hex.slice(3,5),16);
-    let b = parseInt(hex.slice(5,7),16);
-    r = clamp(Math.round(r*amt),0,255);
-    g = clamp(Math.round(g*amt),0,255);
-    b = clamp(Math.round(b*amt),0,255);
-    return `rgb(${r},${g},${b})`;
+    const [r,g,b] = this._hexToRgb(hex);
+    return this._mixColor(r,g,b,amt);
   }
 }
 
-// ─── Boot ───────────────────────────────────────────────────
+// ─── Boot ────────────────────────────────────────────────────
 new NerfArena();
