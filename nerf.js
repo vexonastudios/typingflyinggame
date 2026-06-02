@@ -1101,30 +1101,36 @@ class NerfArena {
     ctx.restore();
   }
 
-  // ─── Gun Viewmodel (FPS forward-facing) ─────────────────────
-  // Drawn as if held forward: barrel points UP toward crosshair,
-  // body visible from slight top-down angle, grip at bottom-right.
+  // ─── Gun Viewmodel (FPS forward-facing perspective) ──────────
+  // Drawn at an angle and foreshortened to point INTO the screen
   _drawGun(ctx, p, ox, oy, vpW, vpH) {
     const gunColor = p.color;
     const [r,g,b]  = this._hexToRgb(gunColor);
 
     // Sway + recoil: gun bobs while walking, kicks up on fire
-    const swayX   = p.gunSwayX * 1.2;
-    const swayY   = p.gunSwayY * 1.0;
-    const recoilY = p.gunRecoil * 40;  // kicks DOWN on screen (toward player)
+    const swayX   = p.gunSwayX * 1.5;
+    const swayY   = p.gunSwayY * 1.2;
+    const recoilY = p.gunRecoil * 45;  // kicks DOWN/BACK on screen
 
-    // Anchor: bottom-right area, slightly inset
+    // Anchor: bottom-right area, moved slightly inward
     const scale = vpH / 700;
-    const ax = ox + vpW  - 60 * scale + swayX;
-    const ay = oy + vpH  + recoilY + swayY;
+    const ax = ox + vpW * 0.88 + swayX;
+    const ay = oy + vpH + 50 * scale + recoilY + swayY; // anchored slightly below screen edge
 
     ctx.save();
     ctx.translate(ax, ay);
     ctx.scale(scale, scale);
 
-    // In this coordinate system, 0,0 is the grip/hand position.
-    // The barrel extends UP and slightly LEFT (toward the crosshair).
-    // We draw from bottom (grip) to top (barrel tip).
+    // ── PERSPECTIVE TRICK ──
+    // 1. Rotate the gun left so it points toward the center crosshair
+    ctx.rotate(-0.45);
+    // 2. Foreshorten (squish) the Y-axis to simulate 3D depth into the screen
+    //    Expand X-axis slightly so it looks bulky
+    ctx.scale(1.15, 0.65);
+
+    // In this coordinate system, 0,0 is the hand.
+    // The barrel extends UP (-Y). Due to the rotate/scale above,
+    // -Y visually translates to "forward and left into the screen".
 
     // ── Shadow under grip ──
     ctx.fillStyle = 'rgba(0,0,0,0.15)';
@@ -1133,26 +1139,21 @@ class NerfArena {
     ctx.fill();
 
     // ── Grip / Handle ──
-    // Angled grip at bottom right — the player's hand
     const gripDark = this._mixColor(r, g, b, 0.52);
     ctx.fillStyle = gripDark;
     ctx.beginPath();
     ctx.roundRect(-80, -110, 55, 105, [6, 6, 18, 18]);
     ctx.fill();
-    // Grip highlight (left edge)
     ctx.fillStyle = 'rgba(255,255,255,0.09)';
     ctx.beginPath();
     ctx.roundRect(-78, -108, 12, 95, [5, 0, 0, 12]);
     ctx.fill();
-    // Grip texture grooves
     ctx.fillStyle = 'rgba(0,0,0,0.2)';
     for (let i = 0; i < 5; i++) {
-      ctx.beginPath();
-      ctx.roundRect(-72, -85 + i * 15, 36, 7, 2);
-      ctx.fill();
+      ctx.beginPath(); ctx.roundRect(-72, -85 + i * 15, 36, 7, 2); ctx.fill();
     }
 
-    // ── Trigger guard ──
+    // ── Trigger guard & Trigger ──
     ctx.strokeStyle = this._mixColor(r, g, b, 0.48);
     ctx.lineWidth = 7;
     ctx.lineJoin = 'round';
@@ -1161,79 +1162,54 @@ class NerfArena {
     ctx.quadraticCurveTo(-90, -112, -72, -110);
     ctx.stroke();
 
-    // ── Trigger ──
     ctx.fillStyle = '#ffcc00';
-    ctx.beginPath();
-    ctx.roundRect(-84, -142, 10, 22, 3);
-    ctx.fill();
+    ctx.beginPath(); ctx.roundRect(-84, -142, 10, 22, 3); ctx.fill();
 
-    // ── Receiver body (the main gun chassis, seen from slight top angle) ──
-    // This is the thick box that connects grip to barrel
+    // ── Receiver body ──
     ctx.fillStyle = gunColor;
-    ctx.beginPath();
-    ctx.roundRect(-115, -290, 85, 185, 10);
-    ctx.fill();
-    // Left edge highlight (simulates top-down lighting)
+    ctx.beginPath(); ctx.roundRect(-115, -290, 85, 185, 10); ctx.fill();
     ctx.fillStyle = 'rgba(255,255,255,0.14)';
-    ctx.beginPath();
-    ctx.roundRect(-113, -288, 14, 181, [9, 0, 0, 8]);
-    ctx.fill();
-    // Right shadow edge
+    ctx.beginPath(); ctx.roundRect(-113, -288, 14, 181, [9, 0, 0, 8]); ctx.fill();
     ctx.fillStyle = 'rgba(0,0,0,0.18)';
-    ctx.beginPath();
-    ctx.roundRect(-40, -288, 8, 181, [0, 8, 8, 0]);
-    ctx.fill();
-    // Front face of receiver (foreshortened top, simulates depth)
+    ctx.beginPath(); ctx.roundRect(-40, -288, 8, 181, [0, 8, 8, 0]); ctx.fill();
     ctx.fillStyle = this._mixColor(r, g, b, 0.75);
-    ctx.beginPath();
-    ctx.roundRect(-110, -290, 78, 18, [9, 9, 0, 0]);
-    ctx.fill();
+    ctx.beginPath(); ctx.roundRect(-110, -290, 78, 18, [9, 9, 0, 0]); ctx.fill();
 
-    // ── Side detail panel on receiver ──
+    // Side detail panel
     ctx.fillStyle = 'rgba(0,0,0,0.12)';
-    ctx.beginPath();
-    ctx.roundRect(-105, -268, 62, 100, 6);
-    ctx.fill();
-    // NERF label
+    ctx.beginPath(); ctx.roundRect(-105, -268, 62, 100, 6); ctx.fill();
+    
+    // Undo foreshortening just for the text so it renders cleanly
+    ctx.save();
+    ctx.translate(-74, -218);
+    ctx.scale(1, 1/0.65);
     ctx.fillStyle = 'rgba(255,255,255,0.22)';
-    ctx.font = 'bold 14px Outfit';
+    ctx.font = 'bold 20px Outfit';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText('NERF', -74, -218);
+    ctx.fillText('NERF', 0, 0);
+    ctx.restore();
 
-    // ── Dart pegs (ammo visible on side of receiver) ──
+    // ── Dart pegs ──
     for (let i = 0; i < MAX_AMMO; i++) {
       const dy2 = -272 + i * 14;
       const loaded = i < p.ammo;
-      // Dart tip sticking out left side
       ctx.fillStyle = loaded ? '#ee2200' : 'rgba(255,255,255,0.08)';
-      ctx.beginPath();
-      ctx.roundRect(-130, dy2, 17, 9, [3, 0, 0, 3]);
-      ctx.fill();
+      ctx.beginPath(); ctx.roundRect(-130, dy2, 17, 9, [3, 0, 0, 3]); ctx.fill();
       if (loaded) {
         ctx.fillStyle = '#ffaa00';
-        ctx.beginPath();
-        ctx.roundRect(-122, dy2 + 2, 9, 5, 1);
-        ctx.fill();
+        ctx.beginPath(); ctx.roundRect(-122, dy2 + 2, 9, 5, 1); ctx.fill();
       }
     }
 
-    // ── Barrel (the thin tube, pointing upward) ──
+    // ── Barrel ──
     const barrelW = 28;
     const barrelDark2 = this._mixColor(r, g, b, 0.58);
-    // Barrel shadow (right side)
     ctx.fillStyle = 'rgba(0,0,0,0.28)';
-    ctx.beginPath();
-    ctx.roundRect(-78, -560, 12, 275, 4);
-    ctx.fill();
-    // Barrel body
+    ctx.beginPath(); ctx.roundRect(-78, -600, 12, 315, 4); ctx.fill();
     ctx.fillStyle = barrelDark2;
-    ctx.beginPath();
-    ctx.roundRect(-110, -560, barrelW + 8, 275, [6, 6, 0, 0]);
-    ctx.fill();
-    // Barrel left highlight
+    ctx.beginPath(); ctx.roundRect(-110, -600, barrelW + 8, 315, [6, 6, 0, 0]); ctx.fill();
     ctx.fillStyle = 'rgba(255,255,255,0.12)';
-    ctx.beginPath();
     ctx.roundRect(-108, -558, 8, 271, [5, 0, 0, 0]);
     ctx.fill();
     // Barrel front face (top, foreshortened)
