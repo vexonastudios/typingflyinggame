@@ -342,6 +342,16 @@ class NCEngine {
       const dist = Math.sqrt(dx*dx + dy*dy);
       allSprites.push({ type: 'pickup', obj: p, dist });
     }
+    // Objectives (floating markers)
+    if (state.objectives) {
+      for (const o of state.objectives) {
+        if (o.completed) continue;
+        const ox = o.x + 0.5, oy = o.y + 0.5;
+        const dx = ox - px, dy = oy - py;
+        const dist = Math.sqrt(dx*dx + dy*dy);
+        allSprites.push({ type: 'objective', obj: { ...o, x: ox, y: oy }, dist });
+      }
+    }
     // Scenery props
     if (scenery) {
       for (const s of scenery) {
@@ -373,6 +383,8 @@ class NCEngine {
         this._drawEnemySprite(s.obj, px, py, pa, W, H, pitch);
       } else if (s.type === 'exit') {
         this._drawExitSprite(s.obj, px, py, pa, W, H, exitUnlocked, pitch);
+      } else if (s.type === 'objective') {
+        this._drawObjectiveMarker(s.obj, px, py, pa, W, H, pitch);
       } else if (s.type === 'scenery') {
         this._drawSceneryProp(s.obj, px, py, pa, W, H, pitch);
       } else {
@@ -529,6 +541,61 @@ class NCEngine {
       ctx.font = `bold ${Math.max(8, spriteH * 0.08)}px monospace`;
       ctx.fillText('LOCKED', screenX, sy + spriteH * 0.6);
     }
+
+    ctx.restore();
+  }
+
+  _drawObjectiveMarker(o, px, py, pa, W, H, pitch) {
+    const ctx = this.ctx;
+    const dx = o.x - px, dy = o.y - py;
+    const dist = Math.sqrt(dx*dx + dy*dy);
+    if (dist < 0.1 || dist > 20) return;
+
+    const angle = Math.atan2(dy, dx);
+    let relAngle = angle - pa;
+    while (relAngle > Math.PI)  relAngle -= Math.PI * 2;
+    while (relAngle < -Math.PI) relAngle += Math.PI * 2;
+    if (Math.abs(relAngle) > this.halfFov + 0.3) return;
+
+    const screenX = ((relAngle / this.halfFov) * 0.5 + 0.5) * W;
+    const corrDist = dist * Math.cos(relAngle);
+    if (corrDist <= 0.1) return;
+
+    const spriteH = Math.min(H * 2, (H / corrDist) | 0);
+    // Draw marker floating ABOVE the tile (sy shifted up)
+    const bob = Math.sin(Date.now() / 200) * (spriteH * 0.05);
+    const sy = (((H - spriteH) / 2) - spriteH * 0.3 + bob + pitch) | 0;
+
+    const fog = Math.min(1, corrDist / 15);
+    ctx.save();
+    ctx.globalAlpha = 1 - fog * 0.8;
+
+    // Inner glowing diamond
+    ctx.fillStyle = '#ffaa00';
+    ctx.shadowColor = '#ff5500';
+    ctx.shadowBlur = 10;
+    const size = Math.max(10, spriteH * 0.15);
+    ctx.beginPath();
+    ctx.moveTo(screenX, sy - size);
+    ctx.lineTo(screenX + size, sy);
+    ctx.lineTo(screenX, sy + size);
+    ctx.lineTo(screenX - size, sy);
+    ctx.closePath();
+    ctx.fill();
+
+    // Objective text
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = '#ffffff';
+    ctx.font = `bold ${Math.max(10, spriteH * 0.1)}px monospace`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'bottom';
+    ctx.fillText(o.label || 'TARGET', screenX, sy - size - 5);
+    
+    // Distance text
+    ctx.fillStyle = '#ffaa00';
+    ctx.font = `${Math.max(8, spriteH * 0.08)}px monospace`;
+    ctx.textBaseline = 'top';
+    ctx.fillText(`${dist.toFixed(1)}m`, screenX, sy + size + 5);
 
     ctx.restore();
   }
