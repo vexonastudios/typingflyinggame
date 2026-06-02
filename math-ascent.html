@@ -51,6 +51,52 @@
         </div>
       </div>
 
+      <div class="setup-section">
+        <h2 class="section-title">🛸 UFO Rival Difficulty</h2>
+        <div class="rival-grid" id="rival-grid">
+          <label class="rival-chip">
+            <input type="radio" name="rival" value="none">
+            <div class="rival-chip-label">
+              <span class="rival-icon">🚫</span>
+              <span class="rival-name">No Rival</span>
+              <span class="rival-desc">Practice freely</span>
+            </div>
+          </label>
+          <label class="rival-chip">
+            <input type="radio" name="rival" value="training">
+            <div class="rival-chip-label">
+              <span class="rival-icon">🐢</span>
+              <span class="rival-name">Training</span>
+              <span class="rival-desc">UFO moves slow</span>
+            </div>
+          </label>
+          <label class="rival-chip">
+            <input type="radio" name="rival" value="easy" checked>
+            <div class="rival-chip-label">
+              <span class="rival-icon">🛸</span>
+              <span class="rival-name">Easy</span>
+              <span class="rival-desc">Beginner pace</span>
+            </div>
+          </label>
+          <label class="rival-chip">
+            <input type="radio" name="rival" value="hard">
+            <div class="rival-chip-label">
+              <span class="rival-icon">⚡</span>
+              <span class="rival-name">Hard</span>
+              <span class="rival-desc">Fast UFO!</span>
+            </div>
+          </label>
+          <label class="rival-chip">
+            <input type="radio" name="rival" value="expert">
+            <div class="rival-chip-label">
+              <span class="rival-icon">💀</span>
+              <span class="rival-name">Expert</span>
+              <span class="rival-desc">No mercy</span>
+            </div>
+          </label>
+        </div>
+      </div>
+
       <button class="btn-launch" id="btn-launch">
         <span>Launch Mission</span> 🚀
       </button>
@@ -83,6 +129,10 @@
         <span class="hud-label">Accuracy</span>
         <span class="hud-value" id="hud-accuracy">—</span>
       </div>
+      <div class="hud-stat" id="hud-rival-wrap">
+        <span class="hud-label">UFO Progress</span>
+        <span class="hud-value" id="hud-rival-progress">—</span>
+      </div>
       <button class="btn-exit-game" id="btn-exit-game" title="Exit">✕</button>
     </div>
 
@@ -92,7 +142,12 @@
       <div class="planet planet-top">🌟</div>
       <div class="planet planet-mid">🪐</div>
       <div class="planet planet-bot">🌍</div>
+      <!-- Player rocket (right side) -->
       <div class="rocket-ship" id="rocket-ship">🚀</div>
+      <!-- UFO rival (left side, hidden when no rival) -->
+      <div class="ufo-ship hidden" id="ufo-ship">🛸</div>
+      <!-- Lead indicator -->
+      <div class="lead-label" id="lead-label"></div>
     </div>
 
     <!-- Main Arena -->

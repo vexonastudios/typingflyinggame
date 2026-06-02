@@ -108,7 +108,13 @@ let state = {
   startTime: 0,
   totalAttempts: 0,
   
-  isCorrectionMode: false
+  isCorrectionMode: false,
+
+  // UFO Rival
+  rivalMode: 'easy',   // none | training | easy | hard | expert
+  rivalProgress: 0,    // 0..targetCount, mirrors player's completedCount
+  rivalInterval: null, // setInterval handle
+  rivalWon: false
 };
 
 // ─────────────────────────────────────────────────────────────
@@ -130,6 +136,7 @@ function startGame() {
 
   const range = parseInt($('sel-range').value);
   state.targetCount = parseInt($('sel-questions').value);
+  state.rivalMode = document.querySelector('input[name="rival"]:checked')?.value || 'easy';
   
   // Build initial pool of possible facts
   const pool = [];
@@ -159,6 +166,8 @@ function startGame() {
   state.misses = {};
   state.totalAttempts = 0;
   state.isCorrectionMode = false;
+  state.rivalProgress = 0;
+  state.rivalWon = false;
   state.startTime = performance.now();
 
   // Reset UI
@@ -166,8 +175,23 @@ function startGame() {
   $('screen-results').classList.remove('active');
   $('screen-game').classList.add('active');
   $('rocket-ship').style.bottom = '80px';
-  updateHUD();
 
+  // UFO setup
+  clearInterval(state.rivalInterval);
+  const ufo = $('ufo-ship');
+  const rivalWrap = $('hud-rival-wrap');
+  if (state.rivalMode === 'none') {
+    ufo.classList.add('hidden');
+    rivalWrap.classList.add('hidden');
+  } else {
+    ufo.classList.remove('hidden');
+    ufo.classList.remove('ufo-danger');
+    ufo.style.bottom = '80px';
+    rivalWrap.classList.remove('hidden');
+    startRivalAI();
+  }
+
+  updateHUD();
   playSound('launch');
   nextQuestion();
 }
@@ -196,16 +220,36 @@ function updateHUD() {
     $('hud-progress-fill').style.width = '100%'; 
     $('rocket-ship').style.bottom = '50%'; // hover in mid air for endless
   }
+
+  // UFO HUD
+  if (state.rivalMode !== 'none' && state.targetCount > 0) {
+    const rivalPct = Math.min(100, Math.round((state.rivalProgress / state.targetCount) * 100));
+    $('hud-rival-progress').innerText = rivalPct + '%';
+
+    // Lead label
+    const lead = $('lead-label');
+    const playerPct = Math.min(100, (state.completedCount / state.targetCount) * 100);
+    const diff = playerPct - rivalPct;
+    if (Math.abs(diff) < 5) {
+      lead.innerText = 'NECK & NECK';
+      lead.style.background = 'rgba(251,191,36,0.7)';
+    } else if (diff > 0) {
+      lead.innerText = `+${Math.round(diff)}% AHEAD`;
+      lead.style.background = 'rgba(52,211,153,0.7)';
+    } else {
+      lead.innerText = `${Math.round(diff)}% BEHIND`;
+      lead.style.background = 'rgba(248,113,113,0.7)';
+    }
+  }
 }
 
 function nextQuestion() {
   if (state.targetCount > 0 && state.completedCount >= state.targetCount) {
-    endGame();
+    endGame(true);
     return;
   }
   if (state.queue.length === 0) {
-    // Endless mode ran out, just refill and keep going
-    endGame(); 
+    endGame(true); 
     return;
   }
 
@@ -359,10 +403,72 @@ function spawnFloatText(text, x, y, color) {
 }
 
 // ─────────────────────────────────────────────────────────────
+// UFO Rival AI
+// ─────────────────────────────────────────────────────────────
+
+// Seconds per question the UFO takes at each difficulty
+// (answers 1 question every N seconds)
+const RIVAL_SPEEDS = {
+  training: 6.0,
+  easy:     4.0,
+  hard:     2.2,
+  expert:   1.2
+};
+
+function startRivalAI() {
+  clearInterval(state.rivalInterval);
+  if (state.rivalMode === 'none') return;
+
+  const secsPerQ = RIVAL_SPEEDS[state.rivalMode] || 4.0;
+  const msPerQ = secsPerQ * 1000;
+
+  state.rivalInterval = setInterval(() => {
+    if (state.rivalWon) { clearInterval(state.rivalInterval); return; }
+
+    state.rivalProgress++;
+    const target = state.targetCount > 0 ? state.targetCount : 999;
+    const maxH = window.innerHeight - 160;
+    const ufo = $('ufo-ship');
+
+    // Move UFO
+    const pct = Math.min(1, state.rivalProgress / target);
+    ufo.style.bottom = (80 + maxH * pct) + 'px';
+
+    // Danger flare when UFO is within 20% of winning
+    const playerPct = state.completedCount / target;
+    if (pct > 0.8 && pct > playerPct) {
+      ufo.classList.add('ufo-danger');
+      spawnFloatText('UFO CLOSING IN! 🛸', window.innerWidth / 2, window.innerHeight / 2 + 60, '#f87171');
+    }
+
+    updateHUD();
+
+    // UFO wins
+    if (state.rivalProgress >= target) {
+      clearInterval(state.rivalInterval);
+      state.rivalWon = true;
+      endGame(false);
+    }
+  }, msPerQ);
+}
+
+// ─────────────────────────────────────────────────────────────
 // End Game & Results
 // ─────────────────────────────────────────────────────────────
-function endGame() {
-  playSound('win');
+function endGame(playerWon = true) {
+  clearInterval(state.rivalInterval);
+
+  if (playerWon) {
+    playSound('win');
+  } else {
+    playSound('wrong');
+    // dramatic shake
+    const card = $('problem-card');
+    card.classList.remove('shake');
+    void card.offsetWidth;
+    card.classList.add('shake');
+  }
+
   const duration = ((performance.now() - state.startTime) / 1000).toFixed(1);
   const acc = state.totalAttempts > 0 ? Math.round((state.completedCount / state.totalAttempts) * 100) : 0;
   
@@ -370,6 +476,21 @@ function endGame() {
   $('stat-accuracy').innerText = acc + '%';
   $('stat-time').innerText = duration + 's';
   $('stat-best-streak').innerText = state.bestStreak;
+
+  // Result header
+  if (!playerWon) {
+    $('results-rocket').innerText = '\uD83D\uDEF8';
+    $('results-title').innerText = 'UFO Wins!';
+    $('results-subtitle').innerText = `The UFO beat you this time. Try again!`;
+  } else if (state.rivalMode !== 'none') {
+    $('results-rocket').innerText = '\uD83D\uDE80';
+    $('results-title').innerText = 'Mission Complete!';
+    $('results-subtitle').innerText = `You outran the UFO! Great work, astronaut!`;
+  } else {
+    $('results-rocket').innerText = '\uD83D\uDE80';
+    $('results-title').innerText = 'Mission Complete!';
+    $('results-subtitle').innerText = `Great work, astronaut!`;
+  }
 
   // Process weaknesses
   const missesArr = Object.values(state.misses).sort((a, b) => b.count - a.count);
@@ -379,7 +500,6 @@ function endGame() {
   if (missesArr.length === 0) {
     wl.innerHTML = `<div style="text-align:center; padding: 20px; color: var(--green); font-weight:700;">Flawless victory! No misses!</div>`;
   } else {
-    // Show top 5
     const topMisses = missesArr.slice(0, 5);
     const maxMiss = topMisses[0].count;
     

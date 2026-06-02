@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NERF OPS: Rogue Protocol — Campaign</title>
+  <meta name="description" content="Single-player NERF FPS campaign. 6 levels. Take down the Rogue operatives.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="nerf-campaign.css">
+</head>
+<body>
+
+  <!-- Game canvas (raycaster renders here) -->
+  <canvas id="game-canvas"></canvas>
+
+  <!-- HUD canvas (overlaid on top) -->
+  <canvas id="hud-canvas"></canvas>
+
+  <!-- Briefing panel (shown before each level) -->
+  <div id="briefing-panel" style="display:none"></div>
+
+  <!-- Menu / overlay UI (main menu, level complete, game over) -->
+  <div id="menu-overlay"></div>
+
+  <!-- Load modules in dependency order -->
+  <script src="nc-levels.js"></script>   <!-- NC_LEVELS, NC_TILE -->
+  <script src="nc-enemy.js"></script>    <!-- Enemy, ENEMY_TYPES, AI_STATE -->
+  <script src="nc-engine.js"></script>   <!-- NCEngine (raycaster + renderer) -->
+  <script src="nc-hud.js"></script>      <!-- NCHUD (overlay) -->
+  <script src="nc-main.js"></script>     <!-- NerfOpsGame (controller) -->
+</body>
+</html>

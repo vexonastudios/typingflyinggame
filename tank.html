@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Abrams Tank Assault — Co-op & Duel | Vexona Studios</title>
+  <meta name="description" content="2-player tank game. Co-op mission mode or PvP tank duel. Drive, aim, and destroy!">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+  <link rel="icon" type="image/png" href="favicon.png">
+  <link rel="stylesheet" href="tank.css">
+</head>
+<body>
+
+  <!-- ═══════════════ MENU SCREEN ═══════════════ -->
+  <div id="screen-menu" class="screen active">
+    <canvas id="menuCanvas" class="menu-canvas"></canvas>
+    <div class="menu-content">
+      <div class="menu-logo">
+        <div class="menu-emblem">🪖</div>
+        <div>
+          <p class="logo-eyebrow">Vexona Studios · Local Multiplayer</p>
+          <h1 class="logo-title">ABRAMS<br><span class="logo-sub">TANK ASSAULT</span></h1>
+          <p class="logo-tagline">Steel. Strategy. Destruction.</p>
+        </div>
+      </div>
+
+      <!-- Mode Select -->
+      <div class="mode-select">
+        <button id="btnCoop" class="mode-card mode-card--coop">
+          <div class="mode-icon">🤝</div>
+          <div class="mode-info">
+            <div class="mode-name">CO-OP MISSION</div>
+            <div class="mode-desc">One tank, two crew.<br>Driver + Gunner vs the enemy.</div>
+            <div class="mode-players">2 Players · Shared Tank</div>
+          </div>
+        </button>
+        <button id="btnDuel" class="mode-card mode-card--duel">
+          <div class="mode-icon">⚔️</div>
+          <div class="mode-info">
+            <div class="mode-name">TANK DUEL</div>
+            <div class="mode-desc">Each player owns their tank.<br>Drive, aim, destroy your rival.</div>
+            <div class="mode-players">2 Players · Own Tank</div>
+          </div>
+        </button>
+      </div>
+
+      <!-- Co-op controls (shown when hovered / selected) -->
+      <div id="coopControls" class="controls-grid">
+        <div class="ctrl-panel ctrl-panel--driver">
+          <div class="ctrl-header">🪖 DRIVER <span class="ctrl-sub">P1</span></div>
+          <div class="ctrl-list">
+            <div class="ctrl-row"><div class="ctrl-keys"><kbd>↑</kbd></div><span>Forward</span></div>
+            <div class="ctrl-row"><div class="ctrl-keys"><kbd>↓</kbd></div><span>Reverse</span></div>
+            <div class="ctrl-row"><div class="ctrl-keys"><kbd>←</kbd><kbd>→</kbd></div><span>Steer</span></div>
+          </div>
+        </div>
+        <div class="ctrl-divider">+</div>
+        <div class="ctrl-panel ctrl-panel--gunner">
+          <div class="ctrl-header">🎯 GUNNER <span class="ctrl-sub">P2</span></div>
+          <div class="ctrl-list">
+            <div class="ctrl-row"><div class="ctrl-keys"><kbd>A</kbd><kbd>D</kbd></div><span>Aim Turret</span></div>
+            <div class="ctrl-row"><div class="ctrl-keys"><kbd>W</kbd></div><span>Cannon</span></div>
+            <div class="ctrl-row"><div class="ctrl-keys"><kbd>S</kbd></div><span>Machine Gun</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div id="duelControls" class="controls-grid hidden">
+        <div class="ctrl-panel ctrl-panel--driver">
+          <div class="ctrl-header">🟢 PLAYER 1</div>
+          <div class="ctrl-list">
+            <div class="ctrl-row"><div class="ctrl-keys"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></div><span>Drive</span></div>
+            <div class="ctrl-row"><div class="ctrl-keys"><kbd>Q</kbd></div><span>Fire Cannon</span></div>
+          </div>
+        </div>
+        <div class="ctrl-divider">vs</div>
+        <div class="ctrl-panel ctrl-panel--gunner">
+          <div class="ctrl-header">🔴 PLAYER 2</div>
+          <div class="ctrl-list">
+            <div class="ctrl-row"><div class="ctrl-keys"><kbd>I</kbd><kbd>J</kbd><kbd>K</kbd><kbd>L</kbd></div><span>Drive</span></div>
+            <div class="ctrl-row"><div class="ctrl-keys"><kbd>U</kbd></div><span>Fire Cannon</span></div>
+          </div>
+        </div>
+      </div>
+
+      <button id="btnStart" class="btn-deploy">
+        <span class="btn-icon">⚔</span> DEPLOY
+      </button>
+      <a href="index.html" class="btn-back">← Back to Hub</a>
+    </div>
+  </div>
+
+  <!-- ═══════════════ CO-OP GAME SCREEN ═══════════════ -->
+  <div id="screen-game" class="screen">
+    <div id="hud">
+      <div class="hud-section hud-driver">
+        <span class="hud-role">🪖 DRIVER</span>
+        <div class="hud-stat">
+          <span class="hud-lbl">SPD</span>
+          <span id="hudSpeed" class="hud-val hud-val--green">0</span>
+          <span class="hud-unit">km/h</span>
+        </div>
+        <div class="hud-stat">
+          <span class="hud-lbl">GEAR</span>
+          <span id="hudGear" class="hud-val hud-val--gold">N</span>
+        </div>
+      </div>
+      <div class="hud-section hud-center">
+        <div class="hud-hp-row">
+          <span class="hud-lbl">ARMOR</span>
+          <div class="hud-bar-wrap">
+            <div class="hud-bar-track">
+              <div id="hudHpBar" class="hud-bar hud-bar--hp"></div>
+            </div>
+            <span id="hudHpVal" class="hud-hp-num">100</span>
+          </div>
+        </div>
+        <div id="hudZone" class="hud-zone">ZONE 1 — VILLAGE OUTSKIRTS</div>
+        <div id="hudMsg" class="hud-msg"></div>
+      </div>
+      <div class="hud-section hud-gunner">
+        <span class="hud-role">🎯 GUNNER</span>
+        <div class="hud-ammo-block">
+          <div class="hud-ammo-row">
+            <span class="hud-lbl">🔴 CANNON</span>
+            <span id="hudShells" class="hud-val hud-val--red">30</span>
+          </div>
+          <div class="hud-reload-track">
+            <div id="hudReloadBar" class="hud-bar hud-bar--reload"></div>
+          </div>
+        </div>
+        <div class="hud-ammo-block">
+          <div class="hud-ammo-row">
+            <span class="hud-lbl">⚡ MG</span>
+            <span class="hud-lbl" id="hudMgState">READY</span>
+          </div>
+          <div class="hud-reload-track">
+            <div id="hudMgBar" class="hud-bar hud-bar--mg" style="width:0%"></div>
+          </div>
+        </div>
+        <div class="hud-stat">
+          <span class="hud-lbl">KILLS</span>
+          <span id="hudKills" class="hud-val hud-val--gold">0</span>
+        </div>
+      </div>
+    </div>
+    <canvas id="gameCanvas"></canvas>
+    <canvas id="minimap"></canvas>
+  </div>
+
+  <!-- ═══════════════ DUEL GAME SCREEN ═══════════════ -->
+  <div id="screen-duel" class="screen">
+    <div id="duelHud">
+      <!-- Player 1 side -->
+      <div class="dhud-player dhud-p1">
+        <div class="dhud-name">🟢 PLAYER 1</div>
+        <div class="dhud-bar-wrap">
+          <div class="dhud-bar-track">
+            <div id="dHudP1Bar" class="dhud-bar dhud-bar--p1"></div>
+          </div>
+          <span id="dHudP1Hp" class="dhud-hp">100</span>
+        </div>
+        <div class="dhud-reload-wrap">
+          <span class="hud-lbl">RELOAD</span>
+          <div class="hud-reload-track" style="width:90px">
+            <div id="dHudP1Reload" class="hud-bar hud-bar--reload" style="width:100%"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Center score -->
+      <div class="dhud-center">
+        <div class="dhud-score">
+          <span id="dScoreP1" class="dhud-score-num dhud-score--p1">0</span>
+          <span class="dhud-score-dash">—</span>
+          <span id="dScoreP2" class="dhud-score-num dhud-score--p2">0</span>
+        </div>
+        <div id="duelRound" class="dhud-round">ROUND 1 of 5</div>
+        <div id="duelMsg" class="hud-msg" style="text-align:center"></div>
+      </div>
+
+      <!-- Player 2 side -->
+      <div class="dhud-player dhud-p2">
+        <div class="dhud-name">🔴 PLAYER 2</div>
+        <div class="dhud-bar-wrap">
+          <div class="dhud-bar-track">
+            <div id="dHudP2Bar" class="dhud-bar dhud-bar--p2"></div>
+          </div>
+          <span id="dHudP2Hp" class="dhud-hp">100</span>
+        </div>
+        <div class="dhud-reload-wrap">
+          <span class="hud-lbl">RELOAD</span>
+          <div class="hud-reload-track" style="width:90px">
+            <div id="dHudP2Reload" class="hud-bar hud-bar--reload" style="width:100%"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <canvas id="duelCanvas"></canvas>
+  </div>
+
+  <!-- ═══════════════ RESULT SCREEN ═══════════════ -->
+  <div id="screen-result" class="screen">
+    <div class="result-box">
+      <div id="resultEmoji" class="result-emoji">💥</div>
+      <h2 id="resultTitle" class="result-title">MISSION FAILED</h2>
+      <p id="resultDesc" class="result-desc"></p>
+      <div id="resultStats" class="result-stats"></div>
+      <button id="btnRestartLevel" class="btn-deploy" style="display:none; margin-bottom:12px; background: #8fad6e; color: #111; box-shadow: 0 4px 0 #555a4a;">↺ RESTART LEVEL</button>
+      <button id="btnRetry" class="btn-deploy">↺ START OVER</button>
+      <a href="index.html" class="btn-back">← Back to Hub</a>
+    </div>
+  </div>
+
+  <script src="tank-map.js"></script>
+  <script src="tank-entities.js"></script>
+  <script src="tank-engine.js"></script>
+  <script src="tank-duel.js"></script>
+  <script src="tank-main.js"></script>
+</body>
+</html>

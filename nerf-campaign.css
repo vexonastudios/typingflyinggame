@@ -1,0 +1,266 @@
+/* nerf-campaign.css — NERF OPS: Rogue Protocol */
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&display=swap');
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --orange:   #ff6600;
+  --orange-lt:#ff8c00;
+  --dark:     #0a0a0f;
+  --panel:    rgba(10,10,20,0.85);
+  --border:   rgba(255,100,0,0.35);
+  --text:     #e8e8e8;
+  --accent:   #ff6600;
+  --gold:     #ffd700;
+  --green:    #44ff88;
+  --red:      #ff2222;
+  --mono:     'Share Tech Mono', monospace;
+  --display:  'Orbitron', monospace;
+}
+
+html, body {
+  width: 100%; height: 100%;
+  overflow: hidden;
+  background: #000;
+  font-family: var(--mono);
+  color: var(--text);
+}
+
+/* ── Canvases ────────────────────────────────────────────────────────────────── */
+#game-canvas,
+#hud-canvas {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+#game-canvas { z-index: 1; }
+#hud-canvas  { z-index: 2; pointer-events: none; }
+
+/* ── Briefing panel ──────────────────────────────────────────────────────────── */
+#briefing-panel {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0,0,0,0.88);
+  backdrop-filter: blur(6px);
+}
+
+.briefing-box {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-top: 3px solid var(--orange);
+  border-radius: 4px;
+  padding: 40px 48px;
+  max-width: 560px;
+  width: 90%;
+  box-shadow: 0 0 60px rgba(255,100,0,0.15), 0 0 2px rgba(255,100,0,0.3);
+}
+
+.briefing-level {
+  font-family: var(--display);
+  font-size: 0.75em;
+  letter-spacing: 0.2em;
+  color: var(--orange);
+  margin-bottom: 8px;
+  text-transform: uppercase;
+}
+
+.briefing-title {
+  font-family: var(--display);
+  font-size: 1.8em;
+  font-weight: 900;
+  color: #fff;
+  margin-bottom: 6px;
+  letter-spacing: 0.05em;
+}
+
+.briefing-subtitle {
+  font-size: 0.85em;
+  color: rgba(255,255,255,0.55);
+  margin-bottom: 24px;
+  font-style: italic;
+}
+
+.briefing-text p {
+  color: rgba(255,255,255,0.8);
+  font-size: 0.9em;
+  line-height: 1.7;
+  margin-bottom: 8px;
+  padding-left: 12px;
+  border-left: 2px solid var(--orange);
+}
+
+/* ── Menu overlay ────────────────────────────────────────────────────────────── */
+#menu-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0,0,0,0.9);
+  backdrop-filter: blur(8px);
+}
+
+.menu-box {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-top: 3px solid var(--orange);
+  border-radius: 4px;
+  padding: 40px 48px;
+  max-width: 500px;
+  width: 92%;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 0 80px rgba(255,100,0,0.12), 0 0 3px rgba(255,100,0,0.25);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: stretch;
+}
+
+.menu-logo {
+  font-family: var(--display);
+  font-size: 2.4em;
+  font-weight: 900;
+  background: linear-gradient(135deg, #ff8800, #ff4400);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  text-align: center;
+  letter-spacing: 0.08em;
+  line-height: 1.1;
+  margin-bottom: 4px;
+}
+
+.menu-subtitle {
+  font-family: var(--display);
+  font-size: 0.8em;
+  letter-spacing: 0.3em;
+  color: rgba(255,140,0,0.6);
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.menu-divider {
+  height: 1px;
+  background: var(--border);
+  margin: 8px 0;
+}
+
+/* ── Buttons ─────────────────────────────────────────────────────────────────── */
+.menu-btn {
+  font-family: var(--display);
+  font-size: 0.82em;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  padding: 12px 24px;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  background: rgba(255,100,0,0.06);
+  color: rgba(255,200,100,0.8);
+  cursor: pointer;
+  transition: all 0.18s ease;
+  text-transform: uppercase;
+  width: 100%;
+  text-align: center;
+}
+
+.menu-btn:hover:not([disabled]) {
+  background: rgba(255,100,0,0.18);
+  border-color: var(--orange);
+  color: #fff;
+  box-shadow: 0 0 16px rgba(255,100,0,0.2);
+  transform: translateX(3px);
+}
+
+.menu-btn.primary {
+  background: linear-gradient(135deg, rgba(255,100,0,0.2), rgba(255,60,0,0.1));
+  border-color: rgba(255,120,0,0.6);
+  color: #ffcc88;
+}
+
+.menu-btn.primary:hover {
+  background: linear-gradient(135deg, rgba(255,120,0,0.35), rgba(255,80,0,0.2));
+  border-color: var(--orange-lt);
+  color: #fff;
+  box-shadow: 0 0 24px rgba(255,100,0,0.3);
+}
+
+.menu-btn.locked {
+  opacity: 0.3;
+  cursor: not-allowed;
+  color: rgba(255,255,255,0.3);
+}
+
+.menu-btn[disabled] { cursor: not-allowed; }
+
+/* Level select sub-buttons */
+.menu-level-select {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 6px 0;
+}
+
+.level-btn {
+  font-size: 0.78em !important;
+  padding: 9px 16px !important;
+}
+
+/* ── Controls legend ──────────────────────────────────────────────────────────── */
+.menu-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  justify-content: center;
+  margin-top: 6px;
+}
+
+.menu-controls span {
+  font-size: 0.72em;
+  color: rgba(255,255,255,0.35);
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  padding: 3px 8px;
+  border-radius: 3px;
+}
+
+.menu-score {
+  text-align: center;
+  font-size: 0.8em;
+  color: var(--gold);
+  margin-top: 4px;
+  opacity: 0.7;
+}
+
+/* ── Level complete score table ──────────────────────────────────────────────── */
+.score-table {
+  width: 100%;
+  margin: 12px 0;
+}
+
+.score-table div {
+  display: flex;
+  justify-content: space-between;
+  padding: 6px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.07);
+  font-size: 0.85em;
+  color: rgba(255,255,255,0.7);
+}
+
+.score-table div span {
+  color: var(--gold);
+  font-weight: bold;
+}
+
+/* ── Scrollbar ────────────────────────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: rgba(255,255,255,0.03); }
+::-webkit-scrollbar-thumb { background: var(--orange); border-radius: 2px; }
