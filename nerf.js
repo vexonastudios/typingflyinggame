@@ -1101,118 +1101,27 @@ class NerfArena {
     ctx.restore();
   }
 
-  // ─── Gun Viewmodel (FPS forward-facing perspective) ──────────
-  // Drawn at an angle and foreshortened to point INTO the screen
+  // ─── Gun Viewmodel (Classic Centered FPS) ───────────────────
+  // Drawn symmetrically at the bottom center of the screen.
+  // Uses tapering trapezoids to natively create 3D perspective pointing forward.
   _drawGun(ctx, p, ox, oy, vpW, vpH) {
     const gunColor = p.color;
     const [r,g,b]  = this._hexToRgb(gunColor);
 
-    // Sway + recoil: gun bobs while walking, kicks up on fire
-    const swayX   = p.gunSwayX * 1.5;
-    const swayY   = p.gunSwayY * 1.2;
-    const recoilY = p.gunRecoil * 45;  // kicks DOWN/BACK on screen
+    // Bobbing and recoil
+    const swayX   = p.gunSwayX * 2.0;
+    const swayY   = Math.abs(p.gunSwayY) * 1.5;
+    const recoilY = p.gunRecoil * 60; // Kicks down (towards player) on fire
 
-    // Anchor: bottom-right area, moved slightly inward
+    // Center anchor for this player's viewport
     const scale = vpH / 700;
-    const ax = ox + vpW * 0.88 + swayX;
-    const ay = oy + vpH + 50 * scale + recoilY + swayY; // anchored slightly below screen edge
+    const ax = ox + vpW / 2 + swayX;
+    const ay = oy + vpH + recoilY + swayY + 15 * scale;
 
     ctx.save();
     ctx.translate(ax, ay);
     ctx.scale(scale, scale);
 
-    // ── PERSPECTIVE TRICK ──
-    // 1. Rotate the gun left so it points toward the center crosshair
-    ctx.rotate(-0.45);
-    // 2. Foreshorten (squish) the Y-axis to simulate 3D depth into the screen
-    //    Expand X-axis slightly so it looks bulky
-    ctx.scale(1.15, 0.65);
-
-    // In this coordinate system, 0,0 is the hand.
-    // The barrel extends UP (-Y). Due to the rotate/scale above,
-    // -Y visually translates to "forward and left into the screen".
-
-    // ── Shadow under grip ──
-    ctx.fillStyle = 'rgba(0,0,0,0.15)';
-    ctx.beginPath();
-    ctx.ellipse(-30, -10, 60, 12, 0, 0, Math.PI*2);
-    ctx.fill();
-
-    // ── Grip / Handle ──
-    const gripDark = this._mixColor(r, g, b, 0.52);
-    ctx.fillStyle = gripDark;
-    ctx.beginPath();
-    ctx.roundRect(-80, -110, 55, 105, [6, 6, 18, 18]);
-    ctx.fill();
-    ctx.fillStyle = 'rgba(255,255,255,0.09)';
-    ctx.beginPath();
-    ctx.roundRect(-78, -108, 12, 95, [5, 0, 0, 12]);
-    ctx.fill();
-    ctx.fillStyle = 'rgba(0,0,0,0.2)';
-    for (let i = 0; i < 5; i++) {
-      ctx.beginPath(); ctx.roundRect(-72, -85 + i * 15, 36, 7, 2); ctx.fill();
-    }
-
-    // ── Trigger guard & Trigger ──
-    ctx.strokeStyle = this._mixColor(r, g, b, 0.48);
-    ctx.lineWidth = 7;
-    ctx.lineJoin = 'round';
-    ctx.beginPath();
-    ctx.moveTo(-82, -138);
-    ctx.quadraticCurveTo(-90, -112, -72, -110);
-    ctx.stroke();
-
-    ctx.fillStyle = '#ffcc00';
-    ctx.beginPath(); ctx.roundRect(-84, -142, 10, 22, 3); ctx.fill();
-
-    // ── Receiver body ──
-    ctx.fillStyle = gunColor;
-    ctx.beginPath(); ctx.roundRect(-115, -290, 85, 185, 10); ctx.fill();
-    ctx.fillStyle = 'rgba(255,255,255,0.14)';
-    ctx.beginPath(); ctx.roundRect(-113, -288, 14, 181, [9, 0, 0, 8]); ctx.fill();
-    ctx.fillStyle = 'rgba(0,0,0,0.18)';
-    ctx.beginPath(); ctx.roundRect(-40, -288, 8, 181, [0, 8, 8, 0]); ctx.fill();
-    ctx.fillStyle = this._mixColor(r, g, b, 0.75);
-    ctx.beginPath(); ctx.roundRect(-110, -290, 78, 18, [9, 9, 0, 0]); ctx.fill();
-
-    // Side detail panel
-    ctx.fillStyle = 'rgba(0,0,0,0.12)';
-    ctx.beginPath(); ctx.roundRect(-105, -268, 62, 100, 6); ctx.fill();
-    
-    // Undo foreshortening just for the text so it renders cleanly
-    ctx.save();
-    ctx.translate(-74, -218);
-    ctx.scale(1, 1/0.65);
-    ctx.fillStyle = 'rgba(255,255,255,0.22)';
-    ctx.font = 'bold 20px Outfit';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText('NERF', 0, 0);
-    ctx.restore();
-
-    // ── Dart pegs ──
-    for (let i = 0; i < MAX_AMMO; i++) {
-      const dy2 = -272 + i * 14;
-      const loaded = i < p.ammo;
-      ctx.fillStyle = loaded ? '#ee2200' : 'rgba(255,255,255,0.08)';
-      ctx.beginPath(); ctx.roundRect(-130, dy2, 17, 9, [3, 0, 0, 3]); ctx.fill();
-      if (loaded) {
-        ctx.fillStyle = '#ffaa00';
-        ctx.beginPath(); ctx.roundRect(-122, dy2 + 2, 9, 5, 1); ctx.fill();
-      }
-    }
-
-    // ── Barrel ──
-    const barrelW = 28;
-    const barrelDark2 = this._mixColor(r, g, b, 0.58);
-    ctx.fillStyle = 'rgba(0,0,0,0.28)';
-    ctx.beginPath(); ctx.roundRect(-78, -600, 12, 315, 4); ctx.fill();
-    ctx.fillStyle = barrelDark2;
-    ctx.beginPath(); ctx.roundRect(-110, -600, barrelW + 8, 315, [6, 6, 0, 0]); ctx.fill();
-    ctx.fillStyle = 'rgba(255,255,255,0.12)';
-    ctx.roundRect(-108, -558, 8, 271, [5, 0, 0, 0]);
-    ctx.fill();
-    // Barrel front face (top, foreshortened)
     ctx.fillStyle = this._mixColor(r, g, b, 0.65);
     ctx.beginPath();
     ctx.roundRect(-112, -562, barrelW + 12, 14, [6, 6, 0, 0]);
