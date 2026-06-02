@@ -215,10 +215,16 @@ function castRay(map, px, py, angle) {
       dist = side === 0
         ? (mx - px + (1-stepX)/2) / cosA
         : (my - py + (1-stepY)/2) / sinA;
-      return { dist: Math.abs(dist), wallType: map[my][mx], side };
+
+      let wallX;
+      if (side === 0) wallX = py + dist * sinA;
+      else           wallX = px + dist * cosA;
+      wallX -= Math.floor(wallX);
+
+      return { dist: Math.abs(dist), wallType: map[my][mx], side, wallX };
     }
   }
-  return { dist: MAX_DIST, wallType: 0, side: 0 };
+  return { dist: MAX_DIST, wallType: 0, side: 0, wallX: 0 };
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -284,6 +290,7 @@ class NerfArena {
     this.arenaIdx   = parseInt(aEl?.value || '0');
     this.map     = MAPS[this.arenaIdx];
     this.palette = WALL_PALETTES[this.arenaIdx];
+    this._generateTextures();
 
     document.getElementById('gameSetup').style.display   = 'none';
     document.getElementById('gameResults').style.display = 'none';
@@ -317,6 +324,117 @@ class NerfArena {
     el.classList.remove('show');
     void el.offsetWidth;
     el.classList.add('show');
+  }
+
+  // ─── Textures ────────────────────────────────────────────
+  _generateTextures() {
+    this.textures = [];
+    const size = 128; // 128x128 textures
+
+    for (let i = 0; i < 8; i++) {
+        const c = document.createElement('canvas');
+        c.width = size;
+        c.height = size;
+        const x = c.getContext('2d');
+        
+        // Base color
+        const baseColor = this.palette[i] || '#555';
+        x.fillStyle = baseColor;
+        x.fillRect(0, 0, size, size);
+
+        if (i === 0) {
+            // Empty
+        }
+        else if (i === 1 || i === 6 || i === 7) {
+            // Sci-Fi Panel (Rivets and borders)
+            x.fillStyle = this._shadeColor(baseColor, 0.7);
+            x.fillRect(0,0, size, 6); // top border
+            x.fillRect(0,size-6, size, 6); // bottom
+            x.fillRect(0,0, 6, size); // left
+            x.fillRect(size-6,0, 6, size); // right
+            // horizontal line
+            x.fillRect(0, size/2 - 3, size, 6);
+            // rivets
+            x.fillStyle = '#111';
+            const r = 8;
+            x.fillRect(r, r, 4, 4); x.fillRect(size-r-4, r, 4, 4);
+            x.fillRect(r, size-r-4, 4, 4); x.fillRect(size-r-4, size-r-4, 4, 4);
+        }
+        else if (i === 2) {
+            // Grate/Vent (Horizontal slats)
+            for (let y = 0; y < size; y += 16) {
+                x.fillStyle = this._shadeColor(baseColor, 0.3);
+                x.fillRect(0, y+8, size, 8);
+            }
+            // Vertical supports
+            x.fillStyle = this._shadeColor(baseColor, 0.6);
+            x.fillRect(32, 0, 16, size);
+            x.fillRect(80, 0, 16, size);
+            x.fillStyle = '#222'; x.fillRect(40,0,2,size); x.fillRect(88,0,2,size);
+        }
+        else if (i === 3) {
+            // Hazard Stripes (yellow/black)
+            x.fillStyle = '#eab308'; // Warning yellow
+            x.fillRect(0, 0, size, size);
+            x.fillStyle = '#111';
+            for (let j = -size; j < size*2; j += 32) {
+                x.beginPath();
+                x.moveTo(j, 0); x.lineTo(j + 32, 0);
+                x.lineTo(j - size + 32, size); x.lineTo(j - size, size);
+                x.fill();
+            }
+            // Add a border frame so it looks like a panel
+            x.fillStyle = 'rgba(0,0,0,0.4)';
+            x.fillRect(0,0,size,8); x.fillRect(0,size-8,size,8);
+            x.fillRect(0,0,8,size); x.fillRect(size-8,0,8,size);
+        }
+        else if (i === 4) {
+            // Door / Light
+            x.fillStyle = this._shadeColor(baseColor, 0.8);
+            x.fillRect(16, 16, size-32, size-32);
+            // Glowing neon light in center
+            x.shadowColor = '#00ffff';
+            x.shadowBlur = 15;
+            x.fillStyle = '#e0ffff';
+            x.fillRect(48, 32, size-96, size-64);
+            x.shadowBlur = 0;
+            // Handle
+            x.fillStyle = '#111';
+            x.fillRect(size-32, size/2 - 16, 8, 32);
+        }
+        else if (i === 5) {
+            // Server / Tech Core
+            x.fillStyle = '#1a1a1a';
+            x.fillRect(0,0,size,size);
+            for(let j=8; j<size; j+=24) {
+                // Racks
+                x.fillStyle = '#333';
+                x.fillRect(j, 8, 16, size-16);
+                // Lights
+                for(let k=16; k<size-16; k+=12) {
+                    if (Math.random() > 0.3) {
+                        x.fillStyle = Math.random()>0.5 ? '#ff3333' : '#33ff33';
+                        if (Math.random()>0.8) x.fillStyle = '#33ccff';
+                        x.fillRect(j+4, k, 8, 4);
+                    }
+                }
+            }
+        }
+        
+        // Apply grit/noise to all textures for texture
+        if (i > 0) {
+            x.fillStyle = 'rgba(0,0,0,0.15)';
+            for(let n=0; n<500; n++) {
+                x.fillRect(Math.random()*size, Math.random()*size, 2, 2);
+            }
+            x.fillStyle = 'rgba(255,255,255,0.05)';
+            for(let n=0; n<300; n++) {
+                x.fillRect(Math.random()*size, Math.random()*size, 2, 2);
+            }
+        }
+
+        this.textures.push(c);
+    }
   }
 
   // ─── Loop ────────────────────────────────────────────────
@@ -565,53 +683,83 @@ class NerfArena {
 
     // ── Ceiling ──
     const ceilGrad = ctx.createLinearGradient(ox, oy, ox, oy + halfH);
-    ceilGrad.addColorStop(0, '#1a1a2e');
-    ceilGrad.addColorStop(1, '#2d2d4e');
+    ceilGrad.addColorStop(0, '#0a0a0f');
+    ceilGrad.addColorStop(1, '#1c1c28');
     ctx.fillStyle = ceilGrad;
     ctx.fillRect(ox, oy, vpW, halfH);
 
     // ── Floor ──
     const floorGrad = ctx.createLinearGradient(ox, oy + halfH, ox, oy + vpH);
-    floorGrad.addColorStop(0, '#2a2a1a');
-    floorGrad.addColorStop(1, '#1a1a0a');
+    floorGrad.addColorStop(0, '#050505'); // dark at horizon
+    floorGrad.addColorStop(0.5, '#111116');
+    floorGrad.addColorStop(1, '#1f2029'); // lighter near camera
     ctx.fillStyle = floorGrad;
     ctx.fillRect(ox, oy + halfH, vpW, halfH);
 
-    // Floor grid (simple)
-    ctx.strokeStyle = 'rgba(255,200,100,0.06)';
-    ctx.lineWidth = 0.5;
-    for (let i = 0; i < 6; i++) {
-      const y = oy + halfH + (vpH / 2) * (i / 6) ** 0.5 * (vpH / 2);
+    // Floor grid (neon effect)
+    ctx.strokeStyle = 'rgba(0, 200, 255, 0.12)';
+    ctx.lineWidth = 1;
+    for (let i = 0; i < 16; i++) {
+      const perspective = Math.pow(i / 16, 2);
+      const y = oy + halfH + perspective * halfH;
       if (y > oy + vpH) break;
       ctx.beginPath(); ctx.moveTo(ox, y); ctx.lineTo(ox+vpW, y); ctx.stroke();
     }
 
-    // ── Walls (raycasting) ──
+    // ── Walls (textured raycasting) ──
     const zBuffer = new Float32Array(vpW);
 
     for (let col = 0; col < vpW; col++) {
       const rayAngle = p.angle - HALF_FOV + (col / vpW) * FOV;
-      const { dist, wallType, side } = castRay(this.map, p.x, p.y, rayAngle);
+      const { dist, wallType, side, wallX } = castRay(this.map, p.x, p.y, rayAngle);
 
       // Fix fisheye
       const corrDist = Math.max(0.05, dist * Math.cos(rayAngle - p.angle));
       zBuffer[col] = corrDist;
 
-      const wallH  = Math.min(vpH * 2.2, vpH / corrDist);
+      const wallH  = Math.min(vpH * 3.5, vpH / corrDist);
       const wallY  = (vpH - wallH) / 2;
 
-      // Wall colour
-      let baseColor = this.palette[wallType] || '#888888';
-      // Darken for side walls and by distance
-      const shade = Math.max(0.18, 1 - corrDist / 14) * (side === 1 ? 0.72 : 1.0);
-      ctx.fillStyle = this._shadeColor(baseColor, shade);
-      ctx.fillRect(ox + col, oy + wallY, 1, wallH);
+      // Map texture column
+      const texCanvas = this.textures[wallType] || this.textures[1];
+      const TEX_W = texCanvas.width;
+      const TEX_H = texCanvas.height;
 
-      // Wall top/bottom cap shade
-      const capH = Math.max(1, wallH * 0.04);
-      ctx.fillStyle = 'rgba(0,0,0,0.3)';
-      ctx.fillRect(ox + col, oy + wallY, 1, capH);
-      ctx.fillRect(ox + col, oy + wallY + wallH - capH, 1, capH);
+      let texX = Math.floor(wallX * TEX_W);
+      // Flip texture depending on facing direction to align adjacent blocks
+      if (side === 0 && Math.cos(rayAngle) > 0) texX = TEX_W - texX - 1;
+      if (side === 1 && Math.sin(rayAngle) < 0) texX = TEX_W - texX - 1;
+
+      // Draw the texture slice
+      ctx.drawImage(
+          texCanvas,
+          texX, 0, 1, TEX_H,
+          ox + col, oy + wallY, 1, wallH
+      );
+
+      // Distance Fog / Ambient Occlusion
+      // Overlay a black rect with alpha that increases with distance
+      let fogAlpha = Math.max(0, 1 - (12 / corrDist));
+      // Directional shadow: Side 1 is darker to simulate light source
+      if (side === 1) fogAlpha = Math.min(1, fogAlpha + 0.35);
+
+      if (fogAlpha > 0) {
+          ctx.fillStyle = `rgba(0,0,0,${fogAlpha})`;
+          ctx.fillRect(ox + col, oy + wallY, 1, wallH);
+      }
+      
+      // Bottom ambient occlusion (fake shadow where wall meets floor)
+      if (wallH > 0 && wallY + wallH > vpH / 2) {
+          const aoH = Math.min(wallH * 0.15, 60);
+          const drawY = Math.max(0, oy + wallY + wallH - aoH);
+          if (drawY < oy + vpH) {
+              const grad = ctx.createLinearGradient(0, drawY, 0, drawY + aoH);
+              grad.addColorStop(0, 'rgba(0,0,0,0)');
+              grad.addColorStop(1, 'rgba(0,0,0,0.7)');
+              ctx.fillStyle = grad;
+              ctx.fillRect(ox + col, drawY, 1, aoH);
+          }
+      }
     }
 
     // ── Opponent sprite ──
