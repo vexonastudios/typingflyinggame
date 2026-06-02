@@ -341,7 +341,27 @@ class NerfArena {
           document.getElementById('duelSettings').style.display = isCampaign ? 'none' : 'block';
           document.getElementById('ctrlDivider').style.display = isCampaign ? 'none' : 'block';
           document.getElementById('player2Controls').style.display = isCampaign ? 'none' : 'block';
-          document.querySelector('#player1Controls h4 span').textContent = isCampaign ? 'Single Player' : 'Player 1';
+          
+          const p1Controls = document.getElementById('player1Controls');
+          p1Controls.querySelector('h4 span').textContent = isCampaign ? 'Single Player' : 'Player 1';
+          
+          if (isCampaign) {
+            p1Controls.innerHTML = `
+              <h4><span class="player-color-1">Single Player</span></h4>
+              <p><b>WASD / Arrows</b> — Move & Strafe</p>
+              <p><b>Mouse</b> — Aim</p>
+              <p><b>LClick / Space</b> — Shoot</p>
+              <p><b>R</b> — Reload</p>
+            `;
+          } else {
+            p1Controls.innerHTML = `
+              <h4><span class="player-color-1">Player 1</span></h4>
+              <p><b>W / S</b> — Move forward / back</p>
+              <p><b>A / D</b> — Turn left / right</p>
+              <p><b>Space</b> — Shoot</p>
+              <p><b>R</b> — Reload</p>
+            `;
+          }
         }
       });
     });

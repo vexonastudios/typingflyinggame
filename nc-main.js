@@ -288,15 +288,11 @@ class NerfOpsGame {
 
     let moved = false;
 
-    // Arrow key turning (keyboard aiming — more sensitive now)
-    if (this._keys['ArrowLeft'])  p.angle -= turnSpd;
-    if (this._keys['ArrowRight']) p.angle += turnSpd;
-
-    // WASD movement
+    // Arrow keys are now used for strafing, mouse is used for turning
     const fw = this._keys['w'] || this._keys['W'] || this._keys['ArrowUp'];
     const bk = this._keys['s'] || this._keys['S'] || this._keys['ArrowDown'];
-    const sl = this._keys['a'] || this._keys['A'];
-    const sr = this._keys['d'] || this._keys['D'];
+    const sl = this._keys['a'] || this._keys['A'] || this._keys['ArrowLeft'];
+    const sr = this._keys['d'] || this._keys['D'] || this._keys['ArrowRight'];
 
     if (fw) {
       const nx = p.x + Math.cos(p.angle) * spd;
