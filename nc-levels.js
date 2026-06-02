@@ -97,6 +97,15 @@ const LEVEL_1 = {
   ],
 
   winCondition: 'eliminate_all', // kill all enemies to unlock exit
+
+  scenery: [
+    { x: 3.5, y: 3.5, propType: 'ammo_crate' },
+    { x: 12.5, y: 3.5, propType: 'ammo_crate' },
+    { x: 8.5, y: 8.5, propType: 'light_pole' },
+    { x: 2.5, y: 8.5, propType: 'sandbag' },
+    { x: 13.5, y: 8.5, propType: 'sandbag' },
+    { x: 7.5, y: 13.5, propType: 'table', angle: 0.5 },
+  ],
 };
 
 // ─── LEVEL 2: Jungle Outpost ──────────────────────────────────────────────────
@@ -158,6 +167,17 @@ const LEVEL_2 = {
   ],
 
   winCondition: 'reach_exit', // reach exit tile (door must be unlocked)
+
+  scenery: [
+    { x: 3.5, y: 5.5, propType: 'sandbag' },
+    { x: 16.5, y: 5.5, propType: 'sandbag' },
+    { x: 10.5, y: 7.5, propType: 'light_pole' },
+    { x: 3.5, y: 13.5, propType: 'ammo_crate', angle: 0.3 },
+    { x: 16.5, y: 13.5, propType: 'ammo_crate', angle: -0.3 },
+    { x: 8.5, y: 17.5, propType: 'table' },
+    { x: 14.5, y: 17.5, propType: 'table', angle: 1.2 },
+    { x: 1.5, y: 17.5, propType: 'locker' },
+  ],
 };
 
 // ─── LEVEL 3: Research Lab ────────────────────────────────────────────────────
@@ -226,6 +246,19 @@ const LEVEL_3 = {
   ],
 
   winCondition: 'objectives', // complete all objectives + reach exit
+
+  scenery: [
+    { x: 2.5, y: 4.5, propType: 'server_rack' },
+    { x: 19.5, y: 4.5, propType: 'server_rack' },
+    { x: 6.5, y: 7.5, propType: 'monitor', angle: 0.5 },
+    { x: 14.5, y: 7.5, propType: 'monitor', angle: -0.5 },
+    { x: 3.5, y: 10.5, propType: 'table' },
+    { x: 18.5, y: 10.5, propType: 'table' },
+    { x: 10.5, y: 15.5, propType: 'light_pole' },
+    { x: 5.5, y: 17.5, propType: 'server_rack', angle: 1.0 },
+    { x: 16.5, y: 17.5, propType: 'server_rack', angle: -1.0 },
+    { x: 10.5, y: 19.5, propType: 'ammo_crate' },
+  ],
 };
 
 // ─── LEVEL 4: Rooftop Assault ─────────────────────────────────────────────────
@@ -290,6 +323,20 @@ const LEVEL_4 = {
   ],
 
   winCondition: 'eliminate_commander',
+
+  scenery: [
+    { x: 4.5, y: 2.5, propType: 'sandbag' },
+    { x: 12.5, y: 2.5, propType: 'sandbag' },
+    { x: 3.5, y: 5.5, propType: 'ammo_crate' },
+    { x: 13.5, y: 5.5, propType: 'ammo_crate' },
+    { x: 8.5, y: 8.5, propType: 'light_pole' },
+    { x: 8.5, y: 14.5, propType: 'light_pole' },
+    { x: 3.5, y: 11.5, propType: 'locker' },
+    { x: 13.5, y: 11.5, propType: 'locker', angle: 1.5 },
+    { x: 3.5, y: 17.5, propType: 'table' },
+    { x: 12.5, y: 17.5, propType: 'table', angle: 0.7 },
+    { x: 8.5, y: 20.5, propType: 'sandbag' },
+  ],
 };
 
 // ─── LEVEL 5: The Armory ──────────────────────────────────────────────────────
@@ -362,6 +409,22 @@ const LEVEL_5 = {
   objectives: [
     { type: 'destroy_barrel', x: 10, y: 12, id: 'vault_a', label: 'Vault A Cache' },
     { type: 'destroy_barrel', x: 13, y: 12, id: 'vault_b', label: 'Vault B Cache' },
+  ],
+
+  scenery: [
+    { x: 3.5, y: 4.5, propType: 'server_rack' },
+    { x: 19.5, y: 4.5, propType: 'server_rack' },
+    { x: 11.5, y: 4.5, propType: 'monitor', angle: 0.3 },
+    { x: 11.5, y: 6.5, propType: 'table' },
+    { x: 3.5, y: 10.5, propType: 'pillar' },
+    { x: 19.5, y: 10.5, propType: 'pillar' },
+    { x: 3.5, y: 14.5, propType: 'pillar' },
+    { x: 19.5, y: 14.5, propType: 'pillar' },
+    { x: 8.5, y: 17.5, propType: 'locker' },
+    { x: 14.5, y: 17.5, propType: 'locker', angle: 1.5 },
+    { x: 6.5, y: 20.5, propType: 'sandbag' },
+    { x: 16.5, y: 20.5, propType: 'sandbag' },
+    { x: 11.5, y: 20.5, propType: 'light_pole' },
   ],
 };
 
@@ -436,6 +499,24 @@ const LEVEL_6 = {
   ],
 
   winCondition: 'eliminate_commander',
+
+  scenery: [
+    { x: 5.5, y: 5.5, propType: 'sandbag' },
+    { x: 10.5, y: 5.5, propType: 'sandbag' },
+    { x: 15.5, y: 5.5, propType: 'sandbag' },
+    { x: 20.5, y: 5.5, propType: 'sandbag' },
+    { x: 4.5, y: 10.5, propType: 'ammo_crate' },
+    { x: 20.5, y: 10.5, propType: 'ammo_crate' },
+    { x: 3.5, y: 17.5, propType: 'pillar' },
+    { x: 21.5, y: 17.5, propType: 'pillar' },
+    { x: 8.5, y: 18.5, propType: 'table' },
+    { x: 16.5, y: 18.5, propType: 'table', angle: 0.8 },
+    { x: 6.5, y: 22.5, propType: 'server_rack' },
+    { x: 18.5, y: 22.5, propType: 'server_rack' },
+    { x: 12.5, y: 20.5, propType: 'light_pole' },
+    { x: 4.5, y: 22.5, propType: 'locker' },
+    { x: 20.5, y: 22.5, propType: 'locker', angle: 1.5 },
+  ],
 };
 
 // ─── Export ───────────────────────────────────────────────────────────────────

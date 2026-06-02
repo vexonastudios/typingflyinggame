@@ -215,6 +215,9 @@ class NerfOpsGame {
     // Pickups (merge level pickups + any from levelDef.pickups)
     this.pickups = (levelDef.pickups || []).map(p => ({ ...p, collected: false }));
 
+    // Scenery props
+    this.scenery = levelDef.scenery || [];
+
     // Objectives
     this.objectives = (levelDef.objectives || []).map(o => ({ ...o, completed: false }));
     // Mark barrels in map for destroy objectives
@@ -268,15 +271,17 @@ class NerfOpsGame {
   // ─── Build render state ───────────────────────────────────────────────────────
   _buildRenderState() {
     return {
-      player:      this.player,
-      map:         this.map,
-      enemies:     this.enemies,
-      pickups:     this.pickups,
-      objectives:  this.objectives,
-      level:       this.map,
-      score:       this.score + this.totalScore,
-      elapsedTime: this.elapsedTime,
-      shooting:    this._keys[' '] || this._keys['click'],
+      player:       this.player,
+      map:          this.map,
+      enemies:      this.enemies,
+      pickups:      this.pickups,
+      objectives:   this.objectives,
+      scenery:      this.scenery || [],
+      exitUnlocked: this.exitUnlocked,
+      level:        this.map,
+      score:        this.score + this.totalScore,
+      elapsedTime:  this.elapsedTime,
+      shooting:     this._keys[' '] || this._keys['click'],
     };
   }
 

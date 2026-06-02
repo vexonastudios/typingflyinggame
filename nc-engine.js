@@ -322,7 +322,7 @@ class NCEngine {
 
   // ── Sprite Rendering ──────────────────────────────────────────────────────────
   _drawSprites(state) {
-    const { player, enemies, pickups, map, exitUnlocked } = state;
+    const { player, enemies, pickups, map, exitUnlocked, scenery } = state;
     const ctx = this.ctx;
     const W = this.W, H = this.H;
     const { x: px, y: py, angle: pa, pitch = 0 } = player;
@@ -341,6 +341,16 @@ class NCEngine {
       const dx = p.x - px, dy = p.y - py;
       const dist = Math.sqrt(dx*dx + dy*dy);
       allSprites.push({ type: 'pickup', obj: p, dist });
+    }
+    // Scenery props
+    if (scenery) {
+      for (const s of scenery) {
+        const dx = s.x - px, dy = s.y - py;
+        const dist = Math.sqrt(dx*dx + dy*dy);
+        if (dist < 20) {
+          allSprites.push({ type: 'scenery', obj: s, dist });
+        }
+      }
     }
     // Exit tile
     if (map && map.grid) {
@@ -363,6 +373,8 @@ class NCEngine {
         this._drawEnemySprite(s.obj, px, py, pa, W, H, pitch);
       } else if (s.type === 'exit') {
         this._drawExitSprite(s.obj, px, py, pa, W, H, exitUnlocked, pitch);
+      } else if (s.type === 'scenery') {
+        this._drawSceneryProp(s.obj, px, py, pa, W, H, pitch);
       } else {
         this._drawPickupSprite(s.obj, px, py, pa, W, H, pitch);
       }
@@ -377,95 +389,93 @@ class NCEngine {
     const dist = Math.sqrt(dx*dx + dy*dy);
     if (dist < 0.1 || dist > 20) return;
 
-    // Transform into camera space
-    const invDet = 1 / (Math.cos(pa) * (-Math.sin(pa)) - Math.sin(pa) * (-Math.cos(pa)) + 0.0001);
-    // Actually: use simple angle-based projection
+    // Check if roughly in view
     const angle = Math.atan2(dy, dx);
     let relAngle = angle - pa;
     while (relAngle > Math.PI)  relAngle -= Math.PI * 2;
     while (relAngle < -Math.PI) relAngle += Math.PI * 2;
+    if (Math.abs(relAngle) > this.halfFov + 0.5) return;
 
-    if (Math.abs(relAngle) > this.halfFov + 0.3) return;
-
-    const screenX = ((relAngle / this.halfFov) * 0.5 + 0.5) * W;
     const corrDist = dist * Math.cos(relAngle);
     if (corrDist <= 0.1) return;
 
-    const spriteH = Math.min(H * 2, (H / corrDist) | 0);
-    const spriteW = spriteH;
-    const sx = (screenX - spriteW / 2) | 0;
-    const sy = (((H - spriteH) / 2) + pitch) | 0;
-
-    // Fog
-    const fogDepth = 12;
-    const fog = Math.min(1, corrDist / fogDepth);
     const alpha = e.isDead ? (1 - e.deathProgress) : 1;
 
-    ctx.save();
-    ctx.globalAlpha = alpha * (1 - fog * 0.8);
-
-    // Determine animation frame
-    let frame = 'idle';
+    // Determine animation state
+    let animState = 'idle';
     if (e.shootAnimTimer > 0) {
-      frame = 'shoot';
+      animState = 'shoot';
     } else if (e.isMoving) {
-      frame = (Math.floor(e.walkAnimTimer / 200) % 2 === 0) ? 'walk1' : 'walk2';
+      animState = 'walk';
     }
-    const frameIndex = { 'idle': 0, 'walk1': 1, 'walk2': 2, 'shoot': 3 }[frame] || 0;
 
-    const spriteSheet = typeof EnemySpriteGen !== 'undefined' 
-      ? EnemySpriteGen.getSpriteSheet(e.color, e.typeCfg.accentColor, e.isCommander) 
-      : null;
-    const S = spriteSheet ? spriteSheet.height : 64; // Fallback to 64 if not loaded yet
+    // Enemy faces the player (or its movement direction)
+    const enemyFacing = e.angle || Math.atan2(py - e.y, px - e.x);
 
-    // Draw enemy slice by slice (for z-buffering)
-    for (let col = 0; col < spriteW; col++) {
-      if (sx + col < 0 || sx + col >= W) continue;
-      if (corrDist >= this._zBuf[sx + col]) continue; // behind wall
+    // Use the 3D model system
+    if (typeof Model3D !== 'undefined') {
+      const boxes = Model3D.getEnemyModel(
+        e.color, e.typeCfg.accentColor, e.isCommander,
+        animState, e.walkAnimTimer
+      );
 
-      const isFlash = e.isFlashing && Math.floor(Date.now() / 80) % 2 === 0;
-      
-      if (isFlash) {
-        ctx.fillStyle = '#ffffff';
-        ctx.fillRect(sx + col, sy + spriteH * 0.1, 1, spriteH * 0.8);
-      } else if (spriteSheet) {
-        const srcX = frameIndex * S + Math.floor((col / spriteW) * S);
-        ctx.drawImage(spriteSheet, srcX, 0, 1, S, sx + col, sy, 1, spriteH);
-      } else {
-        // Fallback block if generator fails
-        ctx.fillStyle = e.color;
-        ctx.fillRect(sx + col, sy + spriteH * 0.2, 1, spriteH * 0.6);
+      // Hit flash: tint all boxes white
+      if (e.isFlashing && Math.floor(Date.now() / 80) % 2 === 0) {
+        for (const box of boxes) {
+          box.baseColor = '#ffffff';
+        }
       }
+
+      ctx.save();
+      ctx.globalAlpha = alpha;
+
+      Model3D.renderModel(
+        ctx, boxes,
+        e.x, e.y, enemyFacing,
+        px, py, pa, pitch,
+        W, H, this.fov,
+        this._zBuf,
+        12 // fogDepth
+      );
+
+      ctx.restore();
     }
+
+    // Store screen info for hit detection
+    const screenX = ((relAngle / this.halfFov) * 0.5 + 0.5) * W;
+    const spriteH = Math.min(H * 2, (H / corrDist) | 0);
+    const sy = (((H - spriteH) / 2) + pitch) | 0;
 
     // Health bar above enemy
-    if (!e.isDead && e.dist < 8) {
-      const barW = Math.max(20, spriteW * 0.8);
+    if (!e.isDead && dist < 8) {
+      const barW = Math.max(20, spriteH * 0.6);
       const barX = screenX - barW / 2;
       const barY = sy - 10;
+      ctx.save();
       ctx.globalAlpha = alpha * 0.9;
       ctx.fillStyle = '#333';
-      ctx.fillRect(barX, barY, barW, 4);
+      ctx.fillRect(barX, barY, barW, 5);
       const pct = e.health / e.maxHealth;
       ctx.fillStyle = pct > 0.5 ? '#44ff44' : pct > 0.25 ? '#ffaa00' : '#ff2222';
-      ctx.fillRect(barX, barY, barW * pct, 4);
+      ctx.fillRect(barX, barY, barW * pct, 5);
+      ctx.restore();
     }
 
     // Commander crown indicator
     if (e.isCommander && !e.isDead) {
+      ctx.save();
       ctx.globalAlpha = alpha * 0.9;
       ctx.fillStyle = '#ffd700';
       ctx.font = `${Math.max(10, spriteH * 0.15)}px monospace`;
       ctx.textAlign = 'center';
       ctx.fillText('★', screenX, sy - 15);
+      ctx.restore();
     }
 
     e.screenX = screenX;
     e.screenY = sy + spriteH / 2;
     e.dist = dist;
     e.visible = true;
-
-    ctx.restore();
   }
 
   _drawExitSprite(p, px, py, pa, W, H, unlocked, pitch) {
@@ -521,6 +531,31 @@ class NCEngine {
     }
 
     ctx.restore();
+  }
+
+  _drawSceneryProp(s, px, py, pa, W, H, pitch) {
+    if (typeof Model3D === 'undefined') return;
+    const dx = s.x - px, dy = s.y - py;
+    const dist = Math.sqrt(dx*dx + dy*dy);
+    if (dist < 0.1 || dist > 18) return;
+
+    const angle = Math.atan2(dy, dx);
+    let relAngle = angle - pa;
+    while (relAngle > Math.PI)  relAngle -= Math.PI * 2;
+    while (relAngle < -Math.PI) relAngle += Math.PI * 2;
+    if (Math.abs(relAngle) > this.halfFov + 0.5) return;
+
+    const boxes = Model3D.getSceneryModel(s.propType);
+    if (!boxes || boxes.length === 0) return;
+
+    Model3D.renderModel(
+      this.ctx, boxes,
+      s.x, s.y, s.angle || 0,
+      px, py, pa, pitch,
+      W, H, this.fov,
+      this._zBuf,
+      12
+    );
   }
 
   _drawPickupSprite(p, px, py, pa, W, H, pitch) {
