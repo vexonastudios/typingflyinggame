@@ -348,8 +348,9 @@ class NerfArena {
           if (isCampaign) {
             p1Controls.innerHTML = `
               <h4><span class="player-color-1">Single Player</span></h4>
-              <p><b>WASD / Arrows</b> — Move & Strafe</p>
-              <p><b>Mouse</b> — Aim</p>
+              <p><b>↑ / ↓</b> — Move forward / back</p>
+              <p><b>← / →</b> — Turn left / right</p>
+              <p><b>Mouse</b> — Aim (optional)</p>
               <p><b>LClick / Space</b> — Shoot</p>
               <p><b>R</b> — Reload</p>
             `;

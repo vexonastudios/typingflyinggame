@@ -282,44 +282,43 @@ class NerfOpsGame {
   // ─── Input ────────────────────────────────────────────────────────────────────
   _handleInput(dt, now) {
     const p = this.player;
-    const map = this.map;
-    const spd = p.speed * dt;
-    const turnSpd = p.turnSpeed * dt;
+    const MOVE_SPD   = p.speed;
+    const TURN_SPD   = p.turnSpeed;
+    const MOVE_ACCEL = 14.0;
+    const TURN_ACCEL = 7.0;
+    const WALL_MARGIN = 0.28;
 
-    let moved = false;
+    // Initialise velocity state once
+    if (p.velFwd  === undefined) p.velFwd  = 0;
+    if (p.velTurn === undefined) p.velTurn = 0;
 
-    // Arrow keys are now used for strafing, mouse is used for turning
-    const fw = this._keys['w'] || this._keys['W'] || this._keys['ArrowUp'];
-    const bk = this._keys['s'] || this._keys['S'] || this._keys['ArrowDown'];
-    const sl = this._keys['a'] || this._keys['A'] || this._keys['ArrowLeft'];
-    const sr = this._keys['d'] || this._keys['D'] || this._keys['ArrowRight'];
+    // ── Target velocities from keys (matches split-screen Nerf Arena) ──
+    const fwd  = this._keys['w'] || this._keys['W'] || this._keys['ArrowUp'];
+    const back = this._keys['s'] || this._keys['S'] || this._keys['ArrowDown'];
+    const tL   = this._keys['a'] || this._keys['A'] || this._keys['ArrowLeft'];
+    const tR   = this._keys['d'] || this._keys['D'] || this._keys['ArrowRight'];
 
-    if (fw) {
-      const nx = p.x + Math.cos(p.angle) * spd;
-      const ny = p.y + Math.sin(p.angle) * spd;
-      if (!this._solid(nx, p.y)) { p.x = nx; moved = true; }
-      if (!this._solid(p.x, ny)) { p.y = ny; moved = true; }
-    }
-    if (bk) {
-      const nx = p.x - Math.cos(p.angle) * spd;
-      const ny = p.y - Math.sin(p.angle) * spd;
-      if (!this._solid(nx, p.y)) { p.x = nx; moved = true; }
-      if (!this._solid(p.x, ny)) { p.y = ny; moved = true; }
-    }
-    if (sl) {
-      const nx = p.x + Math.cos(p.angle - Math.PI/2) * spd;
-      const ny = p.y + Math.sin(p.angle - Math.PI/2) * spd;
-      if (!this._solid(nx, p.y)) { p.x = nx; moved = true; }
-      if (!this._solid(p.x, ny)) { p.y = ny; moved = true; }
-    }
-    if (sr) {
-      const nx = p.x + Math.cos(p.angle + Math.PI/2) * spd;
-      const ny = p.y + Math.sin(p.angle + Math.PI/2) * spd;
-      if (!this._solid(nx, p.y)) { p.x = nx; moved = true; }
-      if (!this._solid(p.x, ny)) { p.y = ny; moved = true; }
-    }
+    const targetFwd  = fwd ? MOVE_SPD : back ? -MOVE_SPD * 0.6 : 0;
+    const targetTurn = tL  ? -TURN_SPD : tR  ?  TURN_SPD : 0;
 
-    p.moving = moved;
+    // Smooth acceleration (same feel as split-screen)
+    p.velFwd  += (targetFwd  - p.velFwd)  * Math.min(1, MOVE_ACCEL * dt);
+    p.velTurn += (targetTurn - p.velTurn) * Math.min(1, TURN_ACCEL * dt);
+
+    // Turn
+    p.angle += p.velTurn * dt;
+
+    // Move with axis-separated collision (allows wall sliding)
+    const cosA = Math.cos(p.angle), sinA = Math.sin(p.angle);
+    const nx = p.x + cosA * p.velFwd * dt;
+    const ny = p.y + sinA * p.velFwd * dt;
+
+    if (!this._solid(nx + WALL_MARGIN * Math.sign(cosA), p.y) &&
+        !this._solid(nx - WALL_MARGIN * Math.sign(cosA), p.y)) p.x = nx;
+    if (!this._solid(p.x, ny + WALL_MARGIN * Math.sign(sinA)) &&
+        !this._solid(p.x, ny - WALL_MARGIN * Math.sign(sinA))) p.y = ny;
+
+    p.moving = Math.abs(p.velFwd) > 0.15;
 
     // Reload
     if (this._isReloading) {
