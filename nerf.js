@@ -11,8 +11,8 @@ const FOV          = Math.PI / 2.5;   // field of view (~72°)
 const HALF_FOV     = FOV / 2;
 const MOVE_SPD     = 3.5;             // tiles/sec
 const MOVE_ACCEL   = 14.0;            // acceleration smoothing
-const TURN_SPD     = 2.6;             // rad/sec
-const TURN_ACCEL   = 10.0;
+const TURN_SPD     = 1.55;            // rad/sec — tuned for accurate aiming
+const TURN_ACCEL   = 7.0;             // lower = more momentum, easier to stop on target
 const DART_SPD     = 12.0;            // tiles/sec
 const MAX_AMMO     = 8;               // darts per clip
 const RELOAD_TIME  = 1.5;             // seconds
@@ -1101,104 +1101,179 @@ class NerfArena {
     ctx.restore();
   }
 
-  // ─── Gun Sprite ─────────────────────────────────────────────
+  // ─── Gun Viewmodel (FPS style — anchored bottom-right) ─────
   _drawGun(ctx, p, ox, oy, vpW, vpH) {
-    const gunColor = p.color;
-    const gx = ox + vpW/2 + p.gunSwayX;
-    const gy = oy + vpH - 145 + p.gunSwayY + p.gunRecoil * 35;
+    const gunColor  = p.color;
+    const [r,g,b]   = this._hexToRgb(gunColor);
+
+    // Recoil lifts the gun UP (negative dy), sway bobs it side to side
+    const swayX   = p.gunSwayX * 1.4;
+    const swayY   = p.gunSwayY * 1.2;
+    const recoilY = -p.gunRecoil * 55;  // kick upward on fire
+
+    // Anchor point: bottom-right corner of this viewport
+    // The gun extends from the right side, barrel pointing left toward center
+    const anchorX = ox + vpW;          // right edge
+    const anchorY = oy + vpH;          // bottom edge
+
+    // Scale gun with viewport height so it looks right on any screen
+    const scale = vpH / 680;
 
     ctx.save();
+    ctx.translate(anchorX + swayX, anchorY + recoilY + swayY);
+    ctx.scale(scale, scale);
 
-    // ── Gun shadow (ground projection) ──
-    ctx.fillStyle = 'rgba(0,0,0,0.2)';
+    // All coordinates below are in "gun space" from the anchor (bottom-right)
+    // Positive X goes left (into the screen), positive Y goes up
+
+    // ── Gun shadow on floor ──
+    ctx.fillStyle = 'rgba(0,0,0,0.18)';
     ctx.beginPath();
-    ctx.ellipse(gx + 45, oy + vpH - 4, 55, 8, 0, 0, Math.PI*2);
+    ctx.ellipse(-200, -8, 140, 18, 0, 0, Math.PI*2);
     ctx.fill();
 
-    // ── Main body ──
-    ctx.fillStyle = gunColor;
-    ctx.beginPath(); ctx.roundRect(gx - 15, gy + 12, 95, 30, 7); ctx.fill();
+    // ── Barrel (long horizontal tube pointing left from the right side) ──
+    const barrelDark = this._mixColor(r, g, b, 0.55);
+    const barrelMid  = this._mixColor(r, g, b, 0.72);
 
-    // Highlight on top
-    ctx.fillStyle = 'rgba(255,255,255,0.18)';
-    ctx.beginPath(); ctx.roundRect(gx - 12, gy + 13, 89, 6, [6,6,0,0]); ctx.fill();
+    // Under-barrel shadow stripe
+    ctx.fillStyle = 'rgba(0,0,0,0.35)';
+    ctx.beginPath(); ctx.roundRect(-390, -98, 260, 8, 3); ctx.fill();
 
-    // ── Barrel ──
-    ctx.fillStyle = this._mixColor(...this._hexToRgb(gunColor), 0.65);
-    ctx.beginPath(); ctx.roundRect(gx + 60, gy + 18, 55, 15, 5); ctx.fill();
+    // Barrel body
+    ctx.fillStyle = barrelDark;
+    ctx.beginPath(); ctx.roundRect(-390, -105, 258, 38, 6); ctx.fill();
+    // Barrel top highlight
+    ctx.fillStyle = 'rgba(255,255,255,0.13)';
+    ctx.beginPath(); ctx.roundRect(-388, -105, 254, 7, [5,5,0,0]); ctx.fill();
 
-    // Barrel top rail
-    ctx.fillStyle = this._mixColor(...this._hexToRgb(gunColor), 0.55);
-    ctx.beginPath(); ctx.roundRect(gx + 58, gy + 13, 58, 6, 3); ctx.fill();
-
-    // ── Orange tip ──
-    ctx.fillStyle = '#ff5500';
-    ctx.beginPath(); ctx.roundRect(gx + 111, gy + 18, 12, 15, 3); ctx.fill();
-    ctx.fillStyle = '#ff8833';
-    ctx.beginPath(); ctx.roundRect(gx + 112, gy + 18, 6, 3, 1); ctx.fill();
-
-    // ── Handle ──
-    ctx.fillStyle = this._mixColor(...this._hexToRgb(gunColor), 0.6);
-    ctx.beginPath(); ctx.roundRect(gx + 8, gy + 38, 24, 40, 6); ctx.fill();
-    // Grip texture lines
-    ctx.fillStyle = 'rgba(0,0,0,0.2)';
-    for (let i = 0; i < 3; i++) {
-      ctx.beginPath(); ctx.roundRect(gx+11, gy+44+i*8, 16, 3, 1); ctx.fill();
+    // Top rail (picatinny)
+    ctx.fillStyle = barrelMid;
+    ctx.beginPath(); ctx.roundRect(-385, -118, 248, 14, 4); ctx.fill();
+    // Rail notches
+    ctx.fillStyle = 'rgba(0,0,0,0.3)';
+    for (let i = 0; i < 10; i++) {
+      ctx.fillRect(-382 + i*24, -116, 6, 10);
     }
 
+    // Barrel tip (orange muzzle cap)
+    ctx.fillStyle = '#cc3300';
+    ctx.beginPath(); ctx.roundRect(-398, -107, 14, 42, [4,0,0,4]); ctx.fill();
+    ctx.fillStyle = '#ff5500';
+    ctx.beginPath(); ctx.roundRect(-398, -105, 10, 38, [4,0,0,4]); ctx.fill();
+    // Muzzle hole
+    ctx.fillStyle = 'rgba(0,0,0,0.7)';
+    ctx.beginPath(); ctx.arc(-393, -86, 6, 0, Math.PI*2); ctx.fill();
+
+    // ── Main receiver body ──
+    ctx.fillStyle = gunColor;
+    ctx.beginPath(); ctx.roundRect(-148, -140, 190, 85, 10); ctx.fill();
+    // Top highlight
+    ctx.fillStyle = 'rgba(255,255,255,0.16)';
+    ctx.beginPath(); ctx.roundRect(-145, -139, 184, 12, [9,9,0,0]); ctx.fill();
+    // Side panel recess
+    ctx.fillStyle = 'rgba(0,0,0,0.12)';
+    ctx.beginPath(); ctx.roundRect(-130, -128, 120, 60, 6); ctx.fill();
+
+    // Nerf logo plate (small raised panel)
+    ctx.fillStyle = this._mixColor(r, g, b, 0.8);
+    ctx.beginPath(); ctx.roundRect(-125, -120, 80, 14, 3); ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,0.2)';
+    ctx.font = 'bold 9px Outfit';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('NERF', -122, -113);
+
+    // ── Dart magazine / clip ──
+    // Visible dart pegs along the top of the receiver
+    for (let i = 0; i < MAX_AMMO; i++) {
+      const dx2 = -140 + i * 20;
+      const loaded = i < p.ammo;
+      ctx.fillStyle = loaded ? '#ffaa00' : 'rgba(255,255,255,0.1)';
+      ctx.beginPath(); ctx.roundRect(dx2, -158, 14, 20, 3); ctx.fill();
+      if (loaded) {
+        // Dart tip (red suction cap)
+        ctx.fillStyle = '#ee2200';
+        ctx.beginPath(); ctx.roundRect(dx2, -158, 14, 7, [3,3,0,0]); ctx.fill();
+        // Dart foam body highlight
+        ctx.fillStyle = 'rgba(255,220,100,0.4)';
+        ctx.beginPath(); ctx.roundRect(dx2+1, -151, 5, 10, 1); ctx.fill();
+      }
+    }
+
+    // ── Grip (pistol grip, angled) ──
+    ctx.save();
+    ctx.translate(-80, -60);
+    ctx.rotate(0.18); // slight forward cant
+    ctx.fillStyle = this._mixColor(r, g, b, 0.58);
+    ctx.beginPath(); ctx.roundRect(-18, 0, 50, 130, [4,4,14,14]); ctx.fill();
+    // Grip texture lines
+    ctx.fillStyle = 'rgba(0,0,0,0.18)';
+    for (let i = 0; i < 5; i++) {
+      ctx.beginPath(); ctx.roundRect(-12, 18+i*18, 38, 7, 2); ctx.fill();
+    }
+    // Grip highlight
+    ctx.fillStyle = 'rgba(255,255,255,0.08)';
+    ctx.beginPath(); ctx.roundRect(-16, 2, 10, 100, [3,0,0,8]); ctx.fill();
+    ctx.restore();
+
     // ── Trigger guard ──
-    ctx.strokeStyle = this._mixColor(...this._hexToRgb(gunColor), 0.55);
-    ctx.lineWidth = 2.5;
+    ctx.strokeStyle = this._mixColor(r, g, b, 0.52);
+    ctx.lineWidth = 6;
+    ctx.lineJoin = 'round';
     ctx.beginPath();
-    ctx.moveTo(gx+20, gy+40);
-    ctx.quadraticCurveTo(gx+38, gy+62, gx+48, gy+42);
+    ctx.moveTo(-95, -58);
+    ctx.quadraticCurveTo(-55, -10, -20, -58);
     ctx.stroke();
 
     // ── Trigger ──
     ctx.fillStyle = '#ffcc00';
-    ctx.beginPath(); ctx.roundRect(gx + 22, gy + 46, 6, 16, 2); ctx.fill();
+    ctx.beginPath(); ctx.roundRect(-68, -53, 12, 28, 3); ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,0.25)';
+    ctx.beginPath(); ctx.roundRect(-68, -53, 5, 10, 2); ctx.fill();
 
-    // ── Ammo chamber (dart pegs) ──
-    for (let i = 0; i < MAX_AMMO; i++) {
-      const lx = gx - 10 + i * 11;
-      const ly = gy + 15;
-      const loaded = i < p.ammo;
-      ctx.fillStyle = loaded ? '#ffaa00' : 'rgba(255,255,255,0.1)';
-      ctx.beginPath(); ctx.roundRect(lx, ly, 8, 11, 2); ctx.fill();
-      if (loaded) {
-        ctx.fillStyle = 'rgba(255,60,0,0.7)';
-        ctx.beginPath(); ctx.roundRect(lx, ly, 5, 4, 1); ctx.fill();
-      }
+    // ── Pump/foregrip (below barrel) ──
+    ctx.fillStyle = this._mixColor(r, g, b, 0.62);
+    ctx.beginPath(); ctx.roundRect(-330, -75, 90, 22, 5); ctx.fill();
+    ctx.fillStyle = 'rgba(0,0,0,0.2)';
+    for (let i = 0; i < 4; i++) {
+      ctx.fillRect(-325 + i*20, -73, 8, 18);
     }
 
     // ── Muzzle flash ──
     if (p.muzzleFlash > 0) {
       const mf = p.muzzleFlash / 0.10;
       ctx.save();
-      ctx.globalAlpha = mf;
-      // Star burst at barrel tip
-      const mx2 = gx + 118, my2 = gy + 25;
-      ctx.fillStyle = '#ffee44';
-      for (let a = 0; a < 6; a++) {
-        const angle = (a / 6) * Math.PI * 2;
-        const len2 = 10 + Math.random() * 8;
+      ctx.globalAlpha = mf * 0.9;
+      const fx = -393, fy = -86;
+      // Outer glow
+      const glowG = ctx.createRadialGradient(fx, fy, 2, fx, fy, 50);
+      glowG.addColorStop(0, 'rgba(255,240,100,0.9)');
+      glowG.addColorStop(1, 'rgba(255,140,0,0)');
+      ctx.fillStyle = glowG;
+      ctx.beginPath(); ctx.arc(fx, fy, 50, 0, Math.PI*2); ctx.fill();
+      // Star rays
+      ctx.strokeStyle = '#ffffaa';
+      ctx.lineWidth = 3;
+      for (let a = 0; a < 7; a++) {
+        const ang = (a / 7) * Math.PI * 2;
+        const len2 = 22 + Math.random() * 18;
         ctx.beginPath();
-        ctx.moveTo(mx2, my2);
-        ctx.lineTo(mx2 + Math.cos(angle) * len2, my2 + Math.sin(angle) * len2);
-        ctx.lineWidth = 2;
-        ctx.strokeStyle = '#fff8aa';
+        ctx.moveTo(fx, fy);
+        ctx.lineTo(fx + Math.cos(ang)*len2, fy + Math.sin(ang)*len2);
         ctx.stroke();
       }
       ctx.fillStyle = '#ffffff';
-      ctx.beginPath(); ctx.arc(mx2, my2, 4, 0, Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.arc(fx, fy, 7, 0, Math.PI*2); ctx.fill();
       ctx.restore();
     }
 
-    // ── Reload progress overlay ──
+    // ── Reload shimmer overlay ──
     if (p.reloading) {
       const pct = 1 - p.reloadTimer / RELOAD_TIME;
-      ctx.fillStyle = `rgba(255,220,0,${0.1 + Math.abs(Math.sin(this.time * 14)) * 0.08})`;
-      ctx.beginPath(); ctx.roundRect(gx-15, gy+12, 95 * pct, 30, 7); ctx.fill();
+      const pulse = 0.08 + Math.abs(Math.sin(this.time * 14)) * 0.06;
+      ctx.fillStyle = `rgba(255,220,0,${pulse})`;
+      ctx.beginPath(); ctx.roundRect(-148, -140, 190 * pct, 85, 10); ctx.fill();
     }
 
     ctx.restore();
