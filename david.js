@@ -778,7 +778,7 @@ class DavidGame {
     const dx = stone.x - viewer.x, dy = stone.y - viewer.y;
     const dist = Math.sqrt(dx*dx + dy*dy);
     if (dist < 0.3 || dist > 18) return;
-    const sa = Math.atan2(dy, dx) - viewer.angle;
+    const sa = Math.atan2(dy, dx) - viewer.a;
     const na = Math.atan2(Math.sin(sa), Math.cos(sa));
     if (Math.abs(na) > D_HALF_FOV + 0.12) return;
     const sx = (na / D_FOV + 0.5) * W;
@@ -800,7 +800,7 @@ class DavidGame {
     const dx = enemy.x - viewer.x, dy = enemy.y - viewer.y;
     const dist = Math.sqrt(dx*dx + dy*dy);
     if (dist < 0.3 || dist > 18) return;
-    const sa = Math.atan2(dy, dx) - viewer.angle;
+    const sa = Math.atan2(dy, dx) - viewer.a;
     const na = Math.atan2(Math.sin(sa), Math.cos(sa));
     if (Math.abs(na) > D_HALF_FOV + 0.25) return;
     const sx = (na / D_FOV + 0.5) * W;
