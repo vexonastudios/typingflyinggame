@@ -36,6 +36,11 @@
             <span class="opt-label">Rogue Protocol</span>
             <span class="opt-desc">1-player story campaign</span>
           </label>
+          <label class="diff-opt" id="opt-mode-david">
+            <input type="radio" name="gamemode" value="david">
+            <span class="opt-label">⚔️ David's Challenge</span>
+            <span class="opt-desc">Biblical slingshot survival</span>
+          </label>
         </div>
       </div>
 
@@ -65,7 +70,7 @@
         <!-- Arena -->
         <div class="option-group">
           <h3>Arena</h3>
-          <div class="option-row">
+          <div class="option-row arena-row">
             <label class="diff-opt selected" id="opt-arena1">
               <input type="radio" name="arena" value="0" checked>
               <span class="opt-label">🏢 Classic</span>
@@ -81,6 +86,31 @@
               <span class="opt-label">🏰 Fortress</span>
               <span class="opt-desc">Two bases</span>
             </label>
+            <label class="diff-opt" id="opt-arena4">
+              <input type="radio" name="arena" value="3">
+              <span class="opt-label">🏥 Warehouse</span>
+              <span class="opt-desc">Crate aisles</span>
+            </label>
+            <label class="diff-opt" id="opt-arena5">
+              <input type="radio" name="arena" value="4">
+              <span class="opt-label">☢️ Reactor</span>
+              <span class="opt-desc">Nuclear core</span>
+            </label>
+            <label class="diff-opt" id="opt-arena6">
+              <input type="radio" name="arena" value="5">
+              <span class="opt-label">🤠 Frontier</span>
+              <span class="opt-desc">Western town</span>
+            </label>
+            <label class="diff-opt" id="opt-arena7">
+              <input type="radio" name="arena" value="6">
+              <span class="opt-label">🛸 Space Hub</span>
+              <span class="opt-desc">Zero-G station</span>
+            </label>
+            <label class="diff-opt" id="opt-arena8">
+              <input type="radio" name="arena" value="7">
+              <span class="opt-label">💀 Catacombs</span>
+              <span class="opt-desc">Ancient tunnels</span>
+            </label>
           </div>
         </div>
       </div>
@@ -91,7 +121,7 @@
           <h4><span class="player-color-1">Player 1</span></h4>
           <p><b>W / S</b> — Move forward / back</p>
           <p><b>A / D</b> — Turn left / right</p>
-          <p><b>Space</b> — Shoot</p>
+          <p><b>Space</b> — Shoot &nbsp;<b>Q</b> — Aim (ADS)</p>
           <p><b>R</b> — Reload</p>
         </div>
         <div class="ctrl-divider" id="ctrlDivider"></div>
@@ -99,7 +129,7 @@
           <h4><span class="player-color-2">Player 2</span></h4>
           <p><b>↑ / ↓</b> — Move forward / back</p>
           <p><b>← / →</b> — Turn left / right</p>
-          <p><b>Enter</b> — Shoot</p>
+          <p><b>Enter</b> — Shoot &nbsp;<b>Num 0</b> — Aim</p>
           <p><b>/ (slash)</b> — Reload</p>
         </div>
       </div>

@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>David & the Lions — Typing Games Hub</title>
+  <meta name="description" content="Play as David, sling stones at wolves and lions in this biblical raycasting survival game.">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="david.css">
+</head>
+<body>
+  <canvas id="gameCanvas"></canvas>
+  <div id="waveBanner"></div>
+
+  <!-- ── Setup Screen ──────────────────────────────────────── -->
+  <div id="gameSetup" class="d-overlay">
+    <div class="d-panel">
+      <a href="nerf.html" class="d-back-link">← Back to Nerf Arena</a>
+      <h1>⚔️ David &amp; the Lions</h1>
+      <p class="d-subtitle">Sling stones at wolves and lions — trust in the Lord!</p>
+
+      <!-- Battlefield -->
+      <div class="option-group">
+        <h3>Battlefield</h3>
+        <div class="d-arena-row">
+          <label class="diff-opt selected" id="d-opt-valley">
+            <input type="radio" name="arena" value="0" checked>
+            <span class="opt-label">⛰️ Valley of Elah</span>
+            <span class="opt-desc">Open battlefield</span>
+          </label>
+          <label class="diff-opt" id="d-opt-pasture">
+            <input type="radio" name="arena" value="1">
+            <span class="opt-label">🌿 Shepherd's Pasture</span>
+            <span class="opt-desc">Rolling hills</span>
+          </label>
+          <label class="diff-opt" id="d-opt-cave">
+            <input type="radio" name="arena" value="2">
+            <span class="opt-label">🦇 Cave of Adullam</span>
+            <span class="opt-desc">Dark tunnels</span>
+          </label>
+          <label class="diff-opt" id="d-opt-wild">
+            <input type="radio" name="arena" value="3">
+            <span class="opt-label">🏜️ Wilderness</span>
+            <span class="opt-desc">Ancient ruins</span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Difficulty -->
+      <div class="option-group">
+        <h3>Difficulty</h3>
+        <div class="d-diff-row">
+          <label class="diff-opt" id="d-opt-easy">
+            <input type="radio" name="diff" value="easy">
+            <span class="opt-label">🐑 Shepherd</span>
+            <span class="opt-desc">Slower enemies, 15 stones</span>
+          </label>
+          <label class="diff-opt selected" id="d-opt-normal">
+            <input type="radio" name="diff" value="normal" checked>
+            <span class="opt-label">⚔️ Warrior</span>
+            <span class="opt-desc">Balanced, 12 stones</span>
+          </label>
+          <label class="diff-opt" id="d-opt-hard">
+            <input type="radio" name="diff" value="hard">
+            <span class="opt-label">🦁 Champion</span>
+            <span class="opt-desc">Relentless, 10 stones</span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Controls reference -->
+      <div class="d-controls">
+        <div class="d-ctrl-row">
+          <span class="d-key">W A S D</span>
+          <span class="d-ctrl-desc">Move &amp; turn</span>
+        </div>
+        <div class="d-ctrl-row">
+          <span class="d-key">Hold SPACE</span>
+          <span class="d-ctrl-desc">Charge sling — Release to fire!</span>
+        </div>
+        <div class="d-ctrl-row">
+          <span class="d-key">R</span>
+          <span class="d-ctrl-desc">Gather more stones (2.8 s)</span>
+        </div>
+        <div class="d-ctrl-row">
+          <span class="d-key">← → Arrows</span>
+          <span class="d-ctrl-desc">Turn (also works for movement)</span>
+        </div>
+      </div>
+
+      <button id="startBtn" class="d-start-btn">⚔️ Face the Lions!</button>
+    </div>
+  </div>
+
+  <!-- ── Results Screen ────────────────────────────────────── -->
+  <div id="gameResults" class="d-overlay" style="display:none">
+    <div class="d-panel">
+      <span id="resultsIcon" class="d-results-icon">🏆</span>
+      <h2 id="resultsTitle">Results</h2>
+      <div id="resultsList"></div>
+      <button id="restartBtn" class="d-start-btn" style="margin-top:18px">🔄 Try Again</button>
+      <br>
+      <a href="nerf.html" class="d-hub-link">← Back to Nerf Arena</a>
+    </div>
+  </div>
+
+  <script src="david.js"></script>
+</body>
+</html>

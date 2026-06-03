@@ -41,8 +41,8 @@ canvas#gameCanvas {
   border: 1px solid rgba(255, 120, 30, 0.18);
   border-radius: 26px;
   padding: 38px 48px;
-  max-width: 580px;
-  width: 92vw;
+  max-width: 720px;
+  width: 96vw;
   text-align: center;
   box-shadow:
     0 0 70px rgba(255, 100, 20, 0.06),
@@ -90,6 +90,19 @@ canvas#gameCanvas {
   display: flex;
   gap: 10px;
   justify-content: center;
+  flex-wrap: wrap;
+}
+
+/* Arena picker: 4 per row */
+.arena-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  justify-items: center;
+}
+
+@media (max-width: 580px) {
+  .arena-row { grid-template-columns: repeat(2, 1fr); }
 }
 
 .diff-opt {
@@ -121,8 +134,8 @@ canvas#gameCanvas {
   box-shadow: 0 0 22px rgba(255, 100, 20, 0.08);
 }
 
-.opt-label { font-weight: 700; font-size: 0.95rem; color: #fff; }
-.opt-desc  { font-size: 0.74rem; color: rgba(255,255,255,0.4); }
+.opt-label { font-weight: 700; font-size: 0.85rem; color: #fff; }
+.opt-desc  { font-size: 0.68rem; color: rgba(255,255,255,0.4); }
 
 /* ─── Controls Display ────────────────────────────────────── */
 .controls-display {
@@ -225,7 +238,10 @@ canvas#gameCanvas {
 .result-pos   { font-size: 1.05rem; min-width: 60px; text-align: left; font-weight: 700; }
 .result-swatch { width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0; }
 .result-name  { flex: 1; text-align: left; font-weight: 600; }
+.result-stats { display: flex; gap: 10px; align-items: center; flex-shrink: 0; }
 .result-stat  { font-size: 0.88rem; color: rgba(255,255,255,0.55); }
+.result-acc   { font-size: 0.82rem; color: #38bdf8; font-weight: 700; }
+.result-shots { font-size: 0.80rem; color: rgba(255,255,255,0.3); }
 
 .results-panel .start-btn { margin-top: 22px; }
 
