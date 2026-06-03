@@ -670,7 +670,7 @@ class DavidGame {
       for (let j = this.enemies.length - 1; j >= 0; j--) {
         const e = this.enemies[j];
         const dx = nx - e.x, dy = ny - e.y;
-        if (Math.sqrt(dx*dx+dy*dy) < 0.55) {
+        if (Math.sqrt(dx*dx+dy*dy) < 0.65) {
           e.hp--;
           e.hurtTimer = 0.22;
           hit = true;
@@ -777,22 +777,30 @@ class DavidGame {
   _drawStone(ctx, viewer, stone, W, H, zBuf) {
     const dx = stone.x - viewer.x, dy = stone.y - viewer.y;
     const dist = Math.sqrt(dx*dx + dy*dy);
-    if (dist < 0.3 || dist > 18) return;
+    if (dist < 0.08 || dist > 20) return;
     const sa = Math.atan2(dy, dx) - viewer.a;
     const na = Math.atan2(Math.sin(sa), Math.cos(sa));
-    if (Math.abs(na) > D_HALF_FOV + 0.12) return;
+    if (Math.abs(na) > D_HALF_FOV + 0.15) return;
     const sx = (na / D_FOV + 0.5) * W;
-    const sR = clamp(10 / dist * 2.5, 2, H * 0.05);
-    const sY = H / 2;
-    const sC = Math.floor(sx - sR), eC = Math.floor(sx + sR);
+
+    // Make stone large and very bright so it's always obvious
+    const sH = clamp(H / dist * 0.28, 6, H * 0.14);
+    const sW = sH * 0.75;
+    const sY = H / 2 - sH / 2;     // centered at horizon
+
+    const sC = Math.floor(sx - sW/2);
+    const eC = Math.floor(sx + sW/2);
     for (let col = Math.max(0, sC); col < Math.min(W, eC); col++) {
-      if (zBuf[col] <= dist) continue;
-      const u = (col - sC) / Math.max(1, eC - sC) - 0.5;
-      const disk = Math.max(0, 1 - u*u*4);
-      if (disk < 0.05) continue;
-      const brt = 0.45 + disk * 0.55;
-      ctx.fillStyle = `rgba(${~~(130*brt)},${~~(150*brt)},${~~(165*brt)},${0.85})`;
-      ctx.fillRect(col, sY - sR*disk, 1, sR*disk*2);
+      if (zBuf[col] < dist) continue;   // behind a wall
+      // bright light-gray stone with white specular centre
+      const u = (col - sC) / Math.max(1, eC - sC);
+      const hl = 1 - Math.abs(u - 0.5) * 1.6;  // 0 at edges, ~0.6 at center
+      const v  = clamp(hl, 0, 1);
+      const r  = Math.round(195 + v * 55);
+      const g  = Math.round(200 + v * 50);
+      const b  = Math.round(210 + v * 40);
+      ctx.fillStyle = `rgb(${r},${g},${b})`;
+      ctx.fillRect(col, sY, 1, sH);
     }
   }
 
@@ -833,104 +841,126 @@ class DavidGame {
     }
   }
 
+  /* ── Wolf sprite (column renderer) ─────────────────────────
+     Each column draws NON-OVERLAPPING vertical segments so
+     later draws never clobber earlier ones.                  */
   _wolfCol(ctx, u, brt, col, top, sprH, e) {
-    const c = ECFG.wolf;
-    const r0=c.bodyR, g0=c.bodyG, b0=c.bodyB;
-    const rb=~~(r0*brt), gb=~~(g0*brt), bb=~~(b0*brt);
+    if (u < 0.04 || u > 0.96) return;   // hard edge silhouette
 
-    // Ears (pointed tops)
-    const isLEar = u > 0.18 && u < 0.30;
-    const isREar = u > 0.70 && u < 0.82;
-    if (isLEar || isREar) {
-      const earH = sprH * 0.16;
-      ctx.fillStyle = `rgba(${~~(rb*0.8)},${~~(gb*0.8)},${~~(bb*0.8)},1)`;
-      ctx.fillRect(col, top, 1, earH);
-    }
-    // Head
-    if (u > 0.15 && u < 0.85) {
-      const hTop = top + sprH * 0.10;
-      const hBot = top + sprH * 0.38;
-      const isEye = (u > 0.27 && u < 0.41) || (u > 0.59 && u < 0.73);
-      const isSnout = u > 0.38 && u < 0.62;
-      if (isEye) {
-        ctx.fillStyle = `rgba(${~~(c.eyeR*brt)},${~~(c.eyeG*brt)},${~~(c.eyeB*brt)},1)`;
-      } else if (isSnout) {
-        ctx.fillStyle = `rgba(${~~(45*brt)},${~~(55*brt)},${~~(60*brt)},1)`;
-      } else {
-        ctx.fillStyle = `rgba(${rb},${gb},${bb},1)`;
-      }
-      ctx.fillRect(col, hTop, 1, hBot - hTop);
-    }
-    // Body
-    if (u > 0.20 && u < 0.80) {
-      const bTop = top + sprH * 0.37;
-      const bBot = top + sprH * 0.75;
-      ctx.fillStyle = `rgba(${~~(rb*0.85)},${~~(gb*0.85)},${~~(bb*0.85)},1)`;
-      ctx.fillRect(col, bTop, 1, bBot - bTop);
-    }
-    // Legs
-    const isLLeg = u > 0.24 && u < 0.44;
-    const isRLeg = u > 0.56 && u < 0.76;
+    const y   = v => top + sprH * v;
+    const seg = (v0, v1, r, g, b) => {
+      const h = y(v1) - y(v0);
+      if (h < 0.5) return;
+      ctx.fillStyle = `rgb(${~~(r*brt)},${~~(g*brt)},${~~(b*brt)})`;
+      ctx.fillRect(col, y(v0), 1, h);
+    };
+
+    const isLEar = u > 0.10 && u < 0.28;
+    const isREar = u > 0.72 && u < 0.90;
+    const isLEye = u > 0.22 && u < 0.38;
+    const isREye = u > 0.62 && u < 0.78;
+    const isSnout = u > 0.36 && u < 0.64;
+    const isLLeg  = u > 0.16 && u < 0.42;
+    const isRLeg  = u > 0.58 && u < 0.84;
+    const isBody  = u > 0.12 && u < 0.88;
+
+    const legPhase = isLLeg ? 0 : Math.PI;
+    const legOff   = Math.sin(e.bobTime * 2.5 + legPhase) * 0.035;
+
+    // ── Ears (tip: v 0.00–0.12) ──
+    if (isLEar || isREar) seg(0.00, 0.12,  55,  65,  70);
+
+    // ── Forehead (v 0.12–0.22) ──
+    if (u > 0.08 && u < 0.92)  seg(0.12, 0.22,  98, 112, 122);
+
+    // ── Eye band (v 0.22–0.36) ──
+    if      (isLEye || isREye)  seg(0.22, 0.36, 255, 220,  18);  // glowing yellow
+    else if (isSnout)           seg(0.22, 0.36,  50,  60,  65);  // dark snout
+    else if (u > 0.08 && u < 0.92) seg(0.22, 0.36, 98, 112, 122);
+
+    // ── Lower snout / jaw (v 0.36–0.46) ──
+    if (isSnout)  seg(0.36, 0.46,  62,  72,  80);
+    else if (isBody) seg(0.36, 0.46, 110, 125, 136);
+
+    // ── Neck / chest (v 0.46–0.58) ──
+    if (isBody)   seg(0.46, 0.58, 104, 118, 128);
+
+    // ── Body (v 0.58–0.74) ──
+    if (isBody)   seg(0.58, 0.74,  92, 105, 115);
+
+    // ── Legs (v 0.74+legOff – 1.00) ──
     if (isLLeg || isRLeg) {
-      const legAnim = Math.sin(e.bobTime * 2 + (isLLeg ? 0 : Math.PI)) * 0.04 * sprH;
-      const lTop = top + sprH * 0.74 + legAnim;
-      ctx.fillStyle = `rgba(${~~(rb*0.7)},${~~(gb*0.7)},${~~(bb*0.7)},1)`;
-      ctx.fillRect(col, lTop, 1, sprH * 0.26);
+      const lv0 = clamp(0.74 + legOff, 0.60, 0.82);
+      seg(lv0, 1.00, 58, 68, 76);
     }
   }
 
+  /* ── Lion sprite (column renderer) ─────────────────────────
+     Big mane ring, wide tawny body, bright orange eyes.      */
   _lionCol(ctx, u, brt, col, top, sprH, e) {
-    const c = ECFG.lion;
-    const r0=c.bodyR, g0=c.bodyG, b0=c.bodyB;
-    const rb=~~(r0*brt), gb=~~(g0*brt), bb=~~(b0*brt);
+    if (u < 0.03 || u > 0.97) return;
 
-    // Mane (outer ring around head)
-    const isMane = (u > 0.08 && u < 0.26) || (u > 0.74 && u < 0.92);
-    if (isMane) {
-      const mTop = top + sprH * 0.03;
-      const mH   = sprH * 0.40;
-      ctx.fillStyle = `rgba(${~~(145*brt)},${~~(90*brt)},${~~(25*brt)},1)`; // dark mane
-      ctx.fillRect(col, mTop, 1, mH);
+    const y   = v => top + sprH * v;
+    const seg = (v0, v1, r, g, b) => {
+      const h = y(v1) - y(v0);
+      if (h < 0.5) return;
+      ctx.fillStyle = `rgb(${~~(r*brt)},${~~(g*brt)},${~~(b*brt)})`;
+      ctx.fillRect(col, y(v0), 1, h);
+    };
+
+    const isMane  = (u > 0.05 && u < 0.28) || (u > 0.72 && u < 0.95);
+    const isFace  =  u > 0.24 && u < 0.76;
+    const isLEye  =  u > 0.30 && u < 0.44;
+    const isREye  =  u > 0.56 && u < 0.70;
+    const isNose  =  u > 0.42 && u < 0.58;
+    const isBody  =  u > 0.10 && u < 0.90;
+    const isLPaw  =  u > 0.15 && u < 0.44;
+    const isRPaw  =  u > 0.56 && u < 0.85;
+    const isTail  =  u > 0.80 && u < 0.96;
+
+    const pawPhase = isLPaw ? 0 : Math.PI;
+    const pawOff   = Math.sin(e.bobTime * 1.8 + pawPhase) * 0.03;
+
+    // ── Mane top (v 0.00–0.08) ──
+    if (isMane || isFace)  seg(0.00, 0.08, 120,  72,  20);
+
+    // ── Mane sides + face row 1 (v 0.08–0.40) ──
+    if (isMane)            seg(0.08, 0.44, 138,  82,  22);  // dark golden mane
+    // Face centre within mane band
+    if (isFace) {
+      // Brow (v 0.08–0.20)
+      seg(0.08, 0.20, 205, 162,  88);
+      // Eyes (v 0.20–0.34)
+      if (isLEye || isREye) seg(0.20, 0.34, 255,  95,  10);  // burning orange
+      else                  seg(0.20, 0.34, 188, 145,  70);
+      // Nose bridge (v 0.34–0.44)
+      if (isNose)  seg(0.34, 0.44,  95,  55,  18);
+      else         seg(0.34, 0.44, 192, 150,  75);
     }
-    // Face / head center
-    if (u > 0.24 && u < 0.76) {
-      const fTop = top + sprH * 0.06;
-      const fH   = sprH * 0.33;
-      const isEye   = (u > 0.30 && u < 0.42) || (u > 0.58 && u < 0.70);
-      const isNose  = u > 0.44 && u < 0.56;
-      if (isEye) {
-        ctx.fillStyle = `rgba(${~~(c.eyeR*brt)},${~~(c.eyeG*brt)},${~~(c.eyeB*brt)},1)`;
-      } else if (isNose) {
-        ctx.fillStyle = `rgba(${~~(100*brt)},${~~(55*brt)},${~~(15*brt)},1)`;
-      } else {
-        ctx.fillStyle = `rgba(${rb},${gb},${bb},1)`;
-      }
-      ctx.fillRect(col, fTop, 1, fH);
+
+    // ── Mane bottom row (v 0.44–0.52) ──
+    if (isMane)  seg(0.44, 0.52, 120,  72,  20);
+    if (isFace)  seg(0.44, 0.52, 175, 135,  60);   // chin
+
+    // ── Upper body / chest (v 0.52–0.68) ──
+    if (isBody) {
+      const chest = u > 0.38 && u < 0.62;
+      seg(0.52, 0.68, chest ? 210 : 185, chest ? 165 : 142, chest ? 80 : 62);
     }
-    // Body (wide)
-    if (u > 0.14 && u < 0.86) {
-      const bTop = top + sprH * 0.38;
-      const bBot = top + sprH * 0.78;
-      const isChest = u > 0.38 && u < 0.62;
-      ctx.fillStyle = isChest
-        ? `rgba(${~~(rb*1.1)},${~~(gb*1.1)},${~~(bb*1.1)},1)`
-        : `rgba(${rb},${gb},${bb},1)`;
-      ctx.fillRect(col, bTop, 1, bBot - bTop);
+
+    // ── Lower body (v 0.68–0.78) ──
+    if (isBody)  seg(0.68, 0.78, 170, 130,  55);
+
+    // ── Paws (v 0.78+pawOff – 1.00) ──
+    if (isLPaw || isRPaw) {
+      const pv0 = clamp(0.78 + pawOff, 0.65, 0.88);
+      seg(pv0, 1.00, 155, 118,  48);
     }
-    // Paws
-    const isLP = u > 0.20 && u < 0.42, isRP = u > 0.58 && u < 0.80;
-    if (isLP || isRP) {
-      const pAnim = Math.sin(e.bobTime * 1.5 + (isLP ? 0 : Math.PI)) * 0.03 * sprH;
-      const pTop = top + sprH * 0.77 + pAnim;
-      ctx.fillStyle = `rgba(${~~(rb*0.88)},${~~(gb*0.88)},${~~(bb*0.88)},1)`;
-      ctx.fillRect(col, pTop, 1, sprH * 0.23);
-    }
-    // Tail (right side)
-    if (u > 0.78 && u < 0.94) {
-      const tAnim = Math.sin(e.bobTime * 1.2) * 0.06 * sprH;
-      const tTop = top + sprH * 0.55 + tAnim;
-      ctx.fillStyle = `rgba(${~~(155*brt)},${~~(100*brt)},${~~(40*brt)},0.85)`;
-      ctx.fillRect(col, tTop, 1, sprH * 0.28);
+
+    // ── Tail (right edge, v 0.55–0.88, wavy) ──
+    if (isTail) {
+      const tv0 = 0.55 + Math.sin(e.bobTime * 1.3) * 0.06;
+      seg(tv0, 0.88, 148, 105,  38);
     }
   }
 
