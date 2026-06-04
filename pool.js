@@ -744,10 +744,36 @@
     ctx.fillRect(8 * SCALE, -2 * SCALE, stickLen * 0.55, 4 * SCALE);
     ctx.fillStyle = '#1a1a1a';
     ctx.fillRect(8 * SCALE + stickLen * 0.55, -2.5 * SCALE, 20 * SCALE, 5 * SCALE);
-    ctx.fillStyle = '#2a1a0a';
-    ctx.fillRect(28 * SCALE + stickLen * 0.55, -3 * SCALE, stickLen * 0.3, 6 * SCALE);
+    
+    // Grip/Butt — color coded to player
+    const gripColor = turn === 1 ? '#5a1a1a' : '#1a2a5a';
+    ctx.fillStyle = gripColor;
+    const gripStart = 28 * SCALE + stickLen * 0.55;
+    const gripLen = stickLen * 0.3;
+    ctx.fillRect(gripStart, -3 * SCALE, gripLen, 6 * SCALE);
+    
+    // Player Name on Grip
+    ctx.fillStyle = 'rgba(255,255,255,0.6)';
+    ctx.font = `bold ${Math.round(4.5 * SCALE)}px Outfit`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    
+    const nameStr = turn === 1 ? p1Name : p2Name;
+    const textX = gripStart + gripLen / 2;
+    
+    // Keep text readable (not upside down)
+    ctx.save();
+    ctx.translate(textX, 0);
+    // aimAngle is where we are aiming. backAngle is aimAngle + PI
+    // We want to flip if the text would appear upside down
+    if (Math.cos(backAngle) < 0) {
+      ctx.rotate(Math.PI);
+    }
+    ctx.fillText(nameStr.toUpperCase(), 0, 0);
+    ctx.restore();
+
     ctx.fillStyle = '#111';
-    ctx.fillRect(28 * SCALE + stickLen * 0.55 + stickLen * 0.3, -3.5 * SCALE, 8 * SCALE, 7 * SCALE);
+    ctx.fillRect(gripStart + gripLen, -3.5 * SCALE, 8 * SCALE, 7 * SCALE);
     ctx.restore();
 
     // Power bar
