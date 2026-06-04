@@ -40,10 +40,16 @@
 
       <div class="setup-section">
         <div class="settings-label">Learning Aids</div>
-        <label class="toggle-opt">
-          <input type="checkbox" id="guideToggle" checked/>
-          <span>Trajectory guide (aim line + predicted collision)</span>
-        </label>
+        <div style="display: flex; gap: 20px; justify-content: center;">
+          <label class="toggle-opt">
+            <input type="checkbox" id="p1GuideToggle" checked/>
+            <span>P1 Guide</span>
+          </label>
+          <label class="toggle-opt">
+            <input type="checkbox" id="p2GuideToggle" checked/>
+            <span>P2 Guide</span>
+          </label>
+        </div>
       </div>
 
       <div class="setup-section">
@@ -108,9 +114,13 @@
     <div class="bottom-bar">
       <button id="menuBtn" class="bar-btn">← Menu</button>
       <div class="bar-controls">
-        <label class="bar-toggle">
-          <input type="checkbox" id="guideToggleGame" checked/>
-          Guide
+        <label class="bar-toggle" id="p1GuideContainer">
+          <input type="checkbox" id="p1GuideToggleGame" checked/>
+          <span style="color:#ff6b6b; font-weight:bold;">P1 Guide</span>
+        </label>
+        <label class="bar-toggle" id="p2GuideContainer">
+          <input type="checkbox" id="p2GuideToggleGame" checked/>
+          <span style="color:#69b4f5; font-weight:bold;">P2 Guide</span>
         </label>
         <label class="bar-toggle">
           <input type="checkbox" id="musicToggle" checked/>

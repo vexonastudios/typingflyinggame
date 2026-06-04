@@ -194,7 +194,8 @@
   let p1Pocketed = [];
   let p2Pocketed = [];
   let balls = [];
-  let showGuide = true;
+  let p1Guide = true;
+  let p2Guide = true;
   let isBreak = true;
   let gameRunning = false;
   let animFrame = null;
@@ -689,6 +690,7 @@
     ctx.stroke();
     ctx.setLineDash([]);
 
+    const showGuide = turn === 1 ? p1Guide : p2Guide;
     if (!showGuide) return;
     const hit = findFirstHit(cb.x, cb.y, dirX, dirY);
     if (hit.t < 9000) {
@@ -1065,8 +1067,10 @@
   // ======== UI EVENTS ========
   $('startBtn').addEventListener('click', () => {
     SFX.init();
-    showGuide = $('guideToggle').checked;
-    $('guideToggleGame').checked = showGuide;
+    p1Guide = $('p1GuideToggle').checked;
+    p2Guide = $('p2GuideToggle').checked;
+    $('p1GuideToggleGame').checked = p1Guide;
+    $('p2GuideToggleGame').checked = p2Guide;
     $('setupOverlay').style.display = 'none';
     $('gameArea').style.display = 'flex';
 
@@ -1080,7 +1084,8 @@
     startGame();
   });
 
-  $('guideToggleGame').addEventListener('change', e => { showGuide = e.target.checked; });
+  $('p1GuideToggleGame').addEventListener('change', e => { p1Guide = e.target.checked; });
+  $('p2GuideToggleGame').addEventListener('change', e => { p2Guide = e.target.checked; });
 
   $('musicToggle').addEventListener('change', e => {
     if (e.target.checked) {
