@@ -436,10 +436,27 @@ const Model3D = {
 
     // Draw
     for (const face of allFaces) {
-      // Z-buffer check: skip faces behind walls
-      const centerX = face.pts.reduce((s, p) => s + p.sx, 0) / face.pts.length;
-      const col = Math.floor(centerX);
-      if (col >= 0 && col < W && zBuf && face.avgDepth > zBuf[col]) continue;
+      // Z-buffer check: sample multiple columns across the face width
+      // Only cull if ALL sampled columns have a closer wall
+      if (zBuf) {
+        const xs = face.pts.map(p => p.sx);
+        const minX = Math.min(...xs);
+        const maxX = Math.max(...xs);
+        const faceW = Math.max(1, maxX - minX);
+        let fullyOccluded = true;
+        const samples = 5;
+        for (let s = 0; s <= samples; s++) {
+          const sx = minX + (faceW * s / samples);
+          const col = Math.floor(sx);
+          if (col < 0 || col >= W) continue;
+          // Add a small tolerance to prevent z-fighting at wall edges
+          if (face.avgDepth <= zBuf[col] + 0.15) {
+            fullyOccluded = false;
+            break;
+          }
+        }
+        if (fullyOccluded) continue;
+      }
 
       // Fog
       const fog = fogDepth ? Math.min(1, face.avgDepth / fogDepth) : 0;

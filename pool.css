@@ -1,0 +1,227 @@
+/* ============================================================
+   8-BALL POOL — pool.css
+   Premium dark-mode styling
+   ============================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;900&display=swap');
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  min-height: 100vh;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  background: #0d0e12;
+  font-family: 'Outfit', sans-serif;
+  color: #e0e0e0;
+  overflow: hidden;
+}
+
+/* ── Overlays ── */
+.overlay {
+  position: fixed; inset: 0; z-index: 100;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(0,0,0,0.75);
+  backdrop-filter: blur(8px);
+}
+
+.overlay-card {
+  background: rgba(20, 22, 30, 0.95);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 20px;
+  padding: 36px 44px;
+  max-width: 520px; width: 90%;
+  text-align: center;
+  box-shadow: 0 24px 80px rgba(0,0,0,0.6);
+}
+
+/* ── Logo ── */
+.game-logo {
+  display: flex; align-items: center; justify-content: center; gap: 14px;
+  margin-bottom: 6px;
+}
+.logo-icon { font-size: 2.6em; }
+.logo-main {
+  font-size: 2.2em; font-weight: 900; letter-spacing: 3px;
+  background: linear-gradient(135deg, #00c853, #43a047);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+}
+.logo-sub {
+  font-size: 1.1em; font-weight: 600; letter-spacing: 6px; color: #888;
+  display: block;
+}
+.game-tagline { color: #888; margin-bottom: 24px; font-size: 0.95em; }
+
+/* ── Setup Sections ── */
+.setup-section { margin-bottom: 20px; }
+.settings-label {
+  font-weight: 700; font-size: 0.8em; letter-spacing: 2px;
+  text-transform: uppercase; color: #666; margin-bottom: 10px;
+}
+
+/* Toggle switches */
+.toggle-opt {
+  display: flex; align-items: center; gap: 10px; padding: 8px 0;
+  cursor: pointer; font-size: 0.95em; color: #ccc;
+}
+.toggle-opt input[type="checkbox"] {
+  appearance: none; width: 40px; height: 22px;
+  background: #333; border-radius: 11px; position: relative;
+  cursor: pointer; transition: background 0.2s;
+}
+.toggle-opt input[type="checkbox"]::after {
+  content: ''; position: absolute; top: 3px; left: 3px;
+  width: 16px; height: 16px; border-radius: 50%;
+  background: #888; transition: all 0.2s;
+}
+.toggle-opt input[type="checkbox"]:checked { background: #00c853; }
+.toggle-opt input[type="checkbox"]:checked::after {
+  background: #fff; left: 21px;
+}
+
+/* Controls info */
+.controls-info {
+  background: rgba(255,255,255,0.04); border-radius: 10px;
+  padding: 14px 18px; font-size: 0.9em; color: #aaa;
+  line-height: 1.6;
+}
+.controls-info kbd {
+  background: rgba(255,255,255,0.1); border-radius: 4px;
+  padding: 2px 7px; font-family: 'Outfit', sans-serif;
+  font-size: 0.85em; color: #ddd;
+}
+
+/* ── Buttons ── */
+.btn-primary {
+  display: inline-block; padding: 14px 36px;
+  background: linear-gradient(135deg, #00c853, #2e7d32);
+  border: none; border-radius: 12px;
+  color: #fff; font-family: 'Outfit', sans-serif;
+  font-size: 1.15em; font-weight: 700; letter-spacing: 1px;
+  cursor: pointer; transition: transform 0.15s, box-shadow 0.15s;
+  box-shadow: 0 4px 20px rgba(0,200,83,0.3);
+  margin-top: 8px;
+}
+.btn-primary:hover { transform: translateY(-2px); box-shadow: 0 6px 28px rgba(0,200,83,0.45); }
+.btn-secondary {
+  display: inline-block; padding: 12px 28px;
+  background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 10px; color: #ccc; font-family: 'Outfit', sans-serif;
+  font-size: 1em; font-weight: 600; cursor: pointer;
+  transition: background 0.15s;
+}
+.btn-secondary:hover { background: rgba(255,255,255,0.12); }
+.back-link {
+  display: block; margin-top: 16px; color: #666;
+  text-decoration: none; font-size: 0.85em;
+}
+.back-link:hover { color: #aaa; }
+
+/* ── Game Area ── */
+.game-area {
+  display: flex; flex-direction: column; align-items: center;
+  gap: 10px; padding: 10px;
+}
+
+/* ── Scoreboard ── */
+.scoreboard {
+  display: flex; align-items: center; justify-content: space-between;
+  max-width: 1400px; padding: 10px 16px;
+  background: rgba(20,22,30,0.9); border-radius: 14px 14px 0 0;
+  border: 1px solid rgba(255,255,255,0.06);
+  border-bottom: none;
+}
+.score-side {
+  display: flex; align-items: center; gap: 10px; min-width: 260px;
+}
+.score-side--p1 { justify-content: flex-start; }
+.score-side--p2 { justify-content: flex-end; }
+.score-label { font-weight: 700; font-size: 1em; }
+.score-side--p1 .score-label { color: #ff6b6b; }
+.score-side--p2 .score-label { color: #69b4f5; }
+.score-type { font-size: 0.8em; color: #888; font-weight: 600; text-transform: uppercase; }
+.pocketed-balls { display: flex; gap: 3px; }
+.pocketed-ball {
+  width: 18px; height: 18px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 8px; font-weight: 700; color: #fff; border: 1px solid rgba(255,255,255,0.15);
+}
+.score-center { text-align: center; }
+.turn-indicator {
+  font-weight: 700; font-size: 1.05em;
+  transition: color 0.3s;
+}
+.turn-indicator.p1-turn { color: #ff6b6b; }
+.turn-indicator.p2-turn { color: #69b4f5; }
+.turn-status { font-size: 0.75em; color: #666; margin-top: 2px; }
+
+/* ── Canvas ── */
+.canvas-wrapper {
+  border-radius: 0 0 14px 14px;
+  overflow: hidden;
+  box-shadow: 0 12px 50px rgba(0,0,0,0.5);
+  cursor: crosshair;
+}
+canvas { display: block; }
+
+/* ── Message Flash ── */
+.msg-flash {
+  position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+  z-index: 50;
+  padding: 16px 40px; border-radius: 14px;
+  background: rgba(0,0,0,0.85);
+  border: 1px solid rgba(255,255,255,0.15);
+  pointer-events: none;
+  animation: flashIn 0.3s ease-out;
+}
+.msg-flash span {
+  font-size: 1.3em; font-weight: 700; letter-spacing: 1px;
+}
+@keyframes flashIn {
+  from { opacity: 0; transform: translate(-50%, -50%) scale(0.8); }
+  to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+
+/* ── Bottom Bar ── */
+.bottom-bar {
+  display: flex; align-items: center; justify-content: space-between;
+  max-width: 1400px; padding: 8px 16px;
+  background: rgba(20,22,30,0.6); border-radius: 0 0 10px 10px;
+}
+.bar-btn {
+  background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 8px; color: #888; font-family: 'Outfit', sans-serif;
+  font-size: 0.85em; padding: 6px 14px; cursor: pointer;
+}
+.bar-btn:hover { background: rgba(255,255,255,0.12); color: #ccc; }
+.bar-hint { color: #555; font-size: 0.8em; }
+.bar-controls { display: flex; gap: 12px; align-items: center; }
+.bar-toggle {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 0.8em; color: #888; cursor: pointer;
+}
+.bar-toggle input {
+  appearance: none; width: 32px; height: 17px;
+  background: #333; border-radius: 9px; position: relative;
+  cursor: pointer; transition: background 0.2s;
+}
+.bar-toggle input::after {
+  content: ''; position: absolute; top: 2px; left: 2px;
+  width: 13px; height: 13px; border-radius: 50%;
+  background: #666; transition: all 0.2s;
+}
+.bar-toggle input:checked { background: #00c853; }
+.bar-toggle input:checked::after { background: #fff; left: 17px; }
+
+/* ── Results ── */
+.results-emoji { font-size: 3em; margin-bottom: 10px; }
+.results-headline { font-size: 1.8em; font-weight: 900; margin-bottom: 6px; }
+.results-headline.p1-win { color: #ff6b6b; }
+.results-headline.p2-win { color: #69b4f5; }
+.results-sub { color: #888; font-size: 1em; margin-bottom: 20px; }
+.result-btns { display: flex; gap: 12px; justify-content: center; }
+
+/* ── Countdown ── */
+@keyframes countPop {
+  from { transform: scale(0.3); opacity: 0; }
+  to   { transform: scale(1); opacity: 1; }
+}

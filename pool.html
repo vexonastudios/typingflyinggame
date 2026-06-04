@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>8-Ball Pool — Two-Player Billiards</title>
+  <meta name="description" content="Two-player 8-ball pool with realistic physics. Learn angles, power control, and collision reactions."/>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;900&display=swap"/>
+  <link rel="icon" type="image/png" href="favicon.png"/>
+  <link rel="stylesheet" href="pool.css"/>
+</head>
+<body>
+
+  <!-- ── SETUP OVERLAY ── -->
+  <div id="setupOverlay" class="overlay">
+    <div class="overlay-card setup-card">
+      <div class="game-logo">
+        <span class="logo-icon">🎱</span>
+        <div>
+          <span class="logo-main">8-BALL</span>
+          <span class="logo-sub">P O O L</span>
+        </div>
+      </div>
+      <p class="game-tagline">Rack 'em up. Two players, one table.</p>
+
+      <div class="setup-section">
+        <div class="settings-label">Learning Aids</div>
+        <label class="toggle-opt">
+          <input type="checkbox" id="guideToggle" checked/>
+          <span>Trajectory guide (aim line + predicted collision)</span>
+        </label>
+      </div>
+
+      <div class="setup-section">
+        <div class="settings-label">Controls</div>
+        <div class="controls-info">
+          <strong>Move mouse</strong> to aim<br/>
+          <strong>Click &amp; drag back</strong> to set power<br/>
+          <strong>Release</strong> to shoot<br/>
+          After a foul, click to place the cue ball
+        </div>
+      </div>
+
+      <button id="startBtn" class="btn-primary">🎱 BREAK!</button>
+      <a href="index.html" class="back-link">← Back to Hub</a>
+    </div>
+  </div>
+
+  <!-- ── GAME AREA ── -->
+  <div id="gameArea" class="game-area" style="display:none">
+    <!-- Scoreboard -->
+    <div class="scoreboard" id="scoreboard">
+      <div class="score-side score-side--p1">
+        <span class="score-label" id="p1Label">● Player 1</span>
+        <span class="score-type" id="p1Type"></span>
+        <div class="pocketed-balls" id="p1Pocketed"></div>
+      </div>
+      <div class="score-center">
+        <div class="turn-indicator p1-turn" id="turnIndicator">Player 1's Turn</div>
+        <div class="turn-status" id="turnStatus">Break Shot</div>
+      </div>
+      <div class="score-side score-side--p2">
+        <div class="pocketed-balls" id="p2Pocketed"></div>
+        <span class="score-type" id="p2Type"></span>
+        <span class="score-label" id="p2Label">Player 2 ●</span>
+      </div>
+    </div>
+
+    <!-- Canvas -->
+    <div class="canvas-wrapper">
+      <canvas id="poolCanvas"></canvas>
+    </div>
+
+    <!-- Flash message -->
+    <div class="msg-flash" id="msgFlash" style="display:none">
+      <span id="msgText"></span>
+    </div>
+
+    <!-- Bottom bar -->
+    <div class="bottom-bar">
+      <button id="menuBtn" class="bar-btn">← Menu</button>
+      <div class="bar-controls">
+        <label class="bar-toggle">
+          <input type="checkbox" id="guideToggleGame" checked/>
+          Guide
+        </label>
+      </div>
+      <div class="bar-hint">Aim → Click & drag → Release to shoot</div>
+    </div>
+  </div>
+
+  <!-- ── RESULTS OVERLAY ── -->
+  <div id="resultsOverlay" class="overlay" style="display:none">
+    <div class="overlay-card results-card">
+      <div id="resultsEmoji" class="results-emoji">🏆</div>
+      <div id="resultsHeadline" class="results-headline">Player 1 Wins!</div>
+      <div id="resultsSub" class="results-sub"></div>
+      <div class="result-btns">
+        <button id="rematchBtn" class="btn-primary">REMATCH</button>
+        <button id="backMenuBtn" class="btn-secondary">MENU</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="pool-music.js"></script>
+  <script src="pool.js"></script>
+</body>
+</html>

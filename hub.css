@@ -780,6 +780,165 @@ body {
   background: linear-gradient(135deg, #cc2222, #e85c1a);
 }
 
+/* Chess Duel art */
+.card-art--chess {
+  background: linear-gradient(180deg, #1a1408 0%, #2d2210 55%, #3d2e14 100%);
+  position: relative;
+  overflow: hidden;
+}
+.art-chess-board {
+  position: absolute;
+  width: 120px; height: 120px;
+  bottom: 10%; left: 50%; transform: translateX(-50%) perspective(300px) rotateX(35deg);
+  background: repeating-conic-gradient(#d4a84c 0% 25%, #3a2e1a 0% 50%) 0 0 / 30px 30px;
+  border: 2px solid rgba(255,200,80,0.3);
+  border-radius: 4px;
+  opacity: 0.6;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+}
+.art-chess-king {
+  position: absolute;
+  font-size: 52px;
+  top: 20%; left: 30%;
+  filter: drop-shadow(0 4px 12px rgba(255,200,80,0.5));
+  animation: chessPieceBob 2.4s ease-in-out infinite;
+}
+.art-chess-queen {
+  position: absolute;
+  font-size: 44px;
+  top: 26%; right: 22%;
+  filter: drop-shadow(0 4px 12px rgba(255,200,80,0.4));
+  animation: chessPieceBob 2.4s ease-in-out infinite 0.6s;
+}
+.art-chess-pawn {
+  position: absolute;
+  font-size: 28px;
+  filter: drop-shadow(0 2px 8px rgba(255,200,80,0.3));
+}
+.art-chess-pawn--1 {
+  bottom: 38%; left: 18%;
+  animation: chessPieceBob 2s ease-in-out infinite 1s;
+}
+.art-chess-pawn--2 {
+  bottom: 38%; right: 16%;
+  animation: chessPieceBob 2s ease-in-out infinite 1.4s;
+}
+@keyframes chessPieceBob {
+  0%,100% { transform: translateY(0); }
+  50%     { transform: translateY(-8px); }
+}
+#card-chess .card-play-btn {
+  background: linear-gradient(135deg, #d4a017, #b8860b);
+}
+.card-play-btn--gold {
+  background: linear-gradient(135deg, #d4a017, #b8860b) !important;
+  color: #1a1200;
+}
+
+/* Foosball Frenzy art */
+.card-art--foosball {
+  background: linear-gradient(180deg, #1a3a1a 0%, #2d6b2d 55%, #1e4a1e 100%);
+  position: relative;
+  overflow: hidden;
+}
+.art-foos-field {
+  position: absolute;
+  inset: 15% 10%;
+  border: 2px solid rgba(255,255,255,0.1);
+  border-radius: 4px;
+}
+.art-foos-center {
+  position: absolute;
+  width: 40px; height: 40px;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  border: 2px solid rgba(255,255,255,0.1);
+  border-radius: 50%;
+}
+.art-foos-rod {
+  position: absolute;
+  width: 3px;
+  top: 12%; bottom: 12%;
+  background: rgba(180,180,180,0.5);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-around;
+}
+.art-foos-rod--1 { left: 35%; animation: foosSlide 1.8s ease-in-out infinite; }
+.art-foos-rod--2 { left: 62%; animation: foosSlide 2.2s ease-in-out infinite 0.5s; }
+@keyframes foosSlide {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+.art-foos-fig {
+  width: 14px; height: 22px;
+  border-radius: 3px;
+}
+.art-foos-fig--red { background: #e74c3c; border: 1px solid #c0392b; }
+.art-foos-fig--blue { background: #3498db; border: 1px solid #2980b9; }
+.art-foos-ball {
+  position: absolute;
+  font-size: 20px;
+  top: 45%; left: 47%;
+  animation: foosBall 2s ease-in-out infinite;
+  filter: drop-shadow(0 2px 6px rgba(0,0,0,0.5));
+}
+@keyframes foosBall {
+  0%, 100% { transform: translate(0, 0); }
+  25% { transform: translate(15px, -8px); }
+  50% { transform: translate(-5px, 10px); }
+  75% { transform: translate(-12px, -5px); }
+}
+#card-foosball .card-play-btn {
+  background: linear-gradient(135deg, #38a169, #2f855a);
+}
+
+/* ---- 8-Ball Pool ---- */
+.card-glow--teal { background: radial-gradient(circle at 50% 40%, rgba(0,200,150,0.18), transparent 70%); }
+.badge--teal { background: rgba(0,200,150,0.15); color: #44ddaa; }
+.card-play-btn--teal { background: linear-gradient(135deg, #00c896, #00896a); }
+.card-art--pool {
+  background: #2a1508;
+}
+.art-pool-felt {
+  position: absolute; inset: 12%; border-radius: 4px;
+  background: linear-gradient(135deg, #1e7a3a, #145a28);
+  border: 2px solid #0e4a1e;
+}
+.art-pool-pocket {
+  position: absolute; width: 16px; height: 16px;
+  border-radius: 50%; background: #0a0a0a;
+  box-shadow: 0 0 6px rgba(0,0,0,0.8);
+}
+.art-pool-pocket--tl { top: 10%; left: 10%; }
+.art-pool-pocket--tr { top: 10%; right: 10%; }
+.art-pool-pocket--bl { bottom: 10%; left: 10%; }
+.art-pool-pocket--br { bottom: 10%; right: 10%; }
+.art-pool-ball {
+  position: absolute; width: 14px; height: 14px;
+  border-radius: 50%;
+  box-shadow: 1px 1px 4px rgba(0,0,0,0.5);
+}
+.art-pool-ball--1 { background: #f5d800; top: 38%; left: 55%; }
+.art-pool-ball--2 { background: #003db5; top: 48%; left: 60%; }
+.art-pool-ball--3 { background: #d40000; top: 30%; left: 62%; }
+.art-pool-ball--8 { background: #1a1a1a; top: 42%; left: 58%; box-shadow: 0 0 8px rgba(0,0,0,0.7); }
+.art-pool-cue {
+  position: absolute; top: 45%; left: 18%; width: 36%; height: 3px;
+  background: linear-gradient(90deg, #eee 0%, #c9a84c 8%, #a67b30 80%, #2a1a0a 100%);
+  border-radius: 1px;
+  transform-origin: right center;
+  animation: cueAim 3s ease-in-out infinite;
+}
+@keyframes cueAim {
+  0%, 100% { transform: rotate(0deg) translateX(-5px); }
+  30% { transform: rotate(-3deg) translateX(-20px); }
+  35% { transform: rotate(-3deg) translateX(0); }
+  60% { transform: rotate(4deg) translateX(-15px); }
+  65% { transform: rotate(4deg) translateX(0); }
+}
+
 /* ---- Footer ---- */
 .hub-footer {
   text-align: center;

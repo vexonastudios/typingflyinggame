@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Foosball Frenzy — Digital Foosball</title>
+  <meta name="description" content="Two-player digital foosball with physics, kicking, and goals."/>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;900&display=swap"/>
+  <link rel="icon" type="image/png" href="favicon.png"/>
+  <link rel="stylesheet" href="foosball.css"/>
+</head>
+<body>
+
+  <!-- ── SETUP OVERLAY ── -->
+  <div id="setupOverlay" class="overlay">
+    <div class="overlay-card setup-card">
+      <div class="game-logo">
+        <span class="logo-icon">⚽</span>
+        <div>
+          <span class="logo-main">FOOSBALL</span>
+          <span class="logo-sub">FRENZY</span>
+        </div>
+      </div>
+      <p class="game-tagline">Slide. Kick. Score. Two players, one table.</p>
+
+      <div class="setup-section">
+        <div class="settings-label">First To</div>
+        <div class="score-grid">
+          <label class="score-opt">
+            <input type="radio" name="maxScore" value="5"/>
+            <span class="score-name">⚡ 5</span>
+          </label>
+          <label class="score-opt selected">
+            <input type="radio" name="maxScore" value="10" checked/>
+            <span class="score-name">🏆 10</span>
+          </label>
+          <label class="score-opt">
+            <input type="radio" name="maxScore" value="15"/>
+            <span class="score-name">🔥 15</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="setup-section">
+        <div class="settings-label">Controls</div>
+        <div class="controls-info">
+          <div class="ctrl-col ctrl-col--red">
+            <div class="ctrl-title">🔴 Player 1</div>
+            <div class="ctrl-key"><kbd>W</kbd><kbd>S</kbd> Move rods</div>
+            <div class="ctrl-key"><kbd>A</kbd> Kick left <kbd>D</kbd> Kick right</div>
+          </div>
+          <div class="ctrl-vs">VS</div>
+          <div class="ctrl-col ctrl-col--blue">
+            <div class="ctrl-title">🔵 Player 2</div>
+            <div class="ctrl-key"><kbd>↑</kbd><kbd>↓</kbd> Move rods</div>
+            <div class="ctrl-key"><kbd>←</kbd> Kick left <kbd>→</kbd> Kick right</div>
+          </div>
+        </div>
+      </div>
+
+      <button id="startBtn" class="btn-primary">⚽ START MATCH</button>
+      <a href="index.html" class="back-link">← Back to Hub</a>
+    </div>
+  </div>
+
+  <!-- ── GAME AREA ── -->
+  <div id="gameArea" class="game-area" style="display:none">
+    <!-- Scoreboard -->
+    <div class="scoreboard" id="scoreboard">
+      <div class="score-side score-side--red">
+        <span class="score-label">🔴 RED</span>
+        <span class="score-val" id="scoreRed">0</span>
+      </div>
+      <div class="score-center">
+        <span class="score-target" id="scoreTarget">First to 10</span>
+      </div>
+      <div class="score-side score-side--blue">
+        <span class="score-val" id="scoreBlue">0</span>
+        <span class="score-label">BLUE 🔵</span>
+      </div>
+    </div>
+
+    <!-- Canvas -->
+    <div class="canvas-wrapper">
+      <canvas id="gameCanvas"></canvas>
+    </div>
+
+    <!-- Countdown Overlay -->
+    <div class="countdown-overlay" id="countdownOverlay" style="display:none">
+      <span class="countdown-num" id="countdownNum">3</span>
+    </div>
+
+    <!-- Goal Flash -->
+    <div class="goal-flash" id="goalFlash" style="display:none">
+      <span class="goal-text">⚽ GOAL!</span>
+    </div>
+
+    <!-- Bottom bar -->
+    <div class="bottom-bar">
+      <button id="menuBtn" class="bar-btn">← Menu</button>
+      <div class="bar-hint">Press ESC to pause</div>
+    </div>
+  </div>
+
+  <!-- ── RESULTS OVERLAY ── -->
+  <div id="resultsOverlay" class="overlay" style="display:none">
+    <div class="overlay-card results-card">
+      <div id="resultsEmoji" class="results-emoji">🏆</div>
+      <div id="resultsHeadline" class="results-headline">Red Wins!</div>
+      <div id="resultsSub" class="results-sub">10 – 7</div>
+      <div class="result-btns">
+        <button id="rematchBtn" class="btn-primary">REMATCH</button>
+        <button id="backMenuBtn" class="btn-secondary">MENU</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="foosball.js"></script>
+</body>
+</html>
