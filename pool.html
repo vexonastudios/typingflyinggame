@@ -25,6 +25,20 @@
       <p class="game-tagline">Rack 'em up. Two players, one table.</p>
 
       <div class="setup-section">
+        <div class="settings-label">Player Names</div>
+        <div class="name-inputs">
+          <div class="name-field name-field--p1">
+            <span class="name-dot">🔴</span>
+            <input type="text" id="p1NameInput" class="name-input" placeholder="Player 1" maxlength="16"/>
+          </div>
+          <div class="name-field name-field--p2">
+            <input type="text" id="p2NameInput" class="name-input" placeholder="Player 2" maxlength="16"/>
+            <span class="name-dot">🔵</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="setup-section">
         <div class="settings-label">Learning Aids</div>
         <label class="toggle-opt">
           <input type="checkbox" id="guideToggle" checked/>
@@ -39,6 +53,13 @@
           <strong>Click &amp; drag back</strong> to set power<br/>
           <strong>Release</strong> to shoot<br/>
           After a foul, click to place the cue ball
+        </div>
+      </div>
+
+      <div class="setup-section">
+        <div class="settings-label">Fastest Wins ⏱️</div>
+        <div class="leaderboard" id="leaderboard">
+          <div class="leaderboard-empty">No records yet. Be the first!</div>
         </div>
       </div>
 
@@ -59,6 +80,7 @@
       <div class="score-center">
         <div class="turn-indicator p1-turn" id="turnIndicator">Player 1's Turn</div>
         <div class="turn-status" id="turnStatus">Break Shot</div>
+        <div class="match-timer" id="matchTimer">00:00</div>
       </div>
       <div class="score-side score-side--p2">
         <div class="pocketed-balls" id="p2Pocketed"></div>
@@ -85,8 +107,12 @@
           <input type="checkbox" id="guideToggleGame" checked/>
           Guide
         </label>
+        <label class="bar-toggle">
+          <input type="checkbox" id="musicToggle" checked/>
+          🎵 Music
+        </label>
       </div>
-      <div class="bar-hint">Aim → Click & drag → Release to shoot</div>
+      <div class="bar-hint">Aim → Click &amp; drag → Release to shoot</div>
     </div>
   </div>
 
@@ -96,6 +122,7 @@
       <div id="resultsEmoji" class="results-emoji">🏆</div>
       <div id="resultsHeadline" class="results-headline">Player 1 Wins!</div>
       <div id="resultsSub" class="results-sub"></div>
+      <div id="resultsTime" class="results-time">Time: 00:00</div>
       <div class="result-btns">
         <button id="rematchBtn" class="btn-primary">REMATCH</button>
         <button id="backMenuBtn" class="btn-secondary">MENU</button>

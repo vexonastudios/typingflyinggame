@@ -186,6 +186,8 @@
   let turn = 1;
   let p1Type = null;
   let p2Type = null;
+  let p1Name = 'Player 1';
+  let p2Name = 'Player 2';
   let p1Pocketed = [];
   let p2Pocketed = [];
   let balls = [];
@@ -193,6 +195,9 @@
   let isBreak = true;
   let gameRunning = false;
   let animFrame = null;
+  let matchStartTime = 0;
+  let matchTimeStr = '00:00';
+  let matchTimeInterval = null;
 
   // Shot tracking
   let firstHitBall = null;
@@ -398,7 +403,9 @@
         const isSolid = nonEight[0] >= 1 && nonEight[0] <= 7;
         if (turn === 1) { p1Type = isSolid ? 'solids' : 'stripes'; p2Type = isSolid ? 'stripes' : 'solids'; }
         else { p2Type = isSolid ? 'solids' : 'stripes'; p1Type = isSolid ? 'stripes' : 'solids'; }
-        showMessage(`Player ${turn} is ${turn === 1 ? p1Type : p2Type}!`, '#44ff88');
+        const curName = turn === 1 ? p1Name : p2Name;
+        const curType = turn === 1 ? p1Type : p2Type;
+        showMessage(`${curName} → ${curType.toUpperCase()}!`, '#44ff88');
         updateScoreboard();
       }
     }
@@ -423,10 +430,29 @@
       const hitSolid = firstHitBall.id >= 1 && firstHitBall.id <= 7;
       const hitStripe = firstHitBall.id >= 9 && firstHitBall.id <= 15;
       const wantsSolids = playerType === 'solids';
-      const cleared = playerCleared(turn);
-      if (cleared) { if (firstHitBall.id !== 8) { foul = true; foulReason = 'Foul! Must hit the 8-ball.'; } }
-      else if (wantsSolids && !hitSolid) { foul = true; foulReason = "Foul! Hit opponent's ball first."; }
-      else if (!wantsSolids && !hitStripe) { foul = true; foulReason = "Foul! Hit opponent's ball first."; }
+
+      // Were they ALREADY cleared before this shot?
+      // playerCleared() uses current pocketed state (includes balls just pocketed this turn),
+      // so we subtract any own balls pocketed this turn to see if they were pre-cleared.
+      const ownPocketedThisTurn = pocketedThisTurn.filter(id => {
+        if (id === 0 || id === 8) return false;
+        const isSolid = id >= 1 && id <= 7;
+        return (playerType === 'solids') === isSolid;
+      });
+      const clearedNow = playerCleared(turn);
+      // wasAlreadyClear = they are cleared AND didn't just clear themselves this shot
+      const wasAlreadyClear = clearedNow && ownPocketedThisTurn.length === 0;
+
+      if (wasAlreadyClear) {
+        // They were cleared before this shot — must hit 8-ball
+        if (firstHitBall.id !== 8) { foul = true; foulReason = 'Foul! Must hit the 8-ball first.'; }
+      } else if (!clearedNow) {
+        // Normal turn — must hit own group first
+        if (wantsSolids && !hitSolid) { foul = true; foulReason = "Foul! Hit opponent's ball first."; }
+        else if (!wantsSolids && !hitStripe) { foul = true; foulReason = "Foul! Hit opponent's ball first."; }
+      }
+      // If clearedNow && ownPocketedThisTurn.length > 0: they just pocketed their last ball this turn
+      // → no foul, they go again and now need to sink the 8
     }
 
     if (foul) {
@@ -447,9 +473,15 @@
     });
 
     if (playerPocketed.length > 0) {
-      showMessage('Nice shot! Go again.', '#44ff88');
+      if (playerCleared(turn)) {
+        // Just pocketed their last ball this shot — go again, aim for the 8!
+        showMessage('🎱 All cleared! Now sink the 8-ball!', '#ffd700');
+        updateStatus('Sink the 8-ball to win!');
+      } else {
+        showMessage('Nice shot! Go again.', '#44ff88');
+        updateStatus('Your turn — aim your shot');
+      }
       phase = PHASE.AIM;
-      updateStatus('Your turn — aim your shot');
     } else {
       switchTurn();
       phase = PHASE.AIM;
@@ -477,12 +509,21 @@
     phase = PHASE.OVER;
     gameRunning = false;
     if (animFrame) cancelAnimationFrame(animFrame);
+    if (matchTimeInterval) clearInterval(matchTimeInterval);
+
     SFX.win();
+    const winName = winner === 1 ? p1Name : p2Name;
+    
+    // Save to leaderboard
+    const elapsedSeconds = Math.floor((Date.now() - matchStartTime) / 1000);
+    saveRecord(winName, elapsedSeconds);
+
     $('resultsEmoji').textContent = winner === 1 ? '🔴' : '🔵';
-    $('resultsHeadline').textContent = `Player ${winner} Wins!`;
+    $('resultsHeadline').textContent = `${winName} Wins! 🏆`;
     $('resultsHeadline').className = 'results-headline ' + (winner === 1 ? 'p1-win' : 'p2-win');
     $('resultsSub').textContent = `Solids: ${balls.filter(b => b.pocketed && b.id >= 1 && b.id <= 7).length}/7  •  Stripes: ${balls.filter(b => b.pocketed && b.id >= 9 && b.id <= 15).length}/7`;
-    setTimeout(() => { $('resultsOverlay').style.display = 'flex'; }, 600);
+    $('resultsTime').textContent = `Time: ${matchTimeStr}`;
+    setTimeout(() => { $('resultsOverlay').style.display = 'flex'; loadLeaderboard(); }, 600);
   }
 
   // ======== RENDERING ========
@@ -745,7 +786,8 @@
     ctx.clearRect(0, 0, W, H);
     drawTable();
     for (const b of balls) { if (b.id !== 0) drawBall(b); }
-    drawBall(cueBall());
+    // Don't draw cue ball during PLACING — only show the ghost placement cursor
+    if (phase !== PHASE.PLACING) drawBall(cueBall());
     drawAimLine();
     drawCueStick();
     drawPlacingGhost();
@@ -771,17 +813,65 @@
     setTimeout(() => { el.style.display = 'none'; }, 2200);
   }
 
+  function formatTime(secs) {
+    const m = Math.floor(secs / 60);
+    const s = secs % 60;
+    return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+  }
+
+  function updateTimer() {
+    if (!gameRunning) return;
+    const elapsed = Math.floor((Date.now() - matchStartTime) / 1000);
+    matchTimeStr = formatTime(elapsed);
+    $('matchTimer').textContent = matchTimeStr;
+  }
+
+  function loadLeaderboard() {
+    const records = JSON.parse(localStorage.getItem('pool_fastest_wins') || '[]');
+    const el = $('leaderboard');
+    if (records.length === 0) {
+      el.innerHTML = '<div class="leaderboard-empty">No records yet. Be the first!</div>';
+      return;
+    }
+    el.innerHTML = '';
+    records.slice(0, 5).forEach((rec, i) => {
+      const row = document.createElement('div');
+      row.className = 'leaderboard-row';
+      row.innerHTML = `<span class="leaderboard-name">${i + 1}. ${rec.name}</span><span class="leaderboard-time">${formatTime(rec.time)}</span>`;
+      el.appendChild(row);
+    });
+  }
+
+  function saveRecord(name, timeInSeconds) {
+    let records = JSON.parse(localStorage.getItem('pool_fastest_wins') || '[]');
+    records.push({ name, time: timeInSeconds });
+    records.sort((a, b) => a.time - b.time);
+    records = records.slice(0, 10); // keep top 10
+    localStorage.setItem('pool_fastest_wins', JSON.stringify(records));
+  }
+
   function updateTurnIndicator() {
     const el = $('turnIndicator');
-    el.textContent = `Player ${turn}'s Turn`;
+    el.textContent = `${turn === 1 ? p1Name : p2Name}'s Turn`;
     el.className = 'turn-indicator ' + (turn === 1 ? 'p1-turn' : 'p2-turn');
   }
 
   function updateStatus(text) { $('turnStatus').textContent = text; }
 
   function updateScoreboard() {
-    $('p1Type').textContent = p1Type ? (p1Type === 'solids' ? '● Solids (1-7)' : '◐ Stripes (9-15)') : '';
-    $('p2Type').textContent = p2Type ? (p2Type === 'solids' ? '● Solids (1-7)' : '◐ Stripes (9-15)') : '';
+    // Player name labels
+    $('p1Label').textContent = `● ${p1Name}`;
+    $('p2Label').textContent = `${p2Name} ●`;
+
+    // Type badges — big and clear
+    function typeHTML(type) {
+      if (!type) return '';
+      if (type === 'solids') return '<span class="type-badge type-badge--solids">● SOLIDS (1–7)</span>';
+      return '<span class="type-badge type-badge--stripes">◑ STRIPES (9–15)</span>';
+    }
+    $('p1Type').innerHTML = typeHTML(p1Type);
+    $('p2Type').innerHTML = typeHTML(p2Type);
+
     function renderPocketed(elId, pocketed) {
       const el = $(elId);
       el.innerHTML = '';
@@ -861,6 +951,12 @@
 
   // ======== GAME START ========
   function startGame() {
+    // Read player names from inputs (if on setup screen)
+    const n1 = ($('p1NameInput') || {}).value || '';
+    const n2 = ($('p2NameInput') || {}).value || '';
+    p1Name = n1.trim() || 'Player 1';
+    p2Name = n2.trim() || 'Player 2';
+
     // Apply latest dimensions
     dims = calcDimensions();
     W = dims.W; H = dims.H; SCALE = dims.scale;
@@ -881,6 +977,11 @@
     firstHitBall = null;
     pocketedThisTurn = [];
     cueScratch = false;
+
+    matchStartTime = Date.now();
+    updateTimer();
+    if (matchTimeInterval) clearInterval(matchTimeInterval);
+    matchTimeInterval = setInterval(updateTimer, 1000);
 
     updateTurnIndicator();
     updateStatus('Break Shot — aim and fire!');
@@ -911,13 +1012,23 @@
 
   $('guideToggleGame').addEventListener('change', e => { showGuide = e.target.checked; });
 
+  $('musicToggle').addEventListener('change', e => {
+    if (e.target.checked) {
+      PoolMusic.setVolume(0.18);
+    } else {
+      PoolMusic.setVolume(0);
+    }
+  });
+
   $('menuBtn').addEventListener('click', () => {
     gameRunning = false;
     if (animFrame) cancelAnimationFrame(animFrame);
+    if (matchTimeInterval) clearInterval(matchTimeInterval);
     PoolMusic.stop();
     $('gameArea').style.display = 'none';
     $('resultsOverlay').style.display = 'none';
     $('setupOverlay').style.display = 'flex';
+    loadLeaderboard();
   });
 
   $('rematchBtn').addEventListener('click', () => {
@@ -931,7 +1042,11 @@
     $('gameArea').style.display = 'none';
     PoolMusic.stop();
     $('setupOverlay').style.display = 'flex';
+    loadLeaderboard();
   });
+
+  // Load leaderboard on initial load
+  loadLeaderboard();
 
 })();
 

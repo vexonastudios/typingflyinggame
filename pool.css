@@ -34,7 +34,70 @@ body {
   box-shadow: 0 24px 80px rgba(0,0,0,0.6);
 }
 
-/* ── Logo ── */
+/* ── Player name inputs ── */
+.name-inputs {
+  display: flex; gap: 12px; width: 100%;
+}
+.name-field {
+  display: flex; align-items: center; gap: 8px; flex: 1;
+  background: rgba(255,255,255,0.05);
+  border-radius: 10px; padding: 6px 10px;
+}
+.name-field--p1 { border: 1.5px solid rgba(255, 80, 80, 0.45); }
+.name-field--p2 { border: 1.5px solid rgba(80, 140, 255, 0.45); }
+.name-dot { font-size: 1rem; flex-shrink: 0; }
+.name-input {
+  background: transparent; border: none; outline: none;
+  color: #fff; font-family: 'Outfit', sans-serif;
+  font-size: 0.95rem; font-weight: 600; width: 100%;
+}
+.name-input::placeholder { color: rgba(255,255,255,0.3); }
+
+/* ── Type badges (SOLIDS / STRIPES) ── */
+.type-badge {
+  display: inline-block;
+  font-size: 0.8rem; font-weight: 800; letter-spacing: 0.05em;
+  padding: 3px 9px; border-radius: 20px;
+  white-space: nowrap;
+}
+.type-badge--solids {
+  background: rgba(255, 200, 50, 0.18);
+  color: #ffd966;
+  border: 1.5px solid rgba(255, 200, 50, 0.5);
+}
+.type-badge--stripes {
+  background: rgba(0, 200, 180, 0.15);
+  color: #44ddcc;
+  border: 1.5px solid rgba(0, 200, 180, 0.45);
+}
+
+/* ── Match Timer & Leaderboard ── */
+.match-timer {
+  font-size: 1.1rem; font-weight: 700; color: #ffcc00;
+  margin-top: 4px; letter-spacing: 1px;
+}
+.results-time {
+  font-size: 1.2rem; font-weight: 600; color: #ffcc00;
+  margin-bottom: 24px;
+}
+.leaderboard {
+  background: rgba(0,0,0,0.2);
+  border-radius: 8px; padding: 8px 12px;
+  font-size: 0.9rem; color: #e2e8f0;
+  max-height: 120px; overflow-y: auto;
+}
+.leaderboard-empty {
+  color: rgba(255,255,255,0.4); font-style: italic; text-align: center;
+}
+.leaderboard-row {
+  display: flex; justify-content: space-between;
+  padding: 4px 0; border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+.leaderboard-row:last-child { border-bottom: none; }
+.leaderboard-name { font-weight: 600; }
+.leaderboard-time { color: #ffcc00; font-family: monospace; font-size: 1rem; }
+
+/* ── Footer ── */
 .game-logo {
   display: flex; align-items: center; justify-content: center; gap: 14px;
   margin-bottom: 6px;
