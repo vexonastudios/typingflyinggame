@@ -73,19 +73,24 @@
     <!-- Scoreboard -->
     <div class="scoreboard" id="scoreboard">
       <div class="score-side score-side--p1">
-        <span class="score-label" id="p1Label">● Player 1</span>
+        <div class="score-header-p1">
+          <span class="score-label" id="p1Label">● Player 1</span>
+          <span class="player-timer" id="p1Timer">00:00</span>
+        </div>
         <span class="score-type" id="p1Type"></span>
         <div class="pocketed-balls" id="p1Pocketed"></div>
       </div>
       <div class="score-center">
         <div class="turn-indicator p1-turn" id="turnIndicator">Player 1's Turn</div>
         <div class="turn-status" id="turnStatus">Break Shot</div>
-        <div class="match-timer" id="matchTimer">00:00</div>
       </div>
       <div class="score-side score-side--p2">
         <div class="pocketed-balls" id="p2Pocketed"></div>
         <span class="score-type" id="p2Type"></span>
-        <span class="score-label" id="p2Label">Player 2 ●</span>
+        <div class="score-header-p2">
+          <span class="player-timer" id="p2Timer">00:00</span>
+          <span class="score-label" id="p2Label">Player 2 ●</span>
+        </div>
       </div>
     </div>
 

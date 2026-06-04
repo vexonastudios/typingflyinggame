@@ -195,8 +195,10 @@
   let isBreak = true;
   let gameRunning = false;
   let animFrame = null;
-  let matchStartTime = 0;
-  let matchTimeStr = '00:00';
+  
+  let p1TimeMs = 0;
+  let p2TimeMs = 0;
+  let lastTickTime = 0;
   let matchTimeInterval = null;
 
   // Shot tracking
@@ -513,16 +515,17 @@
 
     SFX.win();
     const winName = winner === 1 ? p1Name : p2Name;
+    const winTime = winner === 1 ? p1TimeMs : p2TimeMs;
     
     // Save to leaderboard
-    const elapsedSeconds = Math.floor((Date.now() - matchStartTime) / 1000);
+    const elapsedSeconds = Math.floor(winTime / 1000);
     saveRecord(winName, elapsedSeconds);
 
     $('resultsEmoji').textContent = winner === 1 ? '🔴' : '🔵';
     $('resultsHeadline').textContent = `${winName} Wins! 🏆`;
     $('resultsHeadline').className = 'results-headline ' + (winner === 1 ? 'p1-win' : 'p2-win');
     $('resultsSub').textContent = `Solids: ${balls.filter(b => b.pocketed && b.id >= 1 && b.id <= 7).length}/7  •  Stripes: ${balls.filter(b => b.pocketed && b.id >= 9 && b.id <= 15).length}/7`;
-    $('resultsTime').textContent = `Time: ${matchTimeStr}`;
+    $('resultsTime').textContent = `Winning Time: ${formatTime(elapsedSeconds)}`;
     setTimeout(() => { $('resultsOverlay').style.display = 'flex'; loadLeaderboard(); }, 600);
   }
 
@@ -821,9 +824,19 @@
 
   function updateTimer() {
     if (!gameRunning) return;
-    const elapsed = Math.floor((Date.now() - matchStartTime) / 1000);
-    matchTimeStr = formatTime(elapsed);
-    $('matchTimer').textContent = matchTimeStr;
+    const now = Date.now();
+    const delta = now - lastTickTime;
+    lastTickTime = now;
+
+    // Only increment the timer of the player whose turn it is
+    // We increment during all phases (AIM, POWER, ROLLING, PLACING)
+    if (turn === 1) {
+      p1TimeMs += delta;
+      $('p1Timer').textContent = formatTime(Math.floor(p1TimeMs / 1000));
+    } else {
+      p2TimeMs += delta;
+      $('p2Timer').textContent = formatTime(Math.floor(p2TimeMs / 1000));
+    }
   }
 
   function loadLeaderboard() {
@@ -854,6 +867,14 @@
     const el = $('turnIndicator');
     el.textContent = `${turn === 1 ? p1Name : p2Name}'s Turn`;
     el.className = 'turn-indicator ' + (turn === 1 ? 'p1-turn' : 'p2-turn');
+
+    if (turn === 1) {
+      $('p1Timer').classList.add('is-active');
+      $('p2Timer').classList.remove('is-active');
+    } else {
+      $('p2Timer').classList.add('is-active');
+      $('p1Timer').classList.remove('is-active');
+    }
   }
 
   function updateStatus(text) { $('turnStatus').textContent = text; }
@@ -978,10 +999,14 @@
     pocketedThisTurn = [];
     cueScratch = false;
 
-    matchStartTime = Date.now();
-    updateTimer();
+    p1TimeMs = 0;
+    p2TimeMs = 0;
+    $('p1Timer').textContent = '00:00';
+    $('p2Timer').textContent = '00:00';
+    lastTickTime = Date.now();
+    
     if (matchTimeInterval) clearInterval(matchTimeInterval);
-    matchTimeInterval = setInterval(updateTimer, 1000);
+    matchTimeInterval = setInterval(updateTimer, 200);
 
     updateTurnIndicator();
     updateStatus('Break Shot — aim and fire!');

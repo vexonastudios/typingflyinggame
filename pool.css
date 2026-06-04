@@ -71,10 +71,18 @@ body {
   border: 1.5px solid rgba(0, 200, 180, 0.45);
 }
 
-/* ── Match Timer & Leaderboard ── */
-.match-timer {
-  font-size: 1.1rem; font-weight: 700; color: #ffcc00;
-  margin-top: 4px; letter-spacing: 1px;
+/* ── Player Timers & Leaderboard ── */
+.score-header-p1, .score-header-p2 {
+  display: flex; align-items: center; gap: 8px;
+}
+.player-timer {
+  font-family: monospace; font-size: 1rem; color: rgba(255,255,255,0.4);
+  background: rgba(0,0,0,0.3); padding: 2px 6px; border-radius: 4px;
+  transition: all 0.3s;
+}
+.player-timer.is-active {
+  color: #ffcc00; background: rgba(255,200,0,0.15);
+  box-shadow: 0 0 8px rgba(255,200,0,0.4);
 }
 .results-time {
   font-size: 1.2rem; font-weight: 600; color: #ffcc00;
