@@ -34,6 +34,9 @@
   }
   recalcLayout();
 
+  // Pre-computed felt grain positions (normalized 0-1, prevents flicker)
+  const feltGrain = Array.from({ length: 200 }, () => [Math.random(), Math.random()]);
+
   // Pocket positions (recalculated on resize)
   function getPockets() {
     return [
@@ -209,7 +212,6 @@
   // Input
   let mouse = { x: 0, y: 0 };
   let aimAngle = 0;
-  let aimLocked = false;
   let powerDist = 0;
   let clickStart = null;
 
@@ -389,8 +391,9 @@
   function endTurn() {
     const eightPocketed = pocketedThisTurn.includes(8);
     const playerType = turn === 1 ? p1Type : p2Type;
+    const wasBreak = isBreak; // Save before clearing
 
-    if (isBreak && eightPocketed) {
+    if (wasBreak && eightPocketed) {
       const e8 = balls.find(b => b.id === 8);
       e8.pocketed = false;
       e8.x = TL + TW * 0.72; e8.y = TT + TH / 2;
@@ -399,7 +402,7 @@
       showMessage('8-ball re-spotted!', '#ffcc00');
     }
 
-    if (p1Type === null && !isBreak) {
+    if (p1Type === null && !wasBreak) {
       const nonEight = pocketedThisTurn.filter(id => id !== 0 && id !== 8);
       if (nonEight.length > 0) {
         const isSolid = nonEight[0] >= 1 && nonEight[0] <= 7;
@@ -419,7 +422,8 @@
       else p2Pocketed.push(id);
     }
 
-    if (eightPocketed && !isBreak) {
+    // 8-ball pocketed (and it wasn't the break — break re-spot handled above)
+    if (eightPocketed && !wasBreak) {
       const allCleared = playerCleared(turn);
       if (allCleared && !cueScratch) { gameOver(turn); return; }
       else { gameOver(turn === 1 ? 2 : 1); return; }
@@ -503,8 +507,11 @@
 
   function respawnCue() {
     const cb = cueBall();
+    // Don't set position here — PLACING phase ghost handles placement.
+    // Just mark the ball as available and stop it.
     cb.pocketed = false; cb.vx = 0; cb.vy = 0;
-    cb.x = TL + TW * 0.25; cb.y = TT + TH / 2;
+    // Move off-screen so it doesn't collide while waiting for placement
+    cb.x = -100; cb.y = -100;
   }
 
   function gameOver(winner) {
@@ -552,10 +559,10 @@
     ctx.fillStyle = feltGrad;
     ctx.fillRect(TL, TT, TW, TH);
 
-    // Felt grain
+    // Felt grain (pre-computed positions for flicker-free rendering)
     ctx.fillStyle = 'rgba(255,255,255,0.015)';
-    for (let i = 0; i < 200; i++) {
-      ctx.fillRect(TL + Math.random() * TW, TT + Math.random() * TH, 2 * SCALE, 1);
+    for (const g of feltGrain) {
+      ctx.fillRect(TL + g[0] * TW, TT + g[1] * TH, 2 * SCALE, 1);
     }
 
     // Head string
@@ -946,7 +953,6 @@
     if (phase === PHASE.AIM) {
       const cb = cueBall();
       if (!cb || cb.pocketed) return;
-      aimLocked = true;
       clickStart = { x: mouse.x, y: mouse.y };
       powerDist = 0;
       phase = PHASE.POWER;
@@ -962,13 +968,26 @@
       } else {
         phase = PHASE.AIM;
       }
-      aimLocked = false;
       clickStart = null;
       powerDist = 0;
     }
   });
 
   canvas.addEventListener('contextmenu', e => e.preventDefault());
+
+  // Keyboard: Space/Enter to confirm ball placement
+  document.addEventListener('keydown', e => {
+    if (phase === PHASE.PLACING && (e.code === 'Space' || e.code === 'Enter')) {
+      e.preventDefault();
+      if (placeGhost) {
+        const cb = cueBall();
+        cb.x = placeGhost.x; cb.y = placeGhost.y;
+        cb.pocketed = false;
+        phase = PHASE.AIM;
+        updateStatus('Aim your shot');
+      }
+    }
+  });
 
   // ======== GAME START ========
   function startGame() {
