@@ -483,6 +483,12 @@
   // Confirm dialog callback
   let confirmCallback = null;
 
+  // AI Opponent State
+  let isVsComputer = false;
+  let aiDifficulty = 'medium';
+  let playerColor = 'white';
+  let aiColor = 'black';
+
   // ======== DOM REFS ========
   const $ = id => document.getElementById(id);
   const setupOverlay = $('setupOverlay');
@@ -617,19 +623,29 @@
 
   function undoMove() {
     if (stateStack.length === 0 || gameOver) return;
-    const state = stateStack.pop();
-    board = state.board;
-    turn = state.turn;
-    castling = state.castling;
-    enPassantTarget = state.enPassantTarget;
-    capturedWhite = state.capturedWhite;
-    capturedBlack = state.capturedBlack;
-    lastMoveFrom = state.lastMoveFrom;
-    lastMoveTo = state.lastMoveTo;
-    moveCount = state.moveCount;
-    halfMoveClock = state.halfMoveClock;
-    moveHistory = state.moveHistory;
-    positionHistory = state.positionHistory;
+
+    let steps = 1;
+    if (isVsComputer && turn === playerColor && stateStack.length >= 2) {
+      steps = 2;
+    }
+
+    for (let i = 0; i < steps; i++) {
+      if (stateStack.length === 0) break;
+      const state = stateStack.pop();
+      board = state.board;
+      turn = state.turn;
+      castling = state.castling;
+      enPassantTarget = state.enPassantTarget;
+      capturedWhite = state.capturedWhite;
+      capturedBlack = state.capturedBlack;
+      lastMoveFrom = state.lastMoveFrom;
+      lastMoveTo = state.lastMoveTo;
+      moveCount = state.moveCount;
+      halfMoveClock = state.halfMoveClock;
+      moveHistory = state.moveHistory;
+      positionHistory = state.positionHistory;
+    }
+
     selectedSquare = null;
     legalMoves = [];
 
@@ -974,6 +990,38 @@
     const hasLegal = hasAnyLegalMove(board, nextTurn);
     let isCheckmate = inCheck && !hasLegal;
     let isStalemate = !inCheck && !hasLegal;
+    let isInsufficient = isInsufficientMaterial();
+
+    let winReason = 'checkmate';
+    let gameWinner = color;
+
+    if (isVsComputer) {
+      if (isStalemate && nextTurn === aiColor) {
+        // Human stalemated the computer -> Victory for Human
+        isStalemate = false;
+        isCheckmate = true;
+        gameWinner = playerColor;
+        winReason = 'stalemate-win';
+      } else if (isInsufficient) {
+        // Human has pieces, AI has none -> Victory for Human
+        const humanPieces = [];
+        const aiPieces = [];
+        for (let r = 0; r < 8; r++) {
+          for (let c = 0; c < 8; c++) {
+            const p = board[r][c];
+            if (!p) continue;
+            if (pieceColor(p) === playerColor && p.toLowerCase() !== 'k') humanPieces.push(p);
+            if (pieceColor(p) === aiColor && p.toLowerCase() !== 'k') aiPieces.push(p);
+          }
+        }
+        if (aiPieces.length === 0 && humanPieces.length > 0) {
+          isInsufficient = false;
+          isCheckmate = true;
+          gameWinner = playerColor;
+          winReason = 'material-win';
+        }
+      }
+    }
 
     if (inCheck && !isCheckmate) AudioEngine.play('check');
     if (isCheckmate) AudioEngine.play('checkmate');
@@ -999,12 +1047,12 @@
     if (isCheckmate) {
       gameOver = true;
       stopTimer();
-      showResults(color, 'checkmate');
+      showResults(gameWinner, winReason);
     } else if (isStalemate) {
       gameOver = true;
       stopTimer();
       showResults(null, 'stalemate');
-    } else if (isInsufficientMaterial()) {
+    } else if (isInsufficient) {
       gameOver = true;
       stopTimer();
       AudioEngine.play('draw');
@@ -1019,10 +1067,17 @@
       stopTimer();
       AudioEngine.play('draw');
       showResults(null, 'repetition');
-    } else if (inCheck) {
-      showStatusBanner(`${nextTurn === 'white' ? 'White' : 'Black'} is in CHECK!`);
     } else {
-      hideStatusBanner();
+      if (inCheck) {
+        showStatusBanner(`${nextTurn === 'white' ? 'White' : 'Black'} is in CHECK!`);
+      } else {
+        hideStatusBanner();
+      }
+
+      // Trigger AI Move
+      if (isVsComputer && nextTurn === aiColor) {
+        triggerAIMove();
+      }
     }
   }
 
@@ -1036,6 +1091,7 @@
   }
 
   function renderBoard() {
+    if (!board || board.length === 0) return;
     chessBoard.innerHTML = '';
 
     for (let ri = 0; ri < 8; ri++) {
@@ -1052,7 +1108,10 @@
 
         // Last move highlight
         if (lastMoveFrom && lastMoveFrom.row === r && lastMoveFrom.col === c) sq.classList.add('last-move');
-        if (lastMoveTo && lastMoveTo.row === r && lastMoveTo.col === c) sq.classList.add('last-move');
+        if (lastMoveTo && lastMoveTo.row === r && lastMoveTo.col === c) {
+          sq.classList.add('last-move');
+          sq.classList.add('just-moved');
+        }
 
         // Selected
         if (selectedSquare && selectedSquare.row === r && selectedSquare.col === c) {
@@ -1129,14 +1188,14 @@
 
     [...capturedWhite].sort(sortByValue).forEach(p => {
       const el = document.createElement('span');
-      el.className = 'captured-piece';
+      el.className = `captured-piece ${isWhite(p) ? 'white-piece' : 'black-piece'}`;
       el.textContent = PIECES[p];
       capturedByWhiteEl.appendChild(el);
     });
 
     [...capturedBlack].sort(sortByValue).forEach(p => {
       const el = document.createElement('span');
-      el.className = 'captured-piece';
+      el.className = `captured-piece ${isWhite(p) ? 'white-piece' : 'black-piece'}`;
       el.textContent = PIECES[p];
       capturedByBlackEl.appendChild(el);
     });
@@ -1174,9 +1233,305 @@
     statusBanner.style.display = 'none';
   }
 
+  // ======== CHESS AI ENGINE (LOCAL) ========
+  const PIECE_VALS = {
+    'p': 100, 'n': 320, 'b': 330, 'r': 500, 'q': 900, 'k': 20000
+  };
+
+  const pstPawn = [
+    [0,  0,  0,  0,  0,  0,  0,  0],
+    [50, 50, 50, 50, 50, 50, 50, 50],
+    [10, 10, 20, 30, 30, 20, 10, 10],
+    [5,  5, 10, 25, 25, 10,  5,  5],
+    [0,  0,  0, 20, 20,  0,  0,  0],
+    [5, -5,-10,  0,  0,-10, -5,  5],
+    [5, 10, 10,-20,-20, 10, 10,  5],
+    [0,  0,  0,  0,  0,  0,  0,  0]
+  ];
+
+  const pstKnight = [
+    [-50,-40,-30,-30,-30,-30,-40,-50],
+    [-40,-20,  0,  0,  0,  0,-20,-40],
+    [-30,  0, 10, 15, 15, 10,  0,-30],
+    [-30,  5, 15, 20, 20, 15,  5,-30],
+    [-30,  0, 15, 20, 20, 15,  0,-30],
+    [-30,  5, 10, 15, 15, 10,  5,-30],
+    [-40,-20,  0,  5,  5,  0,-20,-40],
+    [-50,-40,-30,-30,-30,-30,-40,-50]
+  ];
+
+  const pstBishop = [
+    [-20,-10,-10,-10,-10,-10,-10,-20],
+    [-10,  0,  0,  0,  0,  0,  0,-10],
+    [-10,  0,  5, 10, 10,  5,  0,-10],
+    [-10,  5,  5, 10, 10,  5,  5,-10],
+    [-10,  0, 10, 10, 10, 10,  0,-10],
+    [-10, 10, 10, 10, 10, 10, 10,-10],
+    [-10,  5,  0,  0,  0,  0,  5,-10],
+    [-20,-10,-10,-10,-10,-10,-10,-20]
+  ];
+
+  const pstRook = [
+    [0,  0,  0,  0,  0,  0,  0,  0],
+    [5, 10, 10, 10, 10, 10, 10,  5],
+    [-5,  0,  0,  0,  0,  0,  0, -5],
+    [-5,  0,  0,  0,  0,  0,  0, -5],
+    [-5,  0,  0,  0,  0,  0,  0, -5],
+    [-5,  0,  0,  0,  0,  0,  0, -5],
+    [-5,  0,  0,  0,  0,  0,  0, -5],
+    [0,  0,  0,  5,  5,  0,  0,  0]
+  ];
+
+  const pstQueen = [
+    [-20,-10,-10, -5, -5,-10,-10,-20],
+    [-10,  0,  0,  0,  0,  0,  0,-10],
+    [-10,  0,  5,  5,  5,  5,  0,-10],
+    [-5,  0,  5,  5,  5,  5,  0, -5],
+    [0,  0,  5,  5,  5,  5,  0, -5],
+    [-10,  5,  5,  5,  5,  5,  0,-10],
+    [-10,  0,  5,  0,  0,  5,  0,-10],
+    [-20,-10,-10, -5, -5,-10,-10,-20]
+  ];
+
+  const pstKing = [
+    [-30,-40,-40,-50,-50,-40,-40,-30],
+    [-30,-40,-40,-50,-50,-40,-40,-30],
+    [-30,-40,-40,-50,-50,-40,-40,-30],
+    [-30,-40,-40,-50,-50,-40,-40,-30],
+    [-20,-30,-30,-40,-40,-30,-30,-20],
+    [-10,-20,-20,-20,-20,-20,-20,-10],
+    [20, 20,  0,  0,  0,  0, 20, 20],
+    [20, 30, 10,  0,  0, 10, 30, 20]
+  ];
+
+  function evaluateBoard(b) {
+    let score = 0;
+    for (let r = 0; r < 8; r++) {
+      for (let c = 0; c < 8; c++) {
+        const p = b[r][c];
+        if (!p) continue;
+        const type = p.toLowerCase();
+        let val = PIECE_VALS[type] || 0;
+        
+        let pstVal = 0;
+        let rIdx = r;
+        let cIdx = c;
+        if (isBlack(p)) {
+          rIdx = 7 - r; // Mirror vertically for Black
+        }
+        
+        if (type === 'p') pstVal = pstPawn[rIdx][cIdx];
+        else if (type === 'n') pstVal = pstKnight[rIdx][cIdx];
+        else if (type === 'b') pstVal = pstBishop[rIdx][cIdx];
+        else if (type === 'r') pstVal = pstRook[rIdx][cIdx];
+        else if (type === 'q') pstVal = pstQueen[rIdx][cIdx];
+        else if (type === 'k') pstVal = pstKing[rIdx][cIdx];
+        
+        val += pstVal;
+        
+        if (isWhite(p)) {
+          score += val;
+        } else {
+          score -= val;
+        }
+      }
+    }
+    return score;
+  }
+
+  function getAllLegalMoves(b, color) {
+    const moves = [];
+    for (let r = 0; r < 8; r++) {
+      for (let c = 0; c < 8; c++) {
+        if (b[r][c] && pieceColor(b[r][c]) === color) {
+          const pieceMoves = getLegalMoves(b, r, c);
+          pieceMoves.forEach(m => {
+            moves.push({ fromRow: r, fromCol: c, toRow: m.row, toCol: m.col, details: m });
+          });
+        }
+      }
+    }
+    return moves;
+  }
+
+  function minimax(depth, alpha, beta, isMaximizing, b) {
+    if (depth === 0) {
+      return { score: evaluateBoard(b) };
+    }
+    
+    const currentColor = isMaximizing ? 'white' : 'black';
+    const moves = getAllLegalMoves(b, currentColor);
+    
+    if (moves.length === 0) {
+      const inCheck = isInCheck(b, currentColor);
+      if (inCheck) {
+        return { score: isMaximizing ? -Infinity : Infinity };
+      } else {
+        return { score: 0 };
+      }
+    }
+    
+    moves.sort((moveA, moveB) => {
+      const scoreA = moveA.details.capture ? PIECE_VALS[b[moveA.toRow][moveA.toCol]?.toLowerCase() || 'p'] : 0;
+      const scoreB = moveB.details.capture ? PIECE_VALS[b[moveB.toRow][moveB.toCol]?.toLowerCase() || 'p'] : 0;
+      return scoreB - scoreA;
+    });
+
+    let bestMove = null;
+    if (isMaximizing) {
+      let maxScore = -Infinity;
+      for (const move of moves) {
+        const nextBoard = cloneBoard(b);
+        nextBoard[move.toRow][move.toCol] = nextBoard[move.fromRow][move.fromCol];
+        nextBoard[move.fromRow][move.fromCol] = '';
+        if (move.details.enPassant) {
+          const capturedRow = move.toRow + 1;
+          nextBoard[capturedRow][move.toCol] = '';
+        }
+        if (move.details.castling) {
+          const cr = 7; // white
+          if (move.details.castling === 'K') { nextBoard[cr][5] = nextBoard[cr][7]; nextBoard[cr][7] = ''; }
+          else { nextBoard[cr][3] = nextBoard[cr][0]; nextBoard[cr][0] = ''; }
+        }
+        const type = nextBoard[move.toRow][move.toCol]?.toLowerCase();
+        if (type === 'p' && (move.toRow === 0 || move.toRow === 7)) {
+          nextBoard[move.toRow][move.toCol] = 'Q';
+        }
+        
+        const res = minimax(depth - 1, alpha, beta, false, nextBoard);
+        if (res.score > maxScore) {
+          maxScore = res.score;
+          bestMove = move;
+        }
+        alpha = Math.max(alpha, maxScore);
+        if (beta <= alpha) break;
+      }
+      return { score: maxScore, move: bestMove };
+    } else {
+      let minScore = Infinity;
+      for (const move of moves) {
+        const nextBoard = cloneBoard(b);
+        nextBoard[move.toRow][move.toCol] = nextBoard[move.fromRow][move.fromCol];
+        nextBoard[move.fromRow][move.fromCol] = '';
+        if (move.details.enPassant) {
+          const capturedRow = move.toRow - 1;
+          nextBoard[capturedRow][move.toCol] = '';
+        }
+        if (move.details.castling) {
+          const cr = 0; // black
+          if (move.details.castling === 'K') { nextBoard[cr][5] = nextBoard[cr][7]; nextBoard[cr][7] = ''; }
+          else { nextBoard[cr][3] = nextBoard[cr][0]; nextBoard[cr][0] = ''; }
+        }
+        const type = nextBoard[move.toRow][move.toCol]?.toLowerCase();
+        if (type === 'p' && (move.toRow === 0 || move.toRow === 7)) {
+          nextBoard[move.toRow][move.toCol] = 'q';
+        }
+        
+        const res = minimax(depth - 1, alpha, beta, true, nextBoard);
+        if (res.score < minScore) {
+          minScore = res.score;
+          bestMove = move;
+        }
+        beta = Math.min(beta, minScore);
+        if (beta <= alpha) break;
+      }
+      return { score: minScore, move: bestMove };
+    }
+  }
+
+  function getAIMove() {
+    const isAIWhite = (aiColor === 'white');
+    const moves = getAllLegalMoves(board, aiColor);
+    if (moves.length === 0) return null;
+
+    if (aiDifficulty === 'easy') {
+      if (Math.random() > 0.15) {
+        return moves[Math.floor(Math.random() * moves.length)];
+      } else {
+        const captures = moves.filter(m => m.details.capture);
+        if (captures.length > 0) {
+          return captures[Math.floor(Math.random() * captures.length)];
+        }
+        return moves[Math.floor(Math.random() * moves.length)];
+      }
+    }
+
+    const depth = aiDifficulty === 'medium' ? 2 : 3;
+    const moveScores = [];
+    const alpha = -Infinity;
+    const beta = Infinity;
+
+    for (const move of moves) {
+      const nextBoard = cloneBoard(board);
+      nextBoard[move.toRow][move.toCol] = nextBoard[move.fromRow][move.fromCol];
+      nextBoard[move.fromRow][move.fromCol] = '';
+      if (move.details.enPassant) {
+        const capturedRow = aiColor === 'white' ? move.toRow + 1 : move.toRow - 1;
+        nextBoard[capturedRow][move.toCol] = '';
+      }
+      if (move.details.castling) {
+        const cr = aiColor === 'white' ? 7 : 0;
+        if (move.details.castling === 'K') { nextBoard[cr][5] = nextBoard[cr][7]; nextBoard[cr][7] = ''; }
+        else { nextBoard[cr][3] = nextBoard[cr][0]; nextBoard[cr][0] = ''; }
+      }
+      const type = nextBoard[move.toRow][move.toCol]?.toLowerCase();
+      if (type === 'p' && (move.toRow === 0 || move.toRow === 7)) {
+        nextBoard[move.toRow][move.toCol] = aiColor === 'white' ? 'Q' : 'q';
+      }
+
+      const res = minimax(depth - 1, alpha, beta, !isAIWhite, nextBoard);
+      moveScores.push({ move, score: res.score });
+    }
+
+    // Find best score
+    let bestScore = isAIWhite ? -Infinity : Infinity;
+    for (const ms of moveScores) {
+      if (isAIWhite) {
+        if (ms.score > bestScore) bestScore = ms.score;
+      } else {
+        if (ms.score < bestScore) bestScore = ms.score;
+      }
+    }
+
+    // Filter moves within threshold of the best score
+    // Use a wider threshold in the opening to prevent copycat/symmetrical behavior
+    const threshold = (moveCount <= 12) ? 60 : 20;
+    const candidates = moveScores.filter(ms => {
+      if (isAIWhite) {
+        return ms.score >= bestScore - threshold;
+      } else {
+        return ms.score <= bestScore + threshold;
+      }
+    });
+
+    const chosen = candidates[Math.floor(Math.random() * candidates.length)];
+    return chosen.move;
+  }
+
+  function triggerAIMove() {
+    if (gameOver || turn !== aiColor) return;
+    
+    turnText.textContent = `Computer is thinking...`;
+    
+    const delay = 400 + Math.random() * 450;
+    setTimeout(() => {
+      if (gameOver || turn !== aiColor) return;
+      const aiMove = getAIMove();
+      if (aiMove) {
+        legalMoves = getLegalMoves(board, aiMove.fromRow, aiMove.fromCol);
+        
+        const isPawn = board[aiMove.fromRow][aiMove.fromCol].toLowerCase() === 'p';
+        const promotePiece = (isPawn && (aiMove.toRow === 0 || aiMove.toRow === 7)) ? 'q' : null;
+        
+        makeMove(aiMove.fromRow, aiMove.fromCol, aiMove.toRow, aiMove.toCol, promotePiece);
+      }
+    }, delay);
+  }
+
   // ======== CLICK HANDLER ========
   function handleSquareClick(row, col) {
     if (gameOver) return;
+    if (isVsComputer && turn === aiColor) return;
 
     const piece = board[row][col];
 
@@ -1248,6 +1603,16 @@
           resultsEmoji.textContent = '👑';
           resultsHeadline.textContent = 'Checkmate!';
           resultsSub.textContent = `${winnerColor === 'white' ? 'White' : 'Black'} Wins!`;
+          break;
+        case 'stalemate-win':
+          resultsEmoji.textContent = '👑';
+          resultsHeadline.textContent = 'Stalemate Victory!';
+          resultsSub.textContent = `${winnerColor === 'white' ? 'White' : 'Black'} Wins by Stalemate!`;
+          break;
+        case 'material-win':
+          resultsEmoji.textContent = '🏆';
+          resultsHeadline.textContent = 'Material Victory!';
+          resultsSub.textContent = `${winnerColor === 'white' ? 'White' : 'Black'} Wins by capturing all pieces!`;
           break;
         case 'stalemate':
           resultsEmoji.textContent = '🤝';
@@ -1416,9 +1781,23 @@
   // ======== EVENT LISTENERS ========
 
   // Timer option selection
+  // Toggle AI Settings panel based on opponent selection
+  const oppRadios = document.querySelectorAll('input[name="opponent"]');
+  const aiSettingsPanel = $('aiSettings');
+  
+  oppRadios.forEach(radio => {
+    radio.addEventListener('change', () => {
+      if (aiSettingsPanel) {
+        aiSettingsPanel.style.display = radio.value === 'computer' ? 'block' : 'none';
+      }
+    });
+  });
+
+  // Option selection (scoped to siblings in parent element)
   document.querySelectorAll('.timer-opt').forEach(opt => {
     opt.addEventListener('click', () => {
-      document.querySelectorAll('.timer-opt').forEach(o => o.classList.remove('selected'));
+      const parent = opt.parentElement;
+      parent.querySelectorAll('.timer-opt').forEach(o => o.classList.remove('selected'));
       opt.classList.add('selected');
     });
   });
@@ -1442,11 +1821,33 @@
     showHints = $('setupHints').checked;
     AudioEngine.enabled = $('setupSound').checked;
 
+    // Load AI options
+    const oppVal = document.querySelector('input[name="opponent"]:checked').value;
+    isVsComputer = (oppVal === 'computer');
+    if (isVsComputer) {
+      aiDifficulty = document.querySelector('input[name="difficulty"]:checked').value;
+      const playAsVal = document.querySelector('input[name="playAs"]:checked').value;
+      if (playAsVal === 'random') {
+        playerColor = Math.random() < 0.5 ? 'white' : 'black';
+      } else {
+        playerColor = playAsVal;
+      }
+      aiColor = opponentColor(playerColor);
+      boardFlipped = (playerColor === 'black');
+    } else {
+      isVsComputer = false;
+      boardFlipped = false;
+    }
+
     setupOverlay.style.display = 'none';
     gameArea.style.display = 'flex';
 
     initGame();
     AudioEngine.play('gamestart');
+
+    if (isVsComputer && aiColor === 'white') {
+      triggerAIMove();
+    }
   });
 
   // Menu button
@@ -1462,6 +1863,9 @@
   $('playAgainBtn').addEventListener('click', () => {
     resultsOverlay.style.display = 'none';
     initGame();
+    if (isVsComputer && aiColor === 'white') {
+      triggerAIMove();
+    }
   });
 
   // Back to menu from results
@@ -1495,6 +1899,33 @@
   // Draw button
   $('drawBtn').addEventListener('click', () => {
     if (gameOver) return;
+    
+    if (isVsComputer) {
+      showConfirm('🤝', 'Offer Draw?', 'Offer a draw to the computer?', () => {
+        let accept = false;
+        const evalScore = evaluateBoard(board);
+        const aiScore = aiColor === 'white' ? evalScore : -evalScore;
+        
+        if (aiDifficulty === 'easy') {
+          accept = Math.random() < 0.5;
+        } else if (aiDifficulty === 'medium') {
+          accept = aiScore <= 150;
+        } else {
+          accept = aiScore <= -300;
+        }
+        
+        if (accept) {
+          gameOver = true;
+          stopTimer();
+          AudioEngine.play('draw');
+          showResults(null, 'agreed-draw');
+        } else {
+          showConfirm('🤖', 'Draw Declined', 'The computer declines your draw offer.', () => {});
+        }
+      });
+      return;
+    }
+
     const asker = turn === 'white' ? 'White' : 'Black';
     const opp = turn === 'white' ? 'Black' : 'White';
     showConfirm('🤝', 'Offer Draw?', `${asker} is offering a draw. ${opp}, do you accept?`, () => {

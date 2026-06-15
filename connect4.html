@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Connect 4 Duel - Vexona Game Hub</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;900&display=swap" rel="stylesheet">
+  <link rel="icon" type="image/png" href="favicon.png">
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="connect4.css">
+</head>
+<body>
+  <!-- Global UI -->
+  <a href="index.html" class="back-btn" aria-label="Back to Hub">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <path d="M19 12H5M12 19l-7-7 7-7"/>
+    </svg>
+    Back to Hub
+  </a>
+
+  <!-- Menu Screen -->
+  <div id="menuScreen" class="screen active">
+    <div class="menu-container">
+      <div class="menu-logo">
+        <div class="menu-chip chip-red"></div>
+        <div class="menu-chip chip-yellow"></div>
+      </div>
+      <h1 class="game-title">Connect 4</h1>
+      <p class="game-subtitle">Line up four to win!</p>
+      
+      <div class="menu-buttons">
+        <button id="btnPVP" class="btn btn-red">2 Players (Local)</button>
+        <button id="btnPVE" class="btn btn-yellow">Vs AI (Bot)</button>
+        <button id="btnTraining" class="btn btn-blue">Training Mode</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Game Screen -->
+  <div id="gameScreen" class="screen">
+    <div class="game-layout">
+      <!-- Player Info Left (Red) -->
+      <div class="player-panel player-panel-1 active-turn">
+        <div class="player-avatar chip-red"></div>
+        <h2 class="player-name">Player 1</h2>
+        <div class="turn-indicator">Your Turn</div>
+      </div>
+
+      <!-- Main Board Area -->
+      <div class="board-container">
+        <!-- Overlay for recommended moves (Training mode) -->
+        <div id="hintOverlay" class="hidden">Recommended Move</div>
+        
+        <div id="board" class="connect4-board">
+          <!-- The board has 7 columns -->
+          <div class="column" data-col="0"></div>
+          <div class="column" data-col="1"></div>
+          <div class="column" data-col="2"></div>
+          <div class="column" data-col="3"></div>
+          <div class="column" data-col="4"></div>
+          <div class="column" data-col="5"></div>
+          <div class="column" data-col="6"></div>
+          
+          <!-- Board front visual -->
+          <div class="board-front"></div>
+        </div>
+      </div>
+
+      <!-- Player Info Right (Yellow) -->
+      <div class="player-panel player-panel-2">
+        <div class="player-avatar chip-yellow"></div>
+        <h2 class="player-name" id="p2Name">Player 2</h2>
+        <div class="turn-indicator">Waiting...</div>
+      </div>
+    </div>
+
+    <!-- Game Over Overlay -->
+    <div id="gameOverOverlay" class="overlay hidden">
+      <div class="overlay-content">
+        <h2 id="winnerText">Player 1 Wins!</h2>
+        <button id="btnPlayAgain" class="btn btn-primary">Play Again</button>
+        <button id="btnMainMenu" class="btn btn-secondary">Main Menu</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="connect4.js"></script>
+</body>
+</html>

@@ -108,6 +108,11 @@ function startGame(mode) {
   $('menu-screen').classList.remove('active');
   $('results-screen').classList.remove('active');
   $('match-screen').classList.add('active');
+  if (mode === 1) {
+    $('match-screen').classList.add('solo-mode');
+  } else {
+    $('match-screen').classList.remove('solo-mode');
+  }
 
   renderPlayerCards();
   startNextRound();
@@ -382,3 +387,13 @@ function endGame() {
 $('btn-replay').addEventListener('click', () => {
   startGame(state.mode);
 });
+
+// Add click listeners to option slots for solo mode mouse control
+document.querySelectorAll('.option-slot').forEach((slot, index) => {
+  slot.addEventListener('click', () => {
+    if (state.mode === 1 && state.status === 'active') {
+      handleAnswer(0, index);
+    }
+  });
+});
+

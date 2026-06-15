@@ -47,6 +47,60 @@
       </div>
 
       <div class="setup-section">
+        <div class="settings-label">Opponent</div>
+        <div class="timer-grid" style="grid-template-columns: repeat(2, 1fr);">
+          <label class="timer-opt selected" id="optHuman">
+            <input type="radio" name="opponent" value="human" checked/>
+            <span class="timer-name">🧑‍🤝‍🧑 Two Players</span>
+          </label>
+          <label class="timer-opt" id="optComputer">
+            <input type="radio" name="opponent" value="computer"/>
+            <span class="timer-name">🤖 Play Computer</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="setup-section" id="aiSettings" style="display: none; border: 1px dashed rgba(255, 215, 0, 0.2); padding: 16px; border-radius: 16px; background: rgba(0, 0, 0, 0.15);">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; text-align: left;">
+          <div>
+            <div class="settings-label" style="font-size: 0.72rem; margin-bottom: 8px;">Difficulty</div>
+            <div class="timer-grid" style="grid-template-columns: repeat(3, 1fr); gap: 6px;">
+              <label class="timer-opt selected" id="diffEasy" style="padding: 8px 4px;">
+                <input type="radio" name="difficulty" value="easy" checked/>
+                <span class="timer-name" style="font-size: 0.75rem;">Easy</span>
+              </label>
+              <label class="timer-opt" id="diffMedium" style="padding: 8px 4px;">
+                <input type="radio" name="difficulty" value="medium"/>
+                <span class="timer-name" style="font-size: 0.75rem;">Medium</span>
+              </label>
+              <label class="timer-opt" id="diffHard" style="padding: 8px 4px;">
+                <input type="radio" name="difficulty" value="hard"/>
+                <span class="timer-name" style="font-size: 0.75rem;">Hard</span>
+              </label>
+            </div>
+          </div>
+          <div>
+            <div class="settings-label" style="font-size: 0.72rem; margin-bottom: 8px;">Play As</div>
+            <div class="timer-grid" style="grid-template-columns: repeat(3, 1fr); gap: 6px;">
+              <label class="timer-opt selected" id="colorWhite" style="padding: 8px 4px;">
+                <input type="radio" name="playAs" value="white" checked/>
+                <span class="timer-name" style="font-size: 0.75rem;">White</span>
+              </label>
+              <label class="timer-opt" id="colorBlack" style="padding: 8px 4px;">
+                <input type="radio" name="playAs" value="black"/>
+                <span class="timer-name" style="font-size: 0.75rem;">Black</span>
+              </label>
+              <label class="timer-opt" id="colorRandom" style="padding: 8px 4px;">
+                <input type="radio" name="playAs" value="random"/>
+                <span class="timer-name" style="font-size: 0.75rem;">Random</span>
+              </label>
+            </div>
+          </div>
+        </div>
+      </div>
+
+
+      <div class="setup-section">
         <div class="settings-label">Options</div>
         <div class="setup-toggles">
           <label class="toggle-opt" id="toggleHints">

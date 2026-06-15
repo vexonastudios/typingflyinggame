@@ -241,6 +241,19 @@ p { font-size: 1.2rem; margin-bottom: 2rem; color: var(--muted); }
   transition: transform 0.1s, background 0.1s;
 }
 
+.solo-mode .option-slot {
+  cursor: pointer;
+}
+.solo-mode .option-slot:not(.correct-flash):not(.wrong-flash):hover {
+  background: rgba(255,255,255,0.15);
+  border-color: rgba(255,255,255,0.4);
+  transform: translateY(-2px);
+}
+.solo-mode .option-slot:not(.correct-flash):not(.wrong-flash):active {
+  transform: translateY(1px) scale(0.96);
+}
+
+
 .opt-label {
   position: absolute;
   top: 10px;
