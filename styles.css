@@ -520,8 +520,6 @@ kbd {
   object-fit: contain;
 }
 
-}
-
 /* Removed old :fullscreen rules — now handled via body.fs-mode class */
 
 /* ============================================================
