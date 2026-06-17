@@ -5,6 +5,22 @@ const EMPTY = 0;
 const RED = 1;
 const YELLOW = 2;
 
+// ElevenLabs SFX
+const sfxDrop = new Audio('/api/sfx?text=heavy%20plastic%20token%20dropping%20into%20a%20hollow%20slot%20and%20clacking&duration=1');
+const sfxWin = new Audio('/api/sfx?text=triumphant%20arcade%20level%20complete%20chime&duration=3');
+const sfxDraw = new Audio('/api/sfx?text=sad%20arcade%20game%20over%20buzzer&duration=2');
+const sfxError = new Audio('/api/sfx?text=short%20error%20buzz&duration=1');
+
+sfxDrop.preload = 'auto';
+sfxWin.preload = 'auto';
+sfxDraw.preload = 'auto';
+sfxError.preload = 'auto';
+
+function playSound(audio) {
+  audio.currentTime = 0;
+  audio.play().catch(e => console.warn('SFX skipped:', e));
+}
+
 let board = [];
 let currentPlayer = RED;
 let gameMode = 'local'; // 'local', 'bot', 'training'
@@ -28,6 +44,7 @@ function init() {
   
   document.getElementById('btnPlayAgain').addEventListener('click', resetGame);
   document.getElementById('btnMainMenu').addEventListener('click', showMenu);
+  document.getElementById('btnRestartMatch').addEventListener('click', resetGame);
   
   columnsUI.forEach((col, index) => {
     col.addEventListener('click', () => handleColumnClick(index));
@@ -68,7 +85,7 @@ function resetGame() {
     col.appendChild(ghost);
   });
   
-  document.querySelectorAll('.hint-indicator').forEach(el => el.remove());
+  document.querySelectorAll('.hint-arrow').forEach(el => el.remove());
   
   updateUI();
   
@@ -100,17 +117,24 @@ async function handleColumnClick(colIndex) {
 
 async function playTurn(colIndex) {
   const rowInfo = getAvailableRow(colIndex);
-  if (rowInfo === -1) return; // Column full
+  if (rowInfo === -1) {
+    playSound(sfxError);
+    return; // Column full
+  }
 
   isAnimating = true;
   removeGhostChips();
-  document.querySelectorAll('.hint-indicator').forEach(el => el.remove());
+  document.querySelectorAll('.hint-arrow').forEach(el => el.remove());
 
   board[rowInfo][colIndex] = currentPlayer;
   
   // Animate chip drop
   const chip = document.createElement('div');
   chip.className = `chip ${currentPlayer === RED ? 'chip-red' : 'chip-yellow'}`;
+  chip.style.bottom = `${rowInfo * 114}px`; // 100px slot + 14px gap
+  
+  playSound(sfxDrop);
+  
   // We place chips inside the column. Columns are flex-direction: column-reverse, 
   // so appending a child adds it from the bottom.
   // Wait, if it's column-reverse, the first appended goes to the bottom.
@@ -118,6 +142,11 @@ async function playTurn(colIndex) {
   
   // Wait for animation to finish
   await new Promise(resolve => setTimeout(resolve, 500));
+  
+  // Board shake effect
+  const boardEl = document.getElementById('board');
+  boardEl.classList.add('shake');
+  setTimeout(() => boardEl.classList.remove('shake'), 200);
   
   const winLine = checkWin(rowInfo, colIndex);
   if (winLine) {
@@ -142,8 +171,8 @@ async function playTurn(colIndex) {
   
   // Bot turn
   if ((gameMode === 'bot' || gameMode === 'training') && currentPlayer === YELLOW) {
-    // Small delay to make bot feel "human"
-    setTimeout(makeBotMove, 800);
+    const delay = Math.floor(Math.random() * 900) + 600; // 600ms - 1500ms
+    setTimeout(makeBotMove, delay);
   }
 }
 
@@ -210,23 +239,24 @@ function endGame(winner, winLine) {
   isAnimating = false;
   
   if (winner !== EMPTY) {
+    playSound(sfxWin);
     const pName = winner === RED ? 'Player 1' : (gameMode === 'local' ? 'Player 2' : 'Bot');
     winnerText.textContent = `${pName} Wins!`;
     winnerText.style.color = winner === RED ? '#ff4d4d' : '#ffd060';
     
-    // Highlight winning chips
+    // Highlight winning chips and dim others
     if (winLine) {
+      document.querySelectorAll('.chip').forEach(c => c.classList.add('dimmed'));
       winLine.forEach(pos => {
-        // UI mapping: column child index
-        // Columns are flex-direction: column-reverse, so the first child is r=0, second child is r=1, etc.
-        // NOTE: we also have a ghost chip in the column.
         const chips = Array.from(columnsUI[pos.c].querySelectorAll('.chip'));
         if (chips[pos.r]) {
+          chips[pos.r].classList.remove('dimmed');
           chips[pos.r].classList.add('win-highlight');
         }
       });
     }
   } else {
+    playSound(sfxDraw);
     winnerText.textContent = "It's a Draw!";
     winnerText.style.color = "#fff";
   }
@@ -242,16 +272,22 @@ function endGame(winner, winLine) {
 
 async function makeBotMove() {
   if (isGameOver) return;
-  const bestCol = getBestMove(YELLOW);
+  const diff = document.getElementById('botDifficulty').value;
+  let bestCol;
+  if (diff === 'hard') {
+    bestCol = getMinimaxMove(YELLOW);
+  } else {
+    bestCol = getBestMove(YELLOW);
+  }
   await playTurn(bestCol);
 }
 
 function showHint() {
   if (isGameOver) return;
-  const bestCol = getBestMove(RED);
+  const diff = document.getElementById('botDifficulty').value;
+  const bestCol = diff === 'hard' ? getMinimaxMove(RED) : getBestMove(RED);
   const hint = document.createElement('div');
-  hint.className = 'hint-indicator';
-  hint.textContent = 'Recommended';
+  hint.className = 'hint-arrow';
   columnsUI[bestCol].appendChild(hint);
 }
 
@@ -381,6 +417,97 @@ function evaluateWindow(window, player, opponent) {
   }
   
   return score;
+}
+
+// ==========================================
+// Minimax AI with Alpha-Beta Pruning (Depth 5)
+// ==========================================
+
+function getMinimaxMove(player) {
+  const DEPTH = 5;
+  let bestScore = -Infinity;
+  let bestCols = [];
+  
+  // Center-out column order for better pruning
+  const colOrder = [3, 2, 4, 1, 5, 0, 6];
+  
+  for (let c of colOrder) {
+    let r = getAvailableRow(c);
+    if (r !== -1) {
+      board[r][c] = player;
+      if (checkWin(r, c)) {
+        board[r][c] = EMPTY;
+        return c; // Immediate win
+      }
+      let score = minimax(board, DEPTH - 1, -Infinity, Infinity, false, player);
+      board[r][c] = EMPTY;
+      
+      if (score > bestScore) {
+        bestScore = score;
+        bestCols = [c];
+      } else if (score === bestScore) {
+        bestCols.push(c);
+      }
+    }
+  }
+  
+  if (bestCols.length > 0) {
+    return bestCols[Math.floor(Math.random() * bestCols.length)];
+  }
+  return 0; // Fallback
+}
+
+function minimax(boardState, depth, alpha, beta, isMaximizing, botPlayer) {
+  const opponent = botPlayer === RED ? YELLOW : RED;
+  
+  if (depth === 0) {
+    return evaluateBoard(botPlayer);
+  }
+  
+  const colOrder = [3, 2, 4, 1, 5, 0, 6];
+  let isDraw = true;
+  
+  if (isMaximizing) {
+    let maxEval = -Infinity;
+    for (let c of colOrder) {
+      let r = getAvailableRow(c);
+      if (r !== -1) {
+        isDraw = false;
+        boardState[r][c] = botPlayer;
+        if (checkWin(r, c)) {
+          boardState[r][c] = EMPTY;
+          return 100000 + depth; // Prefer faster wins
+        }
+        let eval = minimax(boardState, depth - 1, alpha, beta, false, botPlayer);
+        boardState[r][c] = EMPTY;
+        maxEval = Math.max(maxEval, eval);
+        alpha = Math.max(alpha, eval);
+        if (beta <= alpha) break;
+      }
+    }
+    if (isDraw) return 0;
+    return maxEval;
+  } else {
+    let minEval = Infinity;
+    for (let c of colOrder) {
+      let r = getAvailableRow(c);
+      if (r !== -1) {
+        isDraw = false;
+        boardState[r][c] = opponent;
+        if (checkWin(r, c)) {
+          boardState[r][c] = EMPTY;
+          return -100000 - depth; // Penalize faster losses
+        }
+        let eval = minimax(boardState, depth - 1, alpha, beta, true, botPlayer);
+        boardState[r][c] = EMPTY;
+        minEval = Math.min(minEval, eval);
+        beta = Math.min(beta, eval);
+        if (beta <= alpha) break;
+      }
+    }
+    if (isDraw) return 0;
+    return minEval;
+  }
 }
 
 // Start
