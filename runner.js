@@ -746,6 +746,41 @@ class WordRunner {
     this.springs = this.springs.filter(spring => !this._springThreatensAnswerBlock(spring, blocks));
   }
 
+  _enemyCountForSection(diff, gameCfg) {
+    if (diff <= 0) {
+      if (gameCfg.enemyMultiplier >= 1.25) return 3;
+      if (gameCfg.enemyMultiplier >= 1) return 2;
+      return 1;
+    }
+    return Math.max(1, Math.round((1 + Math.min(3, diff)) * gameCfg.enemyMultiplier));
+  }
+
+  _earlyEnemyForSlot(landX, platW, sectionIndex, slot, total, gameCfg) {
+    const types = ['walker', 'crawler', 'hopper'];
+    const type = types[(sectionIndex + slot) % types.length];
+    const minX = landX + 48;
+    const maxX = landX + platW - 78;
+    const spacing = total <= 1 ? 0 : (maxX - minX) / (total - 1);
+    const x = Math.max(minX, Math.min(maxX, minX + spacing * slot));
+    const dir = (sectionIndex + slot) % 2 === 0 ? -1 : 1;
+    const patrol = { startX: landX + 36, endX: landX + platW - 70, dead: false, anim: 0 };
+
+    if (type === 'crawler') {
+      return { ...patrol, type, x, y: 472, w: 46, h: 28, vx: dir * 36 * gameCfg.speedMultiplier };
+    }
+    if (type === 'hopper') {
+      return {
+        ...patrol,
+        type, x, y: 462, w: 34, h: 38,
+        vx: dir * 48 * gameCfg.speedMultiplier,
+        baseY: 462,
+        hopTime: sectionIndex * 0.7 + slot * 0.9,
+        hopHeight: 34
+      };
+    }
+    return { ...patrol, type, x, y: 460, w: 38, h: 40, vx: dir * 46 * gameCfg.speedMultiplier };
+  }
+
   // ─── Level Generation ───
   _generateLevel() {
     const stage = this._getStage();
@@ -821,8 +856,12 @@ class WordRunner {
       }
 
       // Enemies (scaled by level)
-      const eCap = Math.max(1, Math.round((1 + Math.min(3, diff)) * gameCfg.enemyMultiplier));
+      const eCap = this._enemyCountForSection(diff, gameCfg);
       for (let j = 0; j < eCap; j++) {
+        if (diff <= 0) {
+          this.enemies.push(this._earlyEnemyForSlot(landX, platW, i, j, eCap, gameCfg));
+          continue;
+        }
         const r = Math.random();
         const ex = landX + 80 + j * 110;
         if (diff >= 1 && r < 0.18) {
@@ -1050,6 +1089,8 @@ class WordRunner {
     } else {
       this.goalFlag = { x: landPad + 700, y: 130, w: 18, h: 380, wave: 0 };
     }
+
+    this._resolveEnemyCollisions();
   }
 
   // ─── Events ───
@@ -1385,6 +1426,154 @@ class WordRunner {
     p.x = ropeX - p.w / 2;
     p.y = rope.y + p.ropeOffset - p.h / 2;
     p.squash += (1 - p.squash) * dt * 10;
+  }
+
+  _enemyPushWeight(e, axis) {
+    if (e.type === 'shooter') return axis === 'x' ? 1 : 0.2;
+    if (e.type === 'pacer') return axis === 'x' ? 0.55 : 1;
+    return axis === 'x' ? 1 : 0.35;
+  }
+
+  _enemyPatrolMinX(e) {
+    return Math.min(e.startX, e.endX);
+  }
+
+  _enemyPatrolMaxX(e) {
+    const minX = this._enemyPatrolMinX(e);
+    return Math.max(minX, Math.max(e.startX, e.endX) - e.w);
+  }
+
+  _enemyPatrolMinY(e) {
+    return Math.min(e.startY, e.endY);
+  }
+
+  _enemyPatrolMaxY(e) {
+    const minY = this._enemyPatrolMinY(e);
+    return Math.max(minY, Math.max(e.startY, e.endY) - e.h);
+  }
+
+  _clampEnemyToPatrol(e) {
+    if (Number.isFinite(e.startX) && Number.isFinite(e.endX)) {
+      const minX = this._enemyPatrolMinX(e);
+      const maxX = this._enemyPatrolMaxX(e);
+      e.x = Math.max(minX, Math.min(maxX, e.x));
+    }
+    if (Number.isFinite(e.startY) && Number.isFinite(e.endY)) {
+      const minY = this._enemyPatrolMinY(e);
+      const maxY = this._enemyPatrolMaxY(e);
+      e.y = Math.max(minY, Math.min(maxY, e.y));
+      if (e.type === 'hopper') e.baseY = Math.max(minY, Math.min(maxY, e.baseY || e.y));
+    }
+  }
+
+  _bounceEnemyVelocity(e, axis, dir) {
+    if (axis === 'x' && Number.isFinite(e.vx)) {
+      const speed = Math.max(28, Math.abs(e.vx));
+      e.vx = dir * speed;
+      e.avoidTimer = Math.max(e.avoidTimer || 0, 0.18);
+    }
+    if (axis === 'y' && Number.isFinite(e.vy)) {
+      const speed = Math.max(28, Math.abs(e.vy));
+      e.vy = dir * speed;
+    }
+  }
+
+  _resolveEnemyCollisions() {
+    const active = this.enemies.filter(e => !e.dead);
+    for (let pass = 0; pass < 10; pass++) {
+      let separated = false;
+      for (let i = 0; i < active.length; i++) {
+        const a = active[i];
+        for (let j = i + 1; j < active.length; j++) {
+          const b = active[j];
+          if (!intersect(a, b)) continue;
+
+          const overlapX = Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x);
+          const overlapY = Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y);
+          if (overlapX <= 0 || overlapY <= 0) continue;
+
+          const axis = overlapX <= overlapY ? 'x' : 'y';
+          const amount = (axis === 'x' ? overlapX : overlapY) + 0.8;
+          const aWeight = this._enemyPushWeight(a, axis);
+          const bWeight = this._enemyPushWeight(b, axis);
+          const totalWeight = Math.max(0.01, aWeight + bWeight);
+          const aMove = amount * (bWeight / totalWeight);
+          const bMove = amount * (aWeight / totalWeight);
+          const aCenter = axis === 'x' ? a.x + a.w / 2 : a.y + a.h / 2;
+          const bCenter = axis === 'x' ? b.x + b.w / 2 : b.y + b.h / 2;
+          const dir = aCenter <= bCenter ? -1 : 1;
+
+          if (axis === 'x') {
+            a.x += dir * aMove;
+            b.x -= dir * bMove;
+            this._bounceEnemyVelocity(a, 'x', dir);
+            this._bounceEnemyVelocity(b, 'x', -dir);
+          } else {
+            a.y += dir * aMove;
+            b.y -= dir * bMove;
+            this._bounceEnemyVelocity(a, 'y', dir);
+            this._bounceEnemyVelocity(b, 'y', -dir);
+          }
+
+          this._clampEnemyToPatrol(a);
+          this._clampEnemyToPatrol(b);
+          separated = true;
+        }
+      }
+      if (!separated) break;
+    }
+
+    for (let pass = 0; pass < 4; pass++) {
+      let moved = false;
+      active.sort((a, b) => a.x - b.x);
+      for (let i = 0; i < active.length - 1; i++) {
+        const a = active[i];
+        for (let j = i + 1; j < active.length; j++) {
+          const b = active[j];
+          const neededGap = (a.x + a.w + 0.8) - b.x;
+          if (neededGap <= 0) break;
+
+          const overlapY = Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y);
+          if (overlapY <= 0) continue;
+
+          const bMax = Number.isFinite(b.startX) && Number.isFinite(b.endX) ? this._enemyPatrolMaxX(b) : Infinity;
+          const aMin = Number.isFinite(a.startX) && Number.isFinite(a.endX) ? this._enemyPatrolMinX(a) : -Infinity;
+          const bShift = Math.max(0, Math.min(neededGap, bMax - b.x));
+          b.x += bShift;
+          const remaining = neededGap - bShift;
+          if (remaining > 0) {
+            const aShift = Math.max(0, Math.min(remaining, a.x - aMin));
+            a.x -= aShift;
+            const stillNeeded = remaining - aShift;
+            if (stillNeeded > 0) b.x += stillNeeded;
+          }
+          this._bounceEnemyVelocity(a, 'x', -1);
+          this._bounceEnemyVelocity(b, 'x', 1);
+          moved = true;
+        }
+      }
+      if (!moved) break;
+    }
+
+    for (let pass = 0; pass < active.length + 4; pass++) {
+      let fixed = false;
+      active.sort((a, b) => a.x - b.x);
+      for (let i = 0; i < active.length - 1; i++) {
+        const a = active[i];
+        for (let j = i + 1; j < active.length; j++) {
+          const b = active[j];
+          const overlapY = Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y);
+          if (overlapY <= 0) continue;
+          const minClearX = a.x + a.w + 1;
+          if (b.x >= minClearX) break;
+          b.x = minClearX;
+          this._bounceEnemyVelocity(a, 'x', -1);
+          this._bounceEnemyVelocity(b, 'x', 1);
+          fixed = true;
+        }
+      }
+      if (!fixed) break;
+    }
   }
 
   _update(dt) {
@@ -1754,6 +1943,7 @@ class WordRunner {
     for (const e of this.enemies) {
       if (e.dead) continue;
       e.anim = (e.anim || 0) + dt;
+      if (e.avoidTimer > 0) e.avoidTimer = Math.max(0, e.avoidTimer - dt);
 
       if (e.type === 'shooter') {
         e.shootTimer += dt;
@@ -1766,10 +1956,25 @@ class WordRunner {
         e.flyOffset += dt * 3.5;
         e.y = e.startY + Math.sin(e.flyOffset) * 55;
         e.x += e.vx * dt;
-        if (e.x < e.startX || e.x > e.endX) e.vx *= -1;
+        const minX = this._enemyPatrolMinX(e);
+        const maxX = this._enemyPatrolMaxX(e);
+        if (e.x < minX) { e.x = minX; e.vx = Math.abs(e.vx); }
+        else if (e.x > maxX) { e.x = maxX; e.vx = -Math.abs(e.vx); }
       } else if (e.type === 'pacer') {
         e.y += e.vy * dt;
-        if (e.y < e.startY || e.y > e.endY) e.vy *= -1;
+        const minY = this._enemyPatrolMinY(e);
+        const maxY = this._enemyPatrolMaxY(e);
+        if (e.y < minY) { e.y = minY; e.vy = Math.abs(e.vy); }
+        else if (e.y > maxY) { e.y = maxY; e.vy = -Math.abs(e.vy); }
+      } else if (e.type === 'hopper') {
+        e.hopTime = (e.hopTime || 0) + dt * 4.2;
+        e.x += e.vx * dt;
+        const minX = this._enemyPatrolMinX(e);
+        const maxX = this._enemyPatrolMaxX(e);
+        if (e.x < minX) { e.x = minX; e.vx = Math.abs(e.vx); }
+        else if (e.x > maxX) { e.x = maxX; e.vx = -Math.abs(e.vx); }
+        const hop = Math.max(0, Math.sin(e.hopTime));
+        e.y = (e.baseY || e.y) - hop * (e.hopHeight || 32);
       } else if (e.type === 'chaser') {
         let closest = null, minDist = 400;
         for (const p of this.players) {
@@ -1777,13 +1982,29 @@ class WordRunner {
           const d = Math.abs(p.x - e.x);
           if (d < minDist) { minDist = d; closest = p; }
         }
-        e.vx = closest ? (closest.x < e.x ? -120 : 120) * gameCfg.speedMultiplier : e.vx * 0.5;
+        if (e.avoidTimer <= 0) {
+          e.vx = closest ? (closest.x < e.x ? -120 : 120) * gameCfg.speedMultiplier : e.vx * 0.5;
+        }
         e.x += e.vx * dt;
-      } else { // walker
+        if (Number.isFinite(e.startX) && Number.isFinite(e.endX)) {
+          const minX = this._enemyPatrolMinX(e);
+          const maxX = this._enemyPatrolMaxX(e);
+          if (e.x < minX) { e.x = minX; e.vx = Math.abs(e.vx); }
+          else if (e.x > maxX) { e.x = maxX; e.vx = -Math.abs(e.vx); }
+        }
+      } else { // walker/crawler
         e.x += e.vx * dt;
-        if (e.x < e.startX || e.x > e.endX) e.vx *= -1;
+        const minX = this._enemyPatrolMinX(e);
+        const maxX = this._enemyPatrolMaxX(e);
+        if (e.x < minX) { e.x = minX; e.vx = Math.abs(e.vx); }
+        else if (e.x > maxX) { e.x = maxX; e.vx = -Math.abs(e.vx); }
       }
+    }
 
+    this._resolveEnemyCollisions();
+
+    for (const e of this.enemies) {
+      if (e.dead) continue;
       // Enemy vs player
       for (const p of this.players) {
         if (p.dead) continue;
@@ -1834,6 +2055,164 @@ class WordRunner {
   }
 
   // ─── Draw ───
+  _drawEnemy(ctx, e, t) {
+    const facingRight = !Number.isFinite(e.vx) || e.vx >= 0;
+    const eyeDir = facingRight ? 1 : -1;
+
+    ctx.save();
+    if (e.type === 'crawler') {
+      const pulse = Math.sin((e.anim || 0) * 8) * 1.5;
+      ctx.shadowBlur = 8;
+      ctx.shadowColor = '#2dd4bf';
+      ctx.fillStyle = '#0f766e';
+      ctx.beginPath();
+      rr(ctx, e.x, e.y + 8 + pulse, e.w, e.h - 4, 12);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = '#2dd4bf';
+      ctx.beginPath();
+      ctx.ellipse(e.x + e.w / 2, e.y + 13 + pulse, e.w * 0.42, e.h * 0.34, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#115e59';
+      ctx.lineWidth = 2;
+      for (let lx = e.x + 8; lx < e.x + e.w - 4; lx += 10) {
+        ctx.beginPath();
+        ctx.moveTo(lx, e.y + e.h - 3);
+        ctx.lineTo(lx - 4, e.y + e.h + 4);
+        ctx.stroke();
+      }
+      const faceX = facingRight ? e.x + e.w - 12 : e.x + 12;
+      ctx.fillStyle = '#fff';
+      ctx.beginPath(); ctx.arc(faceX, e.y + 13, 4, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#022c22';
+      ctx.beginPath(); ctx.arc(faceX + eyeDir, e.y + 14, 2, 0, Math.PI * 2); ctx.fill();
+      ctx.restore();
+      return;
+    }
+
+    if (e.type === 'hopper') {
+      const hop = Math.max(0, Math.sin(e.hopTime || 0));
+      ctx.shadowBlur = 9;
+      ctx.shadowColor = '#facc15';
+      ctx.strokeStyle = '#92400e';
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.moveTo(e.x + 8, e.y + e.h - 4);
+      ctx.lineTo(e.x - 2, e.y + e.h + 8);
+      ctx.moveTo(e.x + e.w - 8, e.y + e.h - 4);
+      ctx.lineTo(e.x + e.w + 2, e.y + e.h + 8);
+      ctx.stroke();
+      ctx.fillStyle = '#f97316';
+      ctx.beginPath();
+      rr(ctx, e.x + 1, e.y + 5 - hop * 2, e.w - 2, e.h - 8, 14);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = '#fde68a';
+      ctx.beginPath();
+      ctx.ellipse(e.x + e.w / 2, e.y + e.h * 0.54, e.w * 0.28, e.h * 0.24, 0, 0, Math.PI * 2);
+      ctx.fill();
+      [e.x + e.w * 0.35, e.x + e.w * 0.65].forEach(ex => {
+        ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(ex, e.y + 15, 4, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#111827'; ctx.beginPath(); ctx.arc(ex + eyeDir, e.y + 16, 2, 0, Math.PI * 2); ctx.fill();
+      });
+      ctx.restore();
+      return;
+    }
+
+    if (e.type === 'flyer') {
+      ctx.save();
+      ctx.globalAlpha = 0.78;
+      ctx.fillStyle = '#fed7aa';
+      ctx.beginPath();
+      ctx.ellipse(e.x + 4, e.y + 12, 16, 8 + Math.sin(t * 12 + e.anim) * 3, -0.45, 0, Math.PI * 2);
+      ctx.ellipse(e.x + e.w - 4, e.y + 12, 16, 8 + Math.sin(t * 12 + e.anim) * 3, 0.45, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+      ctx.shadowBlur = 8;
+      ctx.shadowColor = '#fb923c';
+      ctx.fillStyle = '#ea580c';
+      ctx.beginPath();
+      rr(ctx, e.x + 5, e.y + 6, e.w - 10, e.h - 4, 14);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+    } else if (e.type === 'shooter') {
+      ctx.shadowBlur = 8;
+      ctx.shadowColor = '#a78bfa';
+      ctx.fillStyle = '#6d28d9';
+      ctx.beginPath();
+      rr(ctx, e.x + 3, e.y + 7, e.w - 6, e.h - 5, 8);
+      ctx.fill();
+      ctx.fillStyle = '#4c1d95';
+      ctx.beginPath();
+      rr(ctx, e.x - 12, e.y + 24, 18, 10, 4);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+    } else if (e.type === 'chaser') {
+      ctx.shadowBlur = 8;
+      ctx.shadowColor = '#84cc16';
+      ctx.fillStyle = '#4d7c0f';
+      ctx.beginPath();
+      rr(ctx, e.x, e.y + 6, e.w, e.h - 6, 10);
+      ctx.fill();
+      ctx.fillStyle = '#a3e635';
+      ctx.beginPath();
+      ctx.moveTo(facingRight ? e.x + 4 : e.x + e.w - 4, e.y + e.h - 6);
+      ctx.lineTo(facingRight ? e.x - 12 : e.x + e.w + 12, e.y + e.h - 12);
+      ctx.lineTo(facingRight ? e.x + 5 : e.x + e.w - 5, e.y + e.h - 18);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+    } else if (e.type === 'pacer') {
+      ctx.shadowBlur = 8;
+      ctx.shadowColor = '#2dd4bf';
+      ctx.fillStyle = '#0d9488';
+      ctx.beginPath();
+      rr(ctx, e.x + 3, e.y, e.w - 6, e.h, 10);
+      ctx.fill();
+      ctx.fillStyle = '#99f6e4';
+      ctx.fillRect(e.x + 8, e.y - 4, e.w - 16, 4);
+      ctx.fillRect(e.x + 8, e.y + e.h, e.w - 16, 4);
+      ctx.shadowBlur = 0;
+    } else {
+      ctx.shadowBlur = 8;
+      ctx.shadowColor = '#f87171';
+      ctx.fillStyle = '#dc2626';
+      ctx.beginPath();
+      rr(ctx, e.x, e.y + 2, e.w, e.h - 2, 8);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = '#991b1b';
+      ctx.beginPath();
+      ctx.moveTo(e.x + 8, e.y + 4);
+      ctx.lineTo(e.x + 14, e.y - 5);
+      ctx.lineTo(e.x + 19, e.y + 5);
+      ctx.moveTo(e.x + e.w - 8, e.y + 4);
+      ctx.lineTo(e.x + e.w - 14, e.y - 5);
+      ctx.lineTo(e.x + e.w - 19, e.y + 5);
+      ctx.fill();
+    }
+
+    ctx.fillStyle = 'rgba(255,255,255,0.13)';
+    ctx.beginPath();
+    rr(ctx, e.x + 4, e.y + 8, e.w - 8, 9, 5);
+    ctx.fill();
+
+    if (e.type === 'shooter') {
+      ctx.fillStyle = '#fff';
+      ctx.beginPath(); ctx.arc(e.x + e.w / 2, e.y + e.h * 0.36, 8, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#dc2626';
+      ctx.beginPath(); ctx.arc(e.x + e.w / 2 - 3, e.y + e.h * 0.36, 4, 0, Math.PI * 2); ctx.fill();
+    } else {
+      const ex1 = facingRight ? e.x + e.w * 0.55 : e.x + e.w * 0.3;
+      const ex2 = facingRight ? e.x + e.w * 0.75 : e.x + e.w * 0.5;
+      const ey = e.y + e.h * 0.32;
+      [ex1, ex2].forEach(ex => {
+        ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(ex, ey, 4, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#111827'; ctx.beginPath(); ctx.arc(ex + eyeDir, ey + 1, 2, 0, Math.PI * 2); ctx.fill();
+      });
+    }
+    ctx.restore();
+  }
+
   _draw() {
     const ctx = this.ctx;
     const t = performance.now() / 1000;
@@ -2475,49 +2854,7 @@ class WordRunner {
     // ── Enemies ──
     for (const e of this.enemies) {
       if (e.dead) continue;
-      ctx.save();
-      let col = '#ef4444';
-      if (e.type === 'shooter') col = '#7c3aed';
-      else if (e.type === 'flyer') col = '#ea580c';
-      else if (e.type === 'chaser') col = '#65a30d';
-      else if (e.type === 'pacer') col = '#0d9488';
-
-      ctx.shadowBlur = 8;
-      ctx.shadowColor = col;
-      ctx.fillStyle = col;
-      ctx.beginPath();
-      rr(ctx, e.x, e.y, e.w, e.h, 8);
-      ctx.fill();
-      ctx.shadowBlur = 0;
-
-      // Highlight
-      ctx.fillStyle = 'rgba(255,255,255,0.12)';
-      ctx.beginPath();
-      rr(ctx, e.x + 2, e.y + 2, e.w - 4, 10, 6);
-      ctx.fill();
-
-      // Eyes
-      const fl = e.vx === undefined ? true : e.vx >= 0;
-      const ex1 = fl ? e.x + e.w * 0.55 : e.x + e.w * 0.3;
-      const ex2 = fl ? e.x + e.w * 0.75 : e.x + e.w * 0.5;
-      const ey = e.y + e.h * 0.3;
-      if (e.type === 'flyer') {
-        [e.x + 6, e.x + e.w - 14].forEach(ex => {
-          ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(ex, ey, 4, 0, Math.PI * 2); ctx.fill();
-          ctx.fillStyle = '#000'; ctx.beginPath(); ctx.arc(ex + 1, ey + 1, 2, 0, Math.PI * 2); ctx.fill();
-        });
-      } else if (e.type === 'shooter') {
-        ctx.fillStyle = '#fff';
-        ctx.beginPath(); ctx.arc(e.x + e.w / 2, e.y + e.h * 0.35, 8, 0, Math.PI * 2); ctx.fill();
-        ctx.fillStyle = '#dc2626';
-        ctx.beginPath(); ctx.arc(e.x + e.w / 2 - 3, e.y + e.h * 0.35, 4, 0, Math.PI * 2); ctx.fill();
-      } else {
-        [ex1, ex2].forEach(ex => {
-          ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(ex, ey, 4, 0, Math.PI * 2); ctx.fill();
-          ctx.fillStyle = '#000'; ctx.beginPath(); ctx.arc(ex + (fl ? 1 : -1), ey + 1, 2, 0, Math.PI * 2); ctx.fill();
-        });
-      }
-      ctx.restore();
+      this._drawEnemy(ctx, e, t);
     }
 
     // ── Sparks ──
