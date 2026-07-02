@@ -434,6 +434,11 @@ class WordRunner {
     this._prevKeys = {};
     window.addEventListener('keydown', e => {
       if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' '].includes(e.key)) e.preventDefault();
+      if (e.key === 'Enter' && this.state === 'end') {
+        e.preventDefault();
+        document.getElementById('playAgainBtn')?.click();
+        return;
+      }
       this.keys[e.key] = true;
     });
     window.addEventListener('keyup', e => {
@@ -1290,6 +1295,7 @@ class WordRunner {
       for (const gate of this.gates) {
         if (gate.cleared) continue;
         for (const b of gate.blocks) {
+          if (b.hit && !b.isCorrect) continue;
           if (intersect(p, b)) {
             if (p.vy > 0 && p.y + p.h - p.vy * dt <= b.y + 8) {
               p.y = b.y - p.h; p.vy = 0; p.grounded = true;
@@ -1307,6 +1313,7 @@ class WordRunner {
       // Boss gate
       if (this.bossPhase && this.bossHealth > 0) {
         for (const b of this.bossGate.blocks) {
+          if (b.hit && !b.isCorrect) continue;
           if (intersect(p, b)) {
             if (p.vy > 0 && p.y + p.h - p.vy * dt <= b.y + 8) {
               p.y = b.y - p.h; p.vy = 0; p.grounded = true;
