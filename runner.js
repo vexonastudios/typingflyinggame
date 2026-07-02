@@ -1542,7 +1542,7 @@ class WordRunner {
 
       // Squash & stretch
       if (!p.grounded) {
-        p.squash += (0.75 - p.squash) * dt * 8;
+        p.squash += (1.04 - p.squash) * dt * 8;
       } else {
         p.squash += (1.0 - p.squash) * dt * 14;
       }
@@ -1598,7 +1598,7 @@ class WordRunner {
           p.vy = -spring.force;
           p.grounded = false;
           p.jumpCount = 1;
-          p.squash = 0.58;
+          p.squash = 1.12;
           spring.cooldown = 0.35;
           Sfx.jump();
           this._spawnBurst(spring.x + spring.w / 2, spring.y, '#22d3ee', 10);
@@ -1614,7 +1614,7 @@ class WordRunner {
             p.vy = JUMP_FORCE;
             p.grounded = false;
             p.jumpCount = 1;
-            p.squash = 0.65;
+            p.squash = 1.08;
             Sfx.jump();
           } else if (p.bootTimer > 0 && p.jumpCount === 1) {
             p.vy = DOUBLE_JUMP_FORCE;
@@ -1797,7 +1797,7 @@ class WordRunner {
           Sfx.stomp();
           this._spawnBurst(e.x + e.w / 2, e.y + e.h / 2, '#fbbf24', 10);
           this._floatText('+50', e.x + e.w / 2, e.y - 10, '#fbbf24');
-          p.squash = 0.6;
+          p.squash = 0.86;
         } else {
           this._killPlayer(p);
         }
@@ -2558,15 +2558,16 @@ class WordRunner {
 
       // Squash/stretch around foot pivot
       ctx.translate(p.x + p.w / 2, p.y + p.h);
-      const scaleX = p.squash < 1 ? 1 / p.squash : p.squash;
-      const scaleY = p.squash;
+      const scaleY = Math.max(0.88, Math.min(1.12, 1 + (p.squash - 1) * 0.72));
+      const scaleX = Math.max(0.96, Math.min(1.06, 1 - (scaleY - 1) * 0.28));
       ctx.scale(scaleX, scaleY);
 
       // Tilt
       const tilt = Math.max(-0.12, Math.min(0.12, p.vx * 0.00035));
       ctx.rotate(tilt);
 
-      const legSwing = p.grounded && Math.abs(p.vx) > 20 ? Math.sin(p.animTime * 14) * 9 : 0;
+      const walkPower = p.grounded ? Math.min(1, Math.abs(p.vx) / MAX_SPEED) : 0;
+      const legSwing = Math.sin(p.animTime * 18) * 8 * walkPower;
       const shoeCol = p.bootTimer > 0 ? '#7c3aed' : '#1e293b';
       this._drawRunnerCharacter(ctx, p, legSwing, shoeCol);
 
@@ -2784,11 +2785,16 @@ class WordRunner {
     const cheek = '#f8d0a5';
     const hair = '#3f2416';
     const outfit = p.id === 1
-      ? { cap: '#ef4444', capDark: '#b91c1c', shirt: '#ef4444', overalls: '#2563eb', trim: '#bfdbfe', badge: '#facc15' }
+      ? { cap: '#0f766e', capDark: '#134e4a', shirt: '#f97316', overalls: '#2563eb', trim: '#bae6fd', badge: '#facc15' }
       : { cap: '#22c55e', capDark: '#15803d', shirt: '#22c55e', overalls: '#166534', trim: '#bbf7d0', badge: '#dcfce7' };
-    const armSwing = p.grounded && Math.abs(p.vx) > 20 ? Math.sin(p.animTime * 14 + Math.PI) * 5 : 1;
+    const walkPower = p.grounded ? Math.min(1, Math.abs(p.vx) / MAX_SPEED) : 0;
+    const airPose = !p.grounded;
+    const armSwing = Math.sin(p.animTime * 18 + Math.PI) * 5 * walkPower;
     const kneeA = legSwing * 0.22;
     const kneeB = -legSwing * 0.22;
+    const footLiftA = Math.max(0, legSwing) * 0.34;
+    const footLiftB = Math.max(0, -legSwing) * 0.34;
+    const armLift = airPose ? -7 : 0;
 
     ctx.save();
     ctx.scale(dir, 1);
@@ -2800,29 +2806,29 @@ class WordRunner {
     ctx.lineWidth = 7;
     ctx.beginPath();
     ctx.moveTo(-9, -29);
-    ctx.lineTo(-14 - armSwing * 0.18, -21 + armSwing * 0.16);
+    ctx.lineTo(-14 - armSwing * 0.32, -21 + armSwing * 0.18 + armLift);
     ctx.stroke();
     ctx.strokeStyle = skinShadow;
     ctx.lineWidth = 5;
     ctx.beginPath();
-    ctx.moveTo(-14 - armSwing * 0.18, -21 + armSwing * 0.16);
-    ctx.lineTo(-16 - armSwing * 0.24, -12 + armSwing * 0.22);
+    ctx.moveTo(-14 - armSwing * 0.32, -21 + armSwing * 0.18 + armLift);
+    ctx.lineTo(-16 - armSwing * 0.4, -12 + armSwing * 0.24 + armLift);
     ctx.stroke();
 
     // Legs and shoes
     ctx.fillStyle = outfit.overalls;
     ctx.beginPath();
-    rr(ctx, -9 + kneeA, -17, 8, 17, 3);
+    rr(ctx, -9 + kneeA, -17 - footLiftA, 8, 17, 3);
     ctx.fill();
     ctx.beginPath();
-    rr(ctx, 2 + kneeB, -17, 8, 17, 3);
+    rr(ctx, 2 + kneeB, -17 - footLiftB, 8, 17, 3);
     ctx.fill();
     ctx.fillStyle = shoeCol;
     ctx.beginPath();
-    rr(ctx, -13 + kneeA, -5, 15, 7, 3);
+    rr(ctx, -13 + kneeA, -5 - footLiftA, 13, 7, 3);
     ctx.fill();
     ctx.beginPath();
-    rr(ctx, -1 + kneeB, -5, 15, 7, 3);
+    rr(ctx, 1 + kneeB, -5 - footLiftB, 13, 7, 3);
     ctx.fill();
 
     // Shirt and overalls
@@ -2857,13 +2863,13 @@ class WordRunner {
     ctx.lineWidth = 7;
     ctx.beginPath();
     ctx.moveTo(10, -29);
-    ctx.lineTo(15 + armSwing * 0.2, -21 - armSwing * 0.16);
+    ctx.lineTo(15 + armSwing * 0.34, -21 - armSwing * 0.18 + armLift);
     ctx.stroke();
     ctx.strokeStyle = skin;
     ctx.lineWidth = 5;
     ctx.beginPath();
-    ctx.moveTo(15 + armSwing * 0.2, -21 - armSwing * 0.16);
-    ctx.lineTo(17 + armSwing * 0.26, -12 - armSwing * 0.22);
+    ctx.moveTo(15 + armSwing * 0.34, -21 - armSwing * 0.18 + armLift);
+    ctx.lineTo(17 + armSwing * 0.42, -12 - armSwing * 0.24 + armLift);
     ctx.stroke();
 
     // Neck, ears, and larger front-readable head
@@ -2882,26 +2888,28 @@ class WordRunner {
     ctx.arc(0, -40, 7.7, 0, Math.PI * 2);
     ctx.fill();
 
-    // Small side hair only; avoid a dark band across the eyes.
+    // Small forehead tuft only; avoid dark sideburn blocks.
     ctx.fillStyle = hair;
     ctx.beginPath();
-    rr(ctx, -10, -47, 4, 9, 2);
-    rr(ctx, 6, -47, 4, 9, 2);
+    ctx.moveTo(-6, -48);
+    ctx.quadraticCurveTo(-2, -51, 2, -48);
+    ctx.quadraticCurveTo(-1, -47, -4, -45);
+    ctx.closePath();
     ctx.fill();
     ctx.fillStyle = outfit.capDark;
     ctx.beginPath();
-    rr(ctx, -10, -57, 20, 7, 5);
+    rr(ctx, -9, -56, 18, 6, 5);
     ctx.fill();
     ctx.fillStyle = outfit.cap;
     ctx.beginPath();
-    rr(ctx, -11, -55, 22, 7, 5);
+    rr(ctx, -10, -54, 20, 6, 5);
     ctx.fill();
     ctx.beginPath();
-    rr(ctx, -7, -51, 22, 4, 3);
+    rr(ctx, 3, -51, 12, 4, 3);
     ctx.fill();
     ctx.fillStyle = outfit.badge;
     ctx.beginPath();
-    ctx.arc(0, -52, 3.1, 0, Math.PI * 2);
+    ctx.arc(-1, -51.5, 2.5, 0, Math.PI * 2);
     ctx.fill();
 
     // Face details
