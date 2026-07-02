@@ -445,19 +445,24 @@ class WordRunner {
       this.keys[e.key] = false;
     });
 
-    document.getElementById('fullscreenBtn')?.addEventListener('click', () => {
+    const fullscreenBtn = document.getElementById('fullscreenBtn');
+    const syncFullscreenUi = () => {
+      const isFullscreen = Boolean(document.fullscreenElement);
+      document.body.classList.toggle('fs-mode', isFullscreen);
+      if (fullscreenBtn) {
+        fullscreenBtn.textContent = isFullscreen ? "\u2715 Exit Fullscreen" : "\u26F6 Fullscreen";
+      }
+    };
+
+    fullscreenBtn?.addEventListener('click', () => {
       if (!document.fullscreenElement) {
-        document.documentElement.requestFullscreen().then(() => {
-          document.body.classList.add("fs-mode");
-          document.getElementById('fullscreenBtn').textContent = "\u2715 Exit Fullscreen";
-        }).catch(() => {});
+        document.documentElement.requestFullscreen().catch(() => {});
       } else {
-        document.exitFullscreen().then(() => {
-          document.body.classList.remove("fs-mode");
-          document.getElementById('fullscreenBtn').textContent = "\u26F6 Fullscreen";
-        });
+        document.exitFullscreen().catch(() => {});
       }
     });
+    document.addEventListener?.('fullscreenchange', syncFullscreenUi);
+    syncFullscreenUi();
 
     // Radio button UI handling
     document.querySelectorAll('.diff-opt input').forEach(inp => {
@@ -2014,52 +2019,9 @@ class WordRunner {
       const tilt = Math.max(-0.12, Math.min(0.12, p.vx * 0.00035));
       ctx.rotate(tilt);
 
-      const hw = p.w / 2;
-      const hh = p.h;
-
-      // Legs
       const legSwing = p.grounded && Math.abs(p.vx) > 20 ? Math.sin(p.animTime * 14) * 9 : 0;
-      // Boot color
       const shoeCol = p.bootTimer > 0 ? '#7c3aed' : '#1e293b';
-      // Left leg
-      ctx.fillStyle = p.color;
-      ctx.fillRect(-hw + 2 + legSwing, -14, 9, 14);
-      ctx.fillStyle = shoeCol;
-      ctx.fillRect(-hw - 1 + legSwing, -5, 13, 7);
-      // Right leg
-      ctx.fillStyle = p.color;
-      ctx.fillRect(hw - 11 - legSwing, -14, 9, 14);
-      ctx.fillStyle = shoeCol;
-      ctx.fillRect(hw - 12 - legSwing, -5, 13, 7);
-
-      // Body
-      const bodyGrad = ctx.createLinearGradient(-hw, -hh, hw, -hh * 0.2);
-      bodyGrad.addColorStop(0, p.color);
-      bodyGrad.addColorStop(1, p.color + '99');
-      ctx.fillStyle = bodyGrad;
-      ctx.beginPath();
-      rr(ctx, -hw, -hh, p.w, p.h - 10, 9);
-      ctx.fill();
-
-      // Shine
-      ctx.fillStyle = 'rgba(255,255,255,0.18)';
-      ctx.beginPath();
-      rr(ctx, -hw + 3, -hh + 4, hw - 2, 10, 4);
-      ctx.fill();
-
-      // Visor eyes
-      ctx.fillStyle = 'rgba(255,255,255,0.92)';
-      const lookX = p.facingRight ? 4 : -4;
-      ctx.fillRect(-hw + 6 + lookX, -hh + 12, 18, 9);
-      // Pupil
-      ctx.fillStyle = 'rgba(0,0,50,0.8)';
-      ctx.fillRect(-hw + 14 + lookX, -hh + 14, 6, 5);
-
-      // Player ID badge
-      ctx.fillStyle = 'rgba(0,0,0,0.5)';
-      ctx.font = '700 8px Outfit';
-      ctx.textAlign = 'center';
-      ctx.fillText(`P${p.id}`, 0, -hh + 24);
+      this._drawRunnerCharacter(ctx, p, legSwing, shoeCol);
 
       ctx.restore();
       ctx.shadowBlur = 0;
@@ -2266,6 +2228,136 @@ class WordRunner {
     } while (size > minSize);
     ctx.textAlign = 'center';
     ctx.fillText(content, cx, cy);
+  }
+
+  _drawRunnerCharacter(ctx, p, legSwing, shoeCol) {
+    const dir = p.facingRight ? 1 : -1;
+    const skin = '#f4c28b';
+    const skinShadow = '#d8915f';
+    const hair = '#4b2e20';
+    const outfit = p.id === 1
+      ? { cap: '#ef4444', shirt: '#ef4444', overalls: '#2563eb', trim: '#bfdbfe' }
+      : { cap: '#a855f7', shirt: '#a855f7', overalls: '#db2777', trim: '#fbcfe8' };
+    const armSwing = p.grounded && Math.abs(p.vx) > 20 ? Math.sin(p.animTime * 14 + Math.PI) * 5 : 1;
+    const kneeA = legSwing * 0.22;
+    const kneeB = -legSwing * 0.22;
+
+    ctx.save();
+    ctx.scale(dir, 1);
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+
+    // Back arm
+    ctx.strokeStyle = skinShadow;
+    ctx.lineWidth = 5;
+    ctx.beginPath();
+    ctx.moveTo(-8, -28);
+    ctx.lineTo(-13 - armSwing * 0.25, -17 + armSwing * 0.25);
+    ctx.stroke();
+
+    // Legs and shoes
+    ctx.fillStyle = outfit.overalls;
+    ctx.beginPath();
+    rr(ctx, -8 + kneeA, -16, 7, 16, 3);
+    ctx.fill();
+    ctx.beginPath();
+    rr(ctx, 2 + kneeB, -16, 7, 16, 3);
+    ctx.fill();
+    ctx.fillStyle = shoeCol;
+    ctx.beginPath();
+    rr(ctx, -11 + kneeA, -4, 13, 6, 3);
+    ctx.fill();
+    ctx.beginPath();
+    rr(ctx, 0 + kneeB, -4, 13, 6, 3);
+    ctx.fill();
+
+    // Shirt and overalls
+    ctx.fillStyle = outfit.shirt;
+    ctx.beginPath();
+    rr(ctx, -12, -32, 24, 18, 6);
+    ctx.fill();
+    ctx.fillStyle = outfit.overalls;
+    ctx.beginPath();
+    rr(ctx, -9, -29, 18, 21, 4);
+    ctx.fill();
+    ctx.strokeStyle = outfit.trim;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(-6, -29);
+    ctx.lineTo(-2, -17);
+    ctx.moveTo(6, -29);
+    ctx.lineTo(2, -17);
+    ctx.stroke();
+    ctx.fillStyle = '#facc15';
+    ctx.beginPath();
+    ctx.arc(-4, -20, 1.8, 0, Math.PI * 2);
+    ctx.arc(4, -20, 1.8, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Front arm
+    ctx.strokeStyle = skin;
+    ctx.lineWidth = 5;
+    ctx.beginPath();
+    ctx.moveTo(9, -28);
+    ctx.lineTo(14 + armSwing * 0.25, -17 - armSwing * 0.25);
+    ctx.stroke();
+
+    // Neck, head, and ear
+    ctx.fillStyle = skinShadow;
+    ctx.fillRect(-3, -35, 7, 6);
+    ctx.fillStyle = skin;
+    ctx.beginPath();
+    ctx.arc(0, -41, 9, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(-7, -40, 3, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Hair and cap
+    ctx.fillStyle = hair;
+    ctx.beginPath();
+    rr(ctx, -8, -47, 12, 9, 4);
+    ctx.fill();
+    ctx.fillStyle = outfit.cap;
+    ctx.beginPath();
+    rr(ctx, -9, -50, 18, 8, 5);
+    ctx.fill();
+    ctx.beginPath();
+    rr(ctx, 1, -47, 13, 4, 2);
+    ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,0.35)';
+    ctx.beginPath();
+    rr(ctx, -5, -49, 7, 2, 1);
+    ctx.fill();
+
+    // Face details
+    ctx.fillStyle = '#111827';
+    ctx.beginPath();
+    ctx.arc(4, -42, 1.4, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = skinShadow;
+    ctx.beginPath();
+    ctx.arc(8, -38, 2.4, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = hair;
+    ctx.beginPath();
+    rr(ctx, 2, -35, 9, 2.5, 2);
+    ctx.fill();
+
+    // Tiny chest badge for local co-op readability.
+    ctx.save();
+    ctx.scale(dir, 1);
+    ctx.fillStyle = 'rgba(0,0,0,0.45)';
+    ctx.beginPath();
+    ctx.arc(0, -18, 5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#fff';
+    ctx.font = '800 6px Outfit';
+    ctx.textAlign = 'center';
+    ctx.fillText(`P${p.id}`, 0, -16);
+    ctx.restore();
+
+    ctx.restore();
   }
 
   _drawHeart(ctx, cx, cy, r, col) {
