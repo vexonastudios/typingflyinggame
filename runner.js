@@ -4,8 +4,57 @@
 // Audio Engine
 // ─────────────────────────────────────────────────────────────
 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+const RUNNER_SFX = {
+  jump: 'sounds/runner-jump.mp3',
+  land: 'sounds/runner-land.mp3',
+  coin: 'sounds/runner-coin.mp3',
+  stomp: 'sounds/runner-stomp.mp3',
+  correct: 'sounds/runner-correct.mp3',
+  wrong: 'sounds/runner-wrong.mp3',
+  hurt: 'sounds/runner-hurt.mp3',
+  win: 'sounds/runner-win.mp3',
+  powerup: 'sounds/runner-powerup.mp3',
+  hit: 'sounds/runner-hit.mp3',
+  spring: 'sounds/runner-spring.mp3',
+  rope: 'sounds/runner-rope.mp3',
+  shoot: 'sounds/runner-shoot.mp3',
+  fire: 'sounds/runner-fire.mp3',
+  bossHit: 'sounds/runner-boss-hit.mp3',
+  crumble: 'sounds/runner-crumble.mp3',
+  levelStart: 'sounds/runner-level-start.mp3'
+};
 const Sfx = {
-  resume: () => { if (audioCtx.state === 'suspended') audioCtx.resume(); },
+  samples: {},
+  samplesReady: false,
+  sampleEnabled: typeof Audio !== 'undefined',
+  initSamples: () => {
+    if (!Sfx.sampleEnabled || Sfx.samplesReady) return;
+    for (const [name, src] of Object.entries(RUNNER_SFX)) {
+      const audio = new Audio(src);
+      audio.preload = 'auto';
+      Sfx.samples[name] = audio;
+    }
+    Sfx.samplesReady = true;
+  },
+  resume: () => {
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    Sfx.initSamples();
+  },
+  playSample: (name, fallback, vol = 0.7, rate = 1) => {
+    try {
+      Sfx.resume();
+      const base = Sfx.samples[name];
+      if (base) {
+        const audio = base.cloneNode();
+        audio.volume = Math.max(0, Math.min(1, vol));
+        audio.playbackRate = Math.max(0.65, Math.min(1.45, rate));
+        const play = audio.play();
+        if (play && typeof play.catch === 'function') play.catch(() => fallback && fallback());
+        return;
+      }
+    } catch (e) {}
+    if (fallback) fallback();
+  },
   playTone: (freq, type, dur, vol = 0.1, detune = 0) => {
     try {
       Sfx.resume();
@@ -22,16 +71,23 @@ const Sfx = {
       osc.stop(audioCtx.currentTime + dur);
     } catch (e) {}
   },
-  jump:    () => { Sfx.playTone(320, 'square', 0.12, 0.06); Sfx.playTone(480, 'square', 0.08, 0.04); },
-  land:    () => Sfx.playTone(120, 'triangle', 0.08, 0.08),
-  coin:    () => { Sfx.playTone(880, 'sine', 0.08, 0.08); setTimeout(() => Sfx.playTone(1320, 'sine', 0.12, 0.08), 60); },
-  stomp:   () => { Sfx.playTone(160, 'triangle', 0.18, 0.12); Sfx.playTone(80, 'sawtooth', 0.1, 0.08); },
-  correct: () => { [600, 750, 950].forEach((f, i) => setTimeout(() => Sfx.playTone(f, 'sine', 0.18, 0.1), i * 90)); },
-  wrong:   () => { Sfx.playTone(200, 'sawtooth', 0.3, 0.12); Sfx.playTone(150, 'sawtooth', 0.3, 0.08); },
-  hurt:    () => { Sfx.playTone(180, 'sawtooth', 0.25, 0.1); setTimeout(() => Sfx.playTone(140, 'sawtooth', 0.2, 0.08), 80); },
-  win:     () => { [400, 500, 600, 800].forEach((f, i) => setTimeout(() => Sfx.playTone(f, 'sine', 0.25, 0.1), i * 120)); },
-  powerup: () => { [600, 700, 800, 1000].forEach((f, i) => setTimeout(() => Sfx.playTone(f, 'sine', 0.15, 0.1), i * 60)); },
-  hit:     () => { Sfx.playTone(300, 'square', 0.1, 0.07); }
+  jump:    () => Sfx.playSample('jump', () => { Sfx.playTone(320, 'square', 0.12, 0.06); Sfx.playTone(480, 'square', 0.08, 0.04); }, 0.5),
+  land:    () => Sfx.playSample('land', () => Sfx.playTone(120, 'triangle', 0.08, 0.08), 0.38),
+  coin:    () => Sfx.playSample('coin', () => { Sfx.playTone(880, 'sine', 0.08, 0.08); setTimeout(() => Sfx.playTone(1320, 'sine', 0.12, 0.08), 60); }, 0.62),
+  stomp:   () => Sfx.playSample('stomp', () => { Sfx.playTone(160, 'triangle', 0.18, 0.12); Sfx.playTone(80, 'sawtooth', 0.1, 0.08); }, 0.62),
+  correct: () => Sfx.playSample('correct', () => { [600, 750, 950].forEach((f, i) => setTimeout(() => Sfx.playTone(f, 'sine', 0.18, 0.1), i * 90)); }, 0.68),
+  wrong:   () => Sfx.playSample('wrong', () => { Sfx.playTone(200, 'sawtooth', 0.3, 0.12); Sfx.playTone(150, 'sawtooth', 0.3, 0.08); }, 0.58),
+  hurt:    () => Sfx.playSample('hurt', () => { Sfx.playTone(180, 'sawtooth', 0.25, 0.1); setTimeout(() => Sfx.playTone(140, 'sawtooth', 0.2, 0.08), 80); }, 0.58),
+  win:     () => Sfx.playSample('win', () => { [400, 500, 600, 800].forEach((f, i) => setTimeout(() => Sfx.playTone(f, 'sine', 0.25, 0.1), i * 120)); }, 0.76),
+  powerup: () => Sfx.playSample('powerup', () => { [600, 700, 800, 1000].forEach((f, i) => setTimeout(() => Sfx.playTone(f, 'sine', 0.15, 0.1), i * 60)); }, 0.7),
+  hit:     () => Sfx.playSample('hit', () => { Sfx.playTone(300, 'square', 0.1, 0.07); }, 0.45),
+  spring:  () => Sfx.playSample('spring', () => Sfx.jump(), 0.62),
+  rope:    () => Sfx.playSample('rope', () => Sfx.hit(), 0.48),
+  shoot:   () => Sfx.playSample('shoot', () => Sfx.playTone(520, 'square', 0.08, 0.035), 0.34),
+  fire:    () => Sfx.playSample('fire', () => Sfx.playTone(90, 'sawtooth', 0.16, 0.05), 0.36),
+  bossHit: () => Sfx.playSample('bossHit', () => Sfx.stomp(), 0.68),
+  crumble: () => Sfx.playSample('crumble', () => Sfx.hit(), 0.55),
+  levelStart: () => Sfx.playSample('levelStart', () => Sfx.powerup(), 0.54)
 };
 
 // ─────────────────────────────────────────────────────────────
@@ -718,6 +774,7 @@ class WordRunner {
 
     this._updateHUD();
     this._generateLevel();
+    Sfx.levelStart();
   }
 
   _challengeTypeForSection(stage, sectionIndex) {
@@ -1137,6 +1194,7 @@ class WordRunner {
     this._recordAnswer(this.bossGate.promptData, block.isCorrect, block.text);
     if (block.isCorrect) {
       Sfx.correct();
+      Sfx.bossHit();
       this.bossHealth--;
       this.score += Math.round(600 * this._getGameConfig().scoreMultiplier);
       this._updateHUD();
@@ -1376,7 +1434,7 @@ class WordRunner {
       p.grounded = false;
       p.jumpCount = 0;
       p.jumpReleased = false;
-      Sfx.hit();
+      Sfx.rope();
       return;
     }
   }
@@ -1391,7 +1449,7 @@ class WordRunner {
     p.ropeCooldown = 0.28;
     p.jumpReleased = false;
     p.jumpCount = 1;
-    Sfx.jump();
+    Sfx.rope();
   }
 
   _updatePlayerOnRope(p, dt) {
@@ -1595,8 +1653,15 @@ class WordRunner {
 
     for (const hazard of this.timedHazards) {
       const phaseTime = (t + hazard.phase) % hazard.period;
+      const wasActive = !!hazard.active;
       hazard.active = phaseTime < hazard.onTime;
       hazard.warning = !hazard.active && phaseTime > hazard.period - 0.35;
+      if (hazard.soundCooldown > 0) hazard.soundCooldown = Math.max(0, hazard.soundCooldown - dt);
+      if (hazard.active && !wasActive && hazard.soundCooldown <= 0 &&
+          hazard.x + hazard.w > this.cameraX - 80 && hazard.x < this.cameraX + CW + 80) {
+        Sfx.fire();
+        hazard.soundCooldown = 1.2;
+      }
     }
 
     for (const spring of this.springs) {
@@ -1631,7 +1696,7 @@ class WordRunner {
           plat.respawnTimer = 2.2;
           plat.crumbleTimer = null;
           this._spawnBurst(plat.x + plat.w / 2, plat.y + 10, '#f59e0b', 12);
-          Sfx.hit();
+          Sfx.crumble();
         }
       }
     }
@@ -1778,7 +1843,7 @@ class WordRunner {
             if (plat.type === 'crumble' && plat.crumbleTimer === null) {
               plat.crumbleTimer = plat.crumbleDelay;
               plat.shake = 1;
-              Sfx.hit();
+              Sfx.crumble();
             }
           } else {
             p.y = plat.y + plat.h;
@@ -1795,7 +1860,7 @@ class WordRunner {
           p.jumpCount = 1;
           p.squash = 1.12;
           spring.cooldown = 0.35;
-          Sfx.jump();
+          Sfx.spring();
           this._spawnBurst(spring.x + spring.w / 2, spring.y, '#22d3ee', 10);
         }
       }
@@ -1951,6 +2016,7 @@ class WordRunner {
         if (e.shootTimer > rate && e.x < this.cameraX + CW + 100) {
           e.shootTimer = 0;
           this.projectiles.push({ x: e.x - 8, y: e.y + e.h / 2 - 6, w: 14, h: 14, vx: -260, vy: 0 });
+          Sfx.shoot();
         }
       } else if (e.type === 'flyer') {
         e.flyOffset += dt * 3.5;
@@ -2043,6 +2109,7 @@ class WordRunner {
         be.shootTimer = 0;
         const speed = (280 + Math.random() * 120) * gameCfg.speedMultiplier;
         this.projectiles.push({ x: be.x, y: be.y + 80, w: 18, h: 18, vx: -speed, vy: (Math.random() - 0.5) * 120 });
+        Sfx.shoot();
         if (this.bossHealth <= 2) {
           // Enraged: shoot 3
           setTimeout(() => {

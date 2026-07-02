@@ -13,8 +13,7 @@ export default async function handler(req) {
       return new Response('Missing text parameter', { status: 400 });
     }
 
-    // Force use of the explicitly provided key
-    const apiKey = '8a6a22f61cbbb023df499360bc945b70045f93aeb50863bb08e42df5f617d46f';
+    const apiKey = process.env.ELEVENLABS_API_KEY;
     if (!apiKey) {
       return new Response('API Key not configured on server', { status: 500 });
     }
