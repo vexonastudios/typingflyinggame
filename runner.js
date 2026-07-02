@@ -163,9 +163,230 @@ const PROMPTS = {
   { q: "Synonym for 'lucid'", a: "clear", w: ["dark", "murky"] }
 ].forEach(p => PROMPTS.Hard.push(p));
 
+const ACADEMIC_TRACKS = {
+  Mixed:    { label: 'Mixed',    short: 'All subjects' },
+  Math:     { label: 'Math',     short: 'Numbers' },
+  Language: { label: 'Language', short: 'Words' },
+  Science:  { label: 'Science',  short: 'Nature' },
+  World:    { label: 'World',    short: 'Maps & history' }
+};
+
+const GAMEPLAY_DIFFICULTIES = {
+  Explorer: {
+    label: 'Explorer',
+    short: 'Forgiving',
+    lives: 4,
+    enemyMultiplier: 0.7,
+    hazardMultiplier: 0.55,
+    speedMultiplier: 0.85,
+    scoreMultiplier: 0.85,
+    wrongPenalty: 20,
+    gateDelta: -1,
+    heartBonus: 0.18,
+    bossHealthDelta: -1
+  },
+  Adventure: {
+    label: 'Adventure',
+    short: 'Balanced',
+    lives: 3,
+    enemyMultiplier: 1,
+    hazardMultiplier: 1,
+    speedMultiplier: 1,
+    scoreMultiplier: 1,
+    wrongPenalty: 30,
+    gateDelta: 0,
+    heartBonus: 0,
+    bossHealthDelta: 0
+  },
+  Master: {
+    label: 'Master',
+    short: 'Sharper hazards',
+    lives: 2,
+    enemyMultiplier: 1.35,
+    hazardMultiplier: 1.25,
+    speedMultiplier: 1.18,
+    scoreMultiplier: 1.25,
+    wrongPenalty: 50,
+    gateDelta: 1,
+    heartBonus: -0.08,
+    bossHealthDelta: 1
+  }
+};
+
+const CAMPAIGN_LEVELS = [
+  { id: 1,  name: 'Meadow Warmup',      biome: 'grass',   tier: 0, gates: 4, tracks: ['Math', 'Language'], skills: ['Addition', 'Spelling'], focus: 'addition and spelling' },
+  { id: 2,  name: 'Rhyme Ravine',       biome: 'grass',   tier: 0, gates: 5, tracks: ['Language', 'Math'], skills: ['Rhyming', 'Subtraction'], focus: 'rhymes and subtraction' },
+  { id: 3,  name: 'Grammar Grove',      biome: 'jungle',  tier: 1, gates: 5, tracks: ['Language', 'World'], skills: ['Grammar', 'Geography'], focus: 'grammar and map facts' },
+  { id: 4,  name: 'Times Table Trail',  biome: 'jungle',  tier: 1, gates: 6, tracks: ['Math', 'Language'], skills: ['Multiplication', 'Vocabulary'], focus: 'times tables and vocabulary' },
+  { id: 5,  name: 'Ember Review',       biome: 'volcano', tier: 1, gates: 4, tracks: ['Math', 'Language', 'Science'], skills: ['Review'], focus: 'first review boss', boss: true, bossHealth: 3 },
+  { id: 6,  name: 'Crystal Cave',       biome: 'cave',    tier: 2, gates: 6, tracks: ['Math', 'Science'], skills: ['Division', 'Earth Science'], focus: 'division and earth science' },
+  { id: 7,  name: 'Fraction Falls',     biome: 'cave',    tier: 2, gates: 7, tracks: ['Math', 'Language'], skills: ['Fractions', 'Grammar'], focus: 'fractions and sentence work' },
+  { id: 8,  name: 'Science Skyway',     biome: 'sky',     tier: 2, gates: 7, tracks: ['Science', 'Math'], skills: ['Life Science', 'Measurement'], focus: 'science facts and measurement' },
+  { id: 9,  name: 'Mapmaker Mesa',      biome: 'grass',   tier: 3, gates: 7, tracks: ['World', 'Language'], skills: ['Geography', 'Vocabulary'], focus: 'geography and word meanings' },
+  { id: 10, name: 'Storm Review',       biome: 'sky',     tier: 3, gates: 5, tracks: ['Math', 'Language', 'Science', 'World'], skills: ['Review'], focus: 'second review boss', boss: true, bossHealth: 4 },
+  { id: 11, name: 'Algebra Outpost',    biome: 'cave',    tier: 3, gates: 7, tracks: ['Math', 'Science'], skills: ['Algebra', 'Physical Science'], focus: 'algebra and physical science' },
+  { id: 12, name: 'Reading Ridge',      biome: 'jungle',  tier: 3, gates: 8, tracks: ['Language', 'World'], skills: ['Comprehension', 'History'], focus: 'reading and history clues' },
+  { id: 13, name: 'Energy Lab',         biome: 'sky',     tier: 4, gates: 8, tracks: ['Science', 'Math'], skills: ['Energy', 'Algebra'], focus: 'energy and advanced math' },
+  { id: 14, name: 'History Heights',    biome: 'jungle',  tier: 4, gates: 8, tracks: ['World', 'Language'], skills: ['History', 'Root Words'], focus: 'history and word roots' },
+  { id: 15, name: 'Final Archive',      biome: 'volcano', tier: 4, gates: 6, tracks: ['Math', 'Language', 'Science', 'World'], skills: ['Mastery'], focus: 'full academic mastery', boss: true, bossHealth: 5 }
+];
+
+const MAX_LEVEL = CAMPAIGN_LEVELS.length;
+
+const ACADEMIC_PROMPTS = [
+  P('Math', 'Easy', 'Addition', '8 + 5 = ?', '13', ['12', '14'], '8 + 5 combines to make 13.'),
+  P('Math', 'Easy', 'Addition', '9 + 6 = ?', '15', ['14', '16'], '9 + 6 is 15.'),
+  P('Math', 'Easy', 'Addition', '7 + 8 = ?', '15', ['13', '16'], '7 + 8 is another way to make 15.'),
+  P('Math', 'Easy', 'Subtraction', '18 - 9 = ?', '9', ['8', '10'], 'Subtracting 9 from 18 leaves 9.'),
+  P('Math', 'Easy', 'Subtraction', '16 - 7 = ?', '9', ['8', '11'], '16 minus 7 equals 9.'),
+  P('Math', 'Easy', 'Place Value', '4 tens + 3 ones = ?', '43', ['34', '47'], 'Four tens and three ones make 43.'),
+  P('Math', 'Easy', 'Money', 'A quarter is worth...', '25 cents', ['10 cents', '50 cents'], 'A quarter has a value of 25 cents.'),
+  P('Math', 'Easy', 'Time', '60 minutes = ?', '1 hour', ['1 day', '30 minutes'], 'One hour is 60 minutes.'),
+  P('Math', 'Medium', 'Multiplication', '7 x 6 = ?', '42', ['40', '48'], '7 groups of 6 make 42.'),
+  P('Math', 'Medium', 'Multiplication', '9 x 8 = ?', '72', ['64', '81'], '9 times 8 equals 72.'),
+  P('Math', 'Medium', 'Division', '63 / 9 = ?', '7', ['6', '8'], '63 split into 9 equal groups gives 7.'),
+  P('Math', 'Medium', 'Division', '96 / 12 = ?', '8', ['6', '9'], '12 times 8 equals 96, so 96 / 12 is 8.'),
+  P('Math', 'Medium', 'Fractions', '1/2 of 18 = ?', '9', ['8', '10'], 'Half of 18 is 9.'),
+  P('Math', 'Medium', 'Fractions', 'Which is larger?', '3/4', ['1/4', '1/2'], 'Three fourths is more than one half or one fourth.'),
+  P('Math', 'Medium', 'Measurement', '1 yard = ?', '3 feet', ['2 feet', '12 feet'], 'One yard is three feet.'),
+  P('Math', 'Medium', 'Decimals', '0.5 equals...', '1/2', ['1/5', '5'], '0.5 is one half.'),
+  P('Math', 'Hard', 'Algebra', '4x + 8 = 28, x = ?', '5', ['4', '6'], 'Subtract 8 to get 4x = 20, then divide by 4.'),
+  P('Math', 'Hard', 'Algebra', '3x - 6 = 21, x = ?', '9', ['7', '8'], 'Add 6 to get 3x = 27, then divide by 3.'),
+  P('Math', 'Hard', 'Algebra', '2(x + 4) = 18, x = ?', '5', ['4', '7'], 'Divide by 2 to get x + 4 = 9, so x is 5.'),
+  P('Math', 'Hard', 'Exponents', '6 squared = ?', '36', ['12', '30'], '6 squared means 6 x 6, which is 36.'),
+  P('Math', 'Hard', 'Fractions', '3/5 + 1/5 = ?', '4/5', ['4/10', '3/10'], 'Same denominators: add the numerators to get 4/5.'),
+  P('Math', 'Hard', 'Percents', '25% of 80 = ?', '20', ['25', '40'], '25% is one fourth, and one fourth of 80 is 20.'),
+
+  P('Language', 'Easy', 'Spelling', 'Choose the correct spelling.', 'because', ['becuz', 'becaus'], 'Because is spelled b-e-c-a-u-s-e.'),
+  P('Language', 'Easy', 'Spelling', 'Choose the correct spelling.', 'friend', ['freind', 'frend'], 'Friend has i before e in this word.'),
+  P('Language', 'Easy', 'Rhyming', 'Rhymes with cake.', 'lake', ['look', 'cook'], 'Cake and lake share the long a sound.'),
+  P('Language', 'Easy', 'Rhyming', 'Rhymes with bright.', 'night', ['brave', 'brown'], 'Bright and night end with the same sound.'),
+  P('Language', 'Easy', 'Nouns', 'Which word is a person?', 'teacher', ['quickly', 'blue'], 'A teacher is a person, so it is a noun.'),
+  P('Language', 'Easy', 'Verbs', 'Which word is an action?', 'climb', ['green', 'desk'], 'Climb is something a person can do.'),
+  P('Language', 'Medium', 'Grammar', 'Choose the complete sentence.', 'The dog barked.', ['Because the dog', 'Running fast'], 'A complete sentence has a subject and a predicate.'),
+  P('Language', 'Medium', 'Grammar', 'Best word: They ___ ready.', 'are', ['is', 'am'], 'They is plural, so use are.'),
+  P('Language', 'Medium', 'Vocabulary', 'Synonym for careful.', 'cautious', ['careless', 'noisy'], 'Cautious means careful.'),
+  P('Language', 'Medium', 'Vocabulary', 'Antonym for fragile.', 'sturdy', ['breakable', 'delicate'], 'Sturdy means strong, the opposite of fragile.'),
+  P('Language', 'Medium', 'Punctuation', 'Which sentence is a question?', 'Where is it?', ['It is here.', 'Run fast!'], 'A question asks something and ends with a question mark.'),
+  P('Language', 'Medium', 'Parts of Speech', 'Which word is an adverb?', 'quickly', ['quick', 'runner'], 'Quickly tells how an action happens.'),
+  P('Language', 'Hard', 'Root Words', 'Root of portable.', 'port', ['able', 'table'], 'Port means carry. Portable means able to be carried.'),
+  P('Language', 'Hard', 'Root Words', 'Prefix inter- means...', 'between', ['before', 'under'], 'Inter- means between or among.'),
+  P('Language', 'Hard', 'Vocabulary', 'Meaning of resilient.', 'able to recover', ['easy to break', 'very loud'], 'Resilient means able to recover after trouble.'),
+  P('Language', 'Hard', 'Vocabulary', 'Antonym for scarce.', 'plentiful', ['rare', 'limited'], 'Scarce means not enough; plentiful means a lot.'),
+  P('Language', 'Hard', 'Comprehension', 'A clue that hints later events is...', 'foreshadowing', ['setting', 'rhyme'], 'Foreshadowing gives hints about later events.'),
+  P('Language', 'Hard', 'Grammar', 'Best revision: She dont know.', "She doesn't know.", ["She don't knows.", "Her doesn't know."], "Doesn't agrees with she in standard English."),
+
+  P('Science', 'Easy', 'Life Science', 'Plants need sunlight, air, and...', 'water', ['sand', 'plastic'], 'Most plants need water, sunlight, and air to grow.'),
+  P('Science', 'Easy', 'Life Science', 'A baby frog is a...', 'tadpole', ['calf', 'cub'], 'A tadpole is the young stage of a frog.'),
+  P('Science', 'Easy', 'Earth Science', 'Rain, snow, and sleet are...', 'precipitation', ['evaporation', 'rotation'], 'Precipitation is water falling from clouds.'),
+  P('Science', 'Easy', 'Space', 'Earth gets light from the...', 'Sun', ['Moon', 'Mars'], 'The Sun gives Earth light and heat.'),
+  P('Science', 'Medium', 'Life Science', 'Animals with backbones are...', 'vertebrates', ['insects', 'minerals'], 'Vertebrates have backbones.'),
+  P('Science', 'Medium', 'Earth Science', 'Rock changed by heat and pressure is...', 'metamorphic', ['igneous', 'sediment'], 'Metamorphic rock forms through heat and pressure.'),
+  P('Science', 'Medium', 'Physical Science', 'A push or pull is a...', 'force', ['shadow', 'cycle'], 'A force is a push or a pull.'),
+  P('Science', 'Medium', 'Energy', 'Energy from motion is...', 'kinetic', ['thermal', 'stored'], 'Kinetic energy is energy of motion.'),
+  P('Science', 'Hard', 'Cells', 'Cells get energy in the...', 'mitochondria', ['nucleus', 'ribosome'], 'Mitochondria help release energy for cells.'),
+  P('Science', 'Hard', 'Chemistry', 'Water is made of hydrogen and...', 'oxygen', ['carbon', 'nitrogen'], 'Water is H2O: hydrogen and oxygen.'),
+  P('Science', 'Hard', 'Space', 'Gravity keeps planets in...', 'orbit', ['photosynthesis', 'erosion'], 'Gravity helps keep planets moving in orbit.'),
+  P('Science', 'Hard', 'Scientific Method', 'A testable prediction is a...', 'hypothesis', ['conclusion', 'variable'], 'A hypothesis is a testable prediction.'),
+
+  P('World', 'Easy', 'Geography', 'A map key explains...', 'symbols', ['weather', 'height'], 'A map key tells what map symbols mean.'),
+  P('World', 'Easy', 'Geography', 'The largest ocean is the...', 'Pacific', ['Atlantic', 'Arctic'], 'The Pacific is the largest ocean.'),
+  P('World', 'Easy', 'Civics', 'A community rule is a...', 'law', ['planet', 'river'], 'Laws are rules for a community.'),
+  P('World', 'Easy', 'History', 'The past is studied in...', 'history', ['biology', 'geometry'], 'History is the study of the past.'),
+  P('World', 'Medium', 'Geography', 'The equator divides Earth into...', 'hemispheres', ['continents', 'states'], 'The equator separates the Northern and Southern Hemispheres.'),
+  P('World', 'Medium', 'Geography', 'A peninsula has water on...', 'three sides', ['one side', 'no sides'], 'A peninsula is land with water on three sides.'),
+  P('World', 'Medium', 'Civics', 'Citizens vote in an...', 'election', ['erosion', 'equation'], 'An election is when citizens choose leaders or decide issues.'),
+  P('World', 'Medium', 'Economics', 'Money paid for work is...', 'income', ['weather', 'latitude'], 'Income is money earned from work or business.'),
+  P('World', 'Hard', 'Geography', 'Lines measuring north/south are...', 'latitude', ['longitude', 'altitude'], 'Latitude lines measure distance north or south of the equator.'),
+  P('World', 'Hard', 'History', 'A primary source is from...', 'the time studied', ['a future guess', 'a map key'], 'Primary sources come from the time being studied.'),
+  P('World', 'Hard', 'Civics', 'The U.S. Constitution sets up...', 'government', ['weather', 'multiplication'], 'The Constitution describes the structure of U.S. government.'),
+  P('World', 'Hard', 'Economics', 'Scarcity means resources are...', 'limited', ['endless', 'invisible'], 'Scarcity means there is not enough to satisfy every want.')
+];
+
+function P(track, band, skill, q, a, w, explanation) {
+  return { track, band, skill, q, a, w, explanation };
+}
+
+function uniqueOptions(answer, wrongs) {
+  const seen = new Set([String(answer)]);
+  const out = [];
+  for (const wrong of wrongs || []) {
+    const text = String(wrong);
+    if (!seen.has(text)) {
+      seen.add(text);
+      out.push(text);
+    }
+  }
+  const n = Number(answer);
+  const numeric = Number.isFinite(n);
+  while (out.length < 2) {
+    const fallback = numeric ? String(n + out.length + 1) : `${answer}${out.length + 1}`;
+    if (!seen.has(fallback)) {
+      seen.add(fallback);
+      out.push(fallback);
+    }
+  }
+  return out.slice(0, 2);
+}
+
+function shuffleList(items) {
+  return [...items].sort(() => Math.random() - 0.5);
+}
+
+function legacyTrackForPrompt(prompt) {
+  return /[0-9xÃ—Ã·+Â²âˆš=]/.test(prompt.q) ? 'Math' : 'Language';
+}
+
+function legacySkillForPrompt(prompt) {
+  if (/[Ã—x]/.test(prompt.q)) return 'Multiplication';
+  if (/[Ã·/]/.test(prompt.q)) return 'Division';
+  if (/[+\-âˆ’]/.test(prompt.q)) return 'Addition';
+  if (/synonym|antonym|meaning/i.test(prompt.q)) return 'Vocabulary';
+  if (/plural|tense|noun|verb|adjective|prefix|suffix|root/i.test(prompt.q)) return 'Grammar';
+  if (/rhyme/i.test(prompt.q)) return 'Rhyming';
+  return 'Review';
+}
+
+const LEGACY_PROMPTS = Object.entries(PROMPTS).flatMap(([band, prompts]) =>
+  prompts.map(prompt => ({
+    ...prompt,
+    band,
+    track: legacyTrackForPrompt(prompt),
+    skill: legacySkillForPrompt(prompt),
+    explanation: `Review the ${legacySkillForPrompt(prompt).toLowerCase()} clue, then try the matching answer.`
+  }))
+);
+
 // ─────────────────────────────────────────────────────────────
 // Utility
 // ─────────────────────────────────────────────────────────────
+ACADEMIC_PROMPTS.push(
+  P('Science', 'Easy', 'Weather', 'Clouds are made of tiny water...', 'droplets', ['rocks', 'leaves'], 'Clouds are made of tiny water droplets or ice crystals.'),
+  P('Science', 'Easy', 'Animals', 'A mammal feeds its babies...', 'milk', ['sand', 'sunlight'], 'Mammals feed their babies milk.'),
+  P('Science', 'Easy', 'Matter', 'Ice is water as a...', 'solid', ['gas', 'shadow'], 'Ice is the solid form of water.'),
+  P('Science', 'Easy', 'Space', 'The Moon moves around...', 'Earth', ['the Sun only', 'Jupiter'], 'The Moon orbits Earth.'),
+  P('Science', 'Medium', 'Ecosystems', 'A food chain starts with a...', 'producer', ['consumer', 'predator'], 'Producers, like plants, make food energy for ecosystems.'),
+  P('Science', 'Medium', 'Matter', 'Evaporation changes liquid to...', 'gas', ['solid', 'metal'], 'Evaporation changes a liquid into a gas.'),
+  P('Science', 'Medium', 'Forces', 'Friction usually slows objects...', 'down', ['up', 'into light'], 'Friction resists motion and often slows objects down.'),
+  P('Science', 'Medium', 'Earth Science', 'Soil is made from rock, air, water, and...', 'organic matter', ['plastic', 'electricity'], 'Soil includes broken rock plus organic matter from living things.'),
+  P('Science', 'Hard', 'Energy', 'Stored energy is called...', 'potential', ['kinetic', 'transparent'], 'Potential energy is stored energy.'),
+  P('Science', 'Hard', 'Genetics', 'Inherited traits are passed by...', 'genes', ['weather', 'gravity'], 'Genes carry inherited trait information.'),
+  P('Science', 'Hard', 'Chemistry', 'The pH scale measures...', 'acidity', ['speed', 'mass only'], 'The pH scale describes how acidic or basic something is.'),
+  P('Science', 'Hard', 'Earth Science', 'Weathering breaks rock into...', 'sediment', ['orbit', 'light'], 'Weathering breaks rock into smaller sediment.'),
+  P('World', 'Easy', 'Geography', 'A continent is a large body of...', 'land', ['water', 'cloud'], 'A continent is a very large land area.'),
+  P('World', 'Easy', 'Geography', 'North, south, east, and west are...', 'directions', ['seasons', 'taxes'], 'Cardinal directions help us describe location.'),
+  P('World', 'Easy', 'History', 'A timeline shows events in...', 'order', ['color', 'volume'], 'Timelines place events in chronological order.'),
+  P('World', 'Easy', 'Economics', 'A need is something people must...', 'have', ['decorate', 'forget'], 'Needs are things people must have to live safely.'),
+  P('World', 'Medium', 'Geography', 'Longitude lines measure east and...', 'west', ['north', 'inside'], 'Longitude measures east or west of the prime meridian.'),
+  P('World', 'Medium', 'History', 'An artifact is an object made or used by...', 'people', ['weather', 'fractions'], 'Artifacts are human-made or human-used objects from the past.'),
+  P('World', 'Medium', 'Civics', 'The branch that makes laws is...', 'legislative', ['judicial', 'executive'], 'The legislative branch makes laws.'),
+  P('World', 'Medium', 'Economics', 'Supply is how much is...', 'available', ['forgotten', 'illegal'], 'Supply is the amount of a good or service available.'),
+  P('World', 'Hard', 'Geography', 'A region is an area with shared...', 'features', ['spelling', 'gravity'], 'Regions group places by shared physical or human features.'),
+  P('World', 'Hard', 'History', 'Cause and effect explains why events...', 'happen', ['rhyme', 'evaporate'], 'Cause and effect connects events with reasons and results.'),
+  P('World', 'Hard', 'Civics', 'Checks and balances limit...', 'power', ['rainfall', 'fractions'], 'Checks and balances keep one branch from gaining too much power.'),
+  P('World', 'Hard', 'Economics', 'Opportunity cost is the next best...', 'choice given up', ['ocean current', 'map symbol'], 'Opportunity cost is what you give up when choosing something else.')
+);
+
 function intersect(a, b) {
   return a.x < b.x + b.w && a.x + a.w > b.x &&
          a.y < b.y + b.h && a.y + a.h > b.y;
@@ -244,8 +465,12 @@ class WordRunner {
 
     document.getElementById('startMissionBtn').addEventListener('click', () => {
       const diffEl = document.querySelector('input[name="diff"]:checked');
+      const trackEl = document.querySelector('input[name="track"]:checked');
+      const gameplayEl = document.querySelector('input[name="gameplay"]:checked');
       const modeEl = document.querySelector('input[name="mode"]:checked');
       this.currentDifficulty = diffEl ? diffEl.value : 'Medium';
+      this.currentTrack = trackEl ? trackEl.value : 'Mixed';
+      this.gameplayDifficulty = gameplayEl ? gameplayEl.value : 'Adventure';
       this.playerCount = modeEl ? parseInt(modeEl.value) : 1;
       document.getElementById('gameSetup').style.display = 'none';
       Sfx.resume();
@@ -254,7 +479,7 @@ class WordRunner {
 
     document.getElementById('playAgainBtn').addEventListener('click', () => {
       document.getElementById('gameEnd').style.display = 'none';
-      this.startGame((this.gameIsOver || this.currentLevel >= 5) ? 1 : this.currentLevel + 1);
+      this.startGame((this.gameIsOver || this.currentLevel >= MAX_LEVEL) ? 1 : this.currentLevel + 1);
     });
 
     document.getElementById('retryBtn').addEventListener('click', () => {
@@ -266,9 +491,14 @@ class WordRunner {
     this.currentLevel = 1;
     this.gameIsOver = false;
     this.currentDifficulty = 'Medium';
+    this.currentTrack = 'Mixed';
+    this.gameplayDifficulty = 'Adventure';
     this.playerCount = 1;
     this.score = 0;
     this.combo = 0;
+    this.reviewPrompts = [];
+    this.campaignStats = this._newStats();
+    this.levelStats = this._newStats();
     this.shakeTimer = 0;
     this.shakeAmt = 0;
     this.flashTimer = 0;
@@ -282,12 +512,106 @@ class WordRunner {
     requestAnimationFrame((ts) => this._loop(ts));
   }
 
-  _getPrompt(difficulty) {
-    if (!this.availablePrompts) this.availablePrompts = { Easy: [], Medium: [], Hard: [] };
-    if (!this.availablePrompts[difficulty] || this.availablePrompts[difficulty].length === 0) {
-      this.availablePrompts[difficulty] = [...PROMPTS[difficulty]].sort(() => Math.random() - 0.5);
+  _newStats() {
+    return { answered: 0, correct: 0, missed: [], skills: {} };
+  }
+
+  _getStage(level = this.currentLevel) {
+    return CAMPAIGN_LEVELS[Math.max(0, Math.min(MAX_LEVEL - 1, level - 1))] || CAMPAIGN_LEVELS[0];
+  }
+
+  _getGameConfig() {
+    return GAMEPLAY_DIFFICULTIES[this.gameplayDifficulty] || GAMEPLAY_DIFFICULTIES.Adventure;
+  }
+
+  _getPrompt(difficulty = this.currentDifficulty) {
+    if (!this.availablePrompts) this.availablePrompts = {};
+    const stage = this._getStage();
+    const key = `${this.currentTrack}:${difficulty}:${stage.id}`;
+
+    if (this.reviewPrompts.length && Math.random() < 0.35) {
+      return this._normalizePrompt(this.reviewPrompts.shift());
     }
-    return this.availablePrompts[difficulty].pop();
+
+    if (!this.availablePrompts[key] || this.availablePrompts[key].length === 0) {
+      this.availablePrompts[key] = this._buildPromptPool(difficulty, stage);
+    }
+    return this._normalizePrompt(this.availablePrompts[key].pop());
+  }
+
+  _buildPromptPool(difficulty, stage) {
+    const selectedTrack = this.currentTrack || 'Mixed';
+    const stageTracks = stage.tracks || ['Math', 'Language'];
+    const allowedTracks = selectedTrack === 'Mixed' ? stageTracks : [selectedTrack];
+    const allPrompts = [...ACADEMIC_PROMPTS, ...LEGACY_PROMPTS];
+
+    let pool = allPrompts.filter(p => p.band === difficulty && allowedTracks.includes(p.track));
+    if (pool.length === 0) {
+      pool = allPrompts.filter(p => p.band === difficulty);
+    }
+    if (selectedTrack === 'Mixed' && pool.length < 12) {
+      pool = pool.concat(allPrompts.filter(p => p.band === difficulty && !pool.includes(p)));
+    }
+    while (pool.length > 0 && pool.length < 12) {
+      pool = pool.concat(pool);
+    }
+
+    const focused = pool.filter(p => (stage.skills || []).includes(p.skill));
+    const generated = this._generatedPrompts(allowedTracks, difficulty, stage, 12);
+    return shuffleList([...focused, ...pool, ...generated]).map(p => this._normalizePrompt(p));
+  }
+
+  _generatedPrompts(tracks, difficulty, stage, count) {
+    const prompts = [];
+    for (let i = 0; i < count; i++) {
+      const track = tracks[i % tracks.length];
+      if (track === 'Math') prompts.push(this._generatedMathPrompt(difficulty, stage));
+    }
+    return prompts.filter(Boolean);
+  }
+
+  _generatedMathPrompt(difficulty, stage) {
+    const tier = stage.tier || 0;
+    if (difficulty === 'Easy') {
+      const a = 4 + Math.floor(Math.random() * (8 + tier * 2));
+      const b = 2 + Math.floor(Math.random() * (7 + tier));
+      if (Math.random() < 0.5) {
+        const answer = a + b;
+        return P('Math', 'Easy', 'Addition', `${a} + ${b} = ?`, String(answer), [String(answer - 1), String(answer + 1)], `${a} plus ${b} equals ${answer}.`);
+      }
+      const top = a + b;
+      return P('Math', 'Easy', 'Subtraction', `${top} - ${b} = ?`, String(a), [String(a - 1), String(a + 2)], `${top} minus ${b} leaves ${a}.`);
+    }
+    if (difficulty === 'Medium') {
+      const a = 3 + Math.floor(Math.random() * (7 + tier));
+      const b = 3 + Math.floor(Math.random() * 7);
+      if (Math.random() < 0.65) {
+        const answer = a * b;
+        return P('Math', 'Medium', 'Multiplication', `${a} x ${b} = ?`, String(answer), [String(answer - b), String(answer + a)], `${a} groups of ${b} make ${answer}.`);
+      }
+      const answer = a;
+      const dividend = a * b;
+      return P('Math', 'Medium', 'Division', `${dividend} / ${b} = ?`, String(answer), [String(answer - 1), String(answer + 1)], `${b} times ${answer} equals ${dividend}.`);
+    }
+    const x = 3 + Math.floor(Math.random() * (7 + tier));
+    const m = 2 + Math.floor(Math.random() * 5);
+    const c = 3 + Math.floor(Math.random() * 10);
+    const total = m * x + c;
+    return P('Math', 'Hard', 'Algebra', `${m}x + ${c} = ${total}, x = ?`, String(x), [String(x - 1), String(x + 1)], `Subtract ${c}, then divide by ${m} to solve for x.`);
+  }
+
+  _normalizePrompt(prompt) {
+    const fallback = PROMPTS[this.currentDifficulty]?.[0] || ACADEMIC_PROMPTS[0];
+    const p = prompt || fallback;
+    return {
+      track: p.track || legacyTrackForPrompt(p),
+      band: p.band || this.currentDifficulty,
+      skill: p.skill || legacySkillForPrompt(p),
+      q: String(p.q),
+      a: String(p.a),
+      w: uniqueOptions(p.a, p.w),
+      explanation: p.explanation || 'Use the clue in the question to choose the best answer.'
+    };
   }
 
   // ─── World State ───
@@ -334,15 +658,24 @@ class WordRunner {
   // ─── Start / Level ───
   startGame(level = 1) {
     this.currentLevel = level;
+    this.currentStage = this._getStage(level);
+    const gameCfg = this._getGameConfig();
     this.state = 'playing';
     this.gameIsOver = false;
-    if (level === 1) this.score = 0;
+    if (level === 1) {
+      this.score = 0;
+      this.reviewPrompts = [];
+      this.campaignStats = this._newStats();
+    }
+    this.levelStats = this._newStats();
     this.combo = 0;
     this.shakeTimer = 0;
     this.flashTimer = 0;
+    this.stageBannerTimer = 3.2;
+    this.lessonToast = null;
 
     this._clearWorld();
-    document.getElementById('levelBadge').textContent = `LVL ${level}/5`;
+    document.getElementById('levelBadge').textContent = `LVL ${level}/${MAX_LEVEL}`;
 
     this.players = [];
     const configs = [
@@ -352,7 +685,7 @@ class WordRunner {
     for (let i = 0; i < this.playerCount; i++) {
       const c = configs[i];
       this.players.push({
-        id: c.id, lives: 3, coinsCollected: 0,
+        id: c.id, lives: gameCfg.lives, coinsCollected: 0,
         x: c.x, y: 300, w: 32, h: 48,
         vx: 0, vy: 0,
         color: c.color, glow: c.glow,
@@ -372,8 +705,10 @@ class WordRunner {
 
   // ─── Level Generation ───
   _generateLevel() {
-    const diff = this.currentLevel - 1; // 0,1,2
-    const gateCount = 4 + diff * 2;
+    const stage = this._getStage();
+    const gameCfg = this._getGameConfig();
+    const diff = Math.max(0, Math.min(4, stage.tier || 0));
+    const gateCount = Math.max(3, (stage.gates || 4) + gameCfg.gateDelta);
     let px = 0;
 
     // Starting platform
@@ -386,7 +721,7 @@ class WordRunner {
       const platW = Math.max(280, 650 - diff * 120);
 
       // Moving island in gap
-      const islandSpeed = 70 + diff * 25;
+      const islandSpeed = (70 + diff * 25) * gameCfg.speedMultiplier;
       this.platforms.push({
         x: px + gap / 2 - 40, y: 460, w: 90, h: 26,
         active: true, type: 'moving',
@@ -405,30 +740,30 @@ class WordRunner {
         this.coins.push({ x: landX + platW * 0.3 + j * 50, y: 380, w: 18, h: 18, collected: false });
       }
       // Heart pickup (random)
-      if (Math.random() < 0.28) {
+      if (Math.random() < 0.28 + gameCfg.heartBonus) {
         this.hearts.push({ x: landX + platW * 0.6, y: 340, w: 22, h: 22, collected: false });
       }
       // Powerup
-      if (Math.random() < 0.18) {
+      if (Math.random() < 0.18 + Math.max(0, gameCfg.heartBonus * 0.4)) {
         const type = Math.random() < 0.5 ? 'star' : 'boots';
         this.powerups.push({ type, x: landX + platW * 0.7, y: 340, w: 26, h: 26, active: true, bob: 0 });
       }
 
       // Enemies (scaled by level)
-      const eCap = 1 + diff;
+      const eCap = Math.max(1, Math.round((1 + Math.min(3, diff)) * gameCfg.enemyMultiplier));
       for (let j = 0; j < eCap; j++) {
         const r = Math.random();
         const ex = landX + 80 + j * 110;
         if (diff >= 1 && r < 0.18) {
           this.enemies.push({ type: 'shooter', x: landX + platW - 120 - j * 50, y: 450, w: 38, h: 50, shootTimer: Math.random() * 2, dead: false, anim: 0 });
         } else if (diff >= 1 && r < 0.35) {
-          this.enemies.push({ type: 'flyer', x: ex, y: 300, w: 38, h: 30, vx: -90, startX: landX + 50, endX: landX + platW - 50, startY: 300, flyOffset: Math.random() * 10, dead: false, anim: 0 });
+          this.enemies.push({ type: 'flyer', x: ex, y: 300, w: 38, h: 30, vx: -90 * gameCfg.speedMultiplier, startX: landX + 50, endX: landX + platW - 50, startY: 300, flyOffset: Math.random() * 10, dead: false, anim: 0 });
         } else if (diff >= 1 && r < 0.52) {
           this.enemies.push({ type: 'chaser', x: landX + platW / 2 + j * 80, y: 460, w: 38, h: 40, vx: 0, dead: false, anim: 0 });
         } else if (diff >= 2 && r < 0.70) {
-          this.enemies.push({ type: 'pacer', x: ex, y: 160, w: 38, h: 38, vy: 110, startY: 160, endY: 420, dead: false, anim: 0 });
+          this.enemies.push({ type: 'pacer', x: ex, y: 160, w: 38, h: 38, vy: 110 * gameCfg.speedMultiplier, startY: 160, endY: 420, dead: false, anim: 0 });
         } else {
-          this.enemies.push({ type: 'walker', x: landX + platW / 2 + j * 90, y: 460, w: 38, h: 40, vx: -50 - diff * 20, startX: landX + 40, endX: landX + platW - 40, dead: false, anim: 0 });
+          this.enemies.push({ type: 'walker', x: landX + platW / 2 + j * 90, y: 460, w: 38, h: 40, vx: (-50 - diff * 20) * gameCfg.speedMultiplier, startX: landX + 40, endX: landX + platW - 40, dead: false, anim: 0 });
         }
       }
 
@@ -438,7 +773,7 @@ class WordRunner {
       const stepGap = 90 + diff * 12;
       const stepW   = Math.max(80, 130 - diff * 18);
       this.platforms.push({ x: px + stepGap, y: 410, w: stepW, h: 210, active: true, type: 'stone' });
-      if (diff >= 1 && Math.random() < 0.5) {
+      if (diff >= 1 && Math.random() < 0.5 * gameCfg.hazardMultiplier) {
         // Only cover the right half of the step to leave a safe landing zone
         const spikeW = stepW / 2;
         this.spikes.push({ x: px + stepGap + (stepW - spikeW), y: 395, w: spikeW, h: 15 });
@@ -455,7 +790,7 @@ class WordRunner {
 
       // ── 3. Approach islands ──
       const numIslands = 1 + diff;
-      const iSpeed = 85 + diff * 28;
+      const iSpeed = (85 + diff * 28) * gameCfg.speedMultiplier;
       const iSpacing = 155 + diff * 8;
       for (let k = 0; k < numIslands; k++) {
         const iX = px + 100 + k * iSpacing;
@@ -481,48 +816,50 @@ class WordRunner {
       const safeY = 460;
       const prompt = this._getPrompt(this.currentDifficulty);
       const answers = [prompt.a, prompt.w[0], prompt.w[1]].sort(() => Math.random() - 0.5);
-      const gateWallX = safeX + 570;
+      const gateWallX = safeX + 720;
 
       const gateWall = { x: gateWallX, y: 0, w: 36, h: 470, active: true, isGate: true };
       this.platforms.push(gateWall);
-      this.platforms.push({ x: safeX, y: safeY, w: 750, h: 160, active: true, type: 'grass' });
+      this.platforms.push({ x: safeX, y: safeY, w: 890, h: 160, active: true, type: 'grass' });
 
       this.gates.push({
         prompt: prompt.q,
+        promptData: prompt,
         blocks: [
-          { x: safeX + 120, y: 300, w: 100, h: 54, text: answers[0], isCorrect: answers[0] === prompt.a, hit: false, bob: Math.random() * Math.PI * 2 },
-          { x: safeX + 290, y: 300, w: 100, h: 54, text: answers[1], isCorrect: answers[1] === prompt.a, hit: false, bob: Math.random() * Math.PI * 2 + 1 },
-          { x: safeX + 460, y: 300, w: 100, h: 54, text: answers[2], isCorrect: answers[2] === prompt.a, hit: false, bob: Math.random() * Math.PI * 2 + 2 }
+          { x: safeX + 100, y: 300, w: 150, h: 54, text: answers[0], isCorrect: answers[0] === prompt.a, hit: false, bob: Math.random() * Math.PI * 2 },
+          { x: safeX + 310, y: 300, w: 150, h: 54, text: answers[1], isCorrect: answers[1] === prompt.a, hit: false, bob: Math.random() * Math.PI * 2 + 1 },
+          { x: safeX + 520, y: 300, w: 150, h: 54, text: answers[2], isCorrect: answers[2] === prompt.a, hit: false, bob: Math.random() * Math.PI * 2 + 2 }
         ],
         wall: gateWall,
         cleared: false
       });
 
-      px = safeX + 750;
+      px = safeX + 890;
     }
 
     // ── 4. End zone / Boss ──
     const landPad = px + 160;
     this.platforms.push({ x: landPad, y: 500, w: 1400, h: 120, active: true, type: 'grass' });
 
-    if (this.currentLevel >= 5) {
+    if (stage.boss) {
       this.bossPhase = true;
-      this.bossHealth = 4;
-      this.bossMaxHealth = 4;
+      this.bossHealth = Math.max(2, (stage.bossHealth || 4) + gameCfg.bossHealthDelta);
+      this.bossMaxHealth = this.bossHealth;
       this.bossEntity = {
         x: landPad + 1100, y: 240, w: 160, h: 160,
         active: true, shootTimer: 0,
-        walkX: landPad + 900, walkDir: -1, walkSpeed: 60,
+        walkX: landPad + 900, walkDir: -1, walkSpeed: 60 * gameCfg.speedMultiplier,
         anim: 0
       };
       const bp = this._getPrompt(this.currentDifficulty);
       const ba = [bp.a, bp.w[0], bp.w[1]].sort(() => Math.random() - 0.5);
       this.bossGate = {
         prompt: bp.q,
+        promptData: bp,
         blocks: [
-          { x: landPad + 300, y: 290, w: 110, h: 60, text: ba[0], isCorrect: ba[0] === bp.a, hit: false, bob: 0 },
-          { x: landPad + 490, y: 290, w: 110, h: 60, text: ba[1], isCorrect: ba[1] === bp.a, hit: false, bob: 1 },
-          { x: landPad + 680, y: 290, w: 110, h: 60, text: ba[2], isCorrect: ba[2] === bp.a, hit: false, bob: 2 }
+          { x: landPad + 250, y: 290, w: 150, h: 60, text: ba[0], isCorrect: ba[0] === bp.a, hit: false, bob: 0 },
+          { x: landPad + 480, y: 290, w: 150, h: 60, text: ba[1], isCorrect: ba[1] === bp.a, hit: false, bob: 1 },
+          { x: landPad + 710, y: 290, w: 150, h: 60, text: ba[2], isCorrect: ba[2] === bp.a, hit: false, bob: 2 }
         ]
       };
       this.goalFlag = null;
@@ -535,16 +872,18 @@ class WordRunner {
   _hitBlock(gate, block, player) {
     if (block.hit) return;
     block.hit = true;
+    this._recordAnswer(gate.promptData, block.isCorrect, block.text);
     if (block.isCorrect) {
       Sfx.correct();
       gate.cleared = true;
       gate.wall.active = false;
       this.combo++;
-      const bonus = 100 * this.currentLevel * Math.min(this.combo, 5);
+      const bonus = Math.round(100 * this.currentLevel * Math.min(this.combo, 5) * this._getGameConfig().scoreMultiplier);
       this.score += bonus;
       this._floatText(`+${bonus}`, block.x + block.w / 2, block.y - 10, '#34d399');
       if (this.combo > 1) this._floatText(`×${Math.min(this.combo,5)} COMBO!`, block.x + block.w / 2, block.y - 40, '#fbbf24');
       this._spawnBurst(block.x + block.w / 2, block.y + block.h / 2, '#34d399', 20);
+      this._showLessonToast(gate.promptData, true);
       this._flashScreen('rgba(52,211,153,0.12)');
       // Revive dead teammates
       for (const p of this.players) {
@@ -559,6 +898,7 @@ class WordRunner {
     } else {
       Sfx.wrong();
       this.combo = 0;
+      this._showLessonToast(gate.promptData, false);
       this._killPlayer(player);
       this._spawnBurst(block.x + block.w / 2, block.y + block.h / 2, '#f87171', 10);
       this._shakeScreen(8, 0.5);
@@ -569,11 +909,13 @@ class WordRunner {
   _hitBossBlock(block, player) {
     if (block.hit) return;
     block.hit = true;
+    this._recordAnswer(this.bossGate.promptData, block.isCorrect, block.text);
     if (block.isCorrect) {
       Sfx.correct();
       this.bossHealth--;
-      this.score += 600;
+      this.score += Math.round(600 * this._getGameConfig().scoreMultiplier);
       this._updateHUD();
+      this._showLessonToast(this.bossGate.promptData, true);
       this._spawnBurst(this.bossEntity.x + 80, this.bossEntity.y + 80, '#fbbf24', 25);
       this._floatText(`-1 HP!`, this.bossEntity.x + 80, this.bossEntity.y - 10, '#fbbf24');
       this._shakeScreen(12, 0.4);
@@ -588,6 +930,7 @@ class WordRunner {
         const bp = this._getPrompt(this.currentDifficulty);
         const ba = [bp.a, bp.w[0], bp.w[1]].sort(() => Math.random() - 0.5);
         this.bossGate.prompt = bp.q;
+        this.bossGate.promptData = bp;
         for (let i = 0; i < 3; i++) {
           this.bossGate.blocks[i].text = ba[i];
           this.bossGate.blocks[i].isCorrect = ba[i] === bp.a;
@@ -597,9 +940,43 @@ class WordRunner {
     } else {
       Sfx.wrong();
       this.combo = 0;
+      this._showLessonToast(this.bossGate.promptData, false);
       this._killPlayer(player);
       this._shakeScreen(8, 0.5);
     }
+  }
+
+  _recordAnswer(promptData, correct, chosenText) {
+    const prompt = this._normalizePrompt(promptData);
+    const apply = (stats) => {
+      stats.answered++;
+      if (correct) stats.correct++;
+      if (!stats.skills[prompt.skill]) stats.skills[prompt.skill] = { answered: 0, correct: 0 };
+      stats.skills[prompt.skill].answered++;
+      if (correct) stats.skills[prompt.skill].correct++;
+      if (!correct) {
+        stats.missed.push({
+          q: prompt.q,
+          answer: prompt.a,
+          chosen: chosenText,
+          skill: prompt.skill,
+          explanation: prompt.explanation
+        });
+      }
+    };
+    apply(this.levelStats);
+    apply(this.campaignStats);
+    if (!correct) this.reviewPrompts.push(prompt);
+  }
+
+  _showLessonToast(promptData, correct) {
+    const prompt = this._normalizePrompt(promptData);
+    this.lessonToast = {
+      text: correct ? prompt.explanation : `Review: ${prompt.explanation}`,
+      skill: prompt.skill,
+      correct,
+      timer: correct ? 3.2 : 4.2
+    };
   }
 
   _killPlayer(p) {
@@ -608,9 +985,10 @@ class WordRunner {
     p.invincibleTimer = 1.8; // brief iframes
     p.lives--;
     Sfx.hurt();
-    this.score = Math.max(0, this.score - 30);
+    const penalty = this._getGameConfig().wrongPenalty;
+    this.score = Math.max(0, this.score - penalty);
     this._updateHUD();
-    this._floatText('-30', p.x + p.w / 2, p.y, '#f87171');
+    this._floatText(`-${penalty}`, p.x + p.w / 2, p.y, '#f87171');
 
     if (p.lives <= 0) {
       p.dead = true;
@@ -632,7 +1010,10 @@ class WordRunner {
   _endGame(won) {
     this.state = 'end';
     this.gameIsOver = !won;
-    const timeBonus = won ? Math.max(0, 6000 - Math.floor(this.levelTime * 80)) : 0;
+    const stage = this._getStage();
+    const gameCfg = this._getGameConfig();
+    const baseTimeBonus = (stage.gates || 4) * 1400 + (stage.boss ? 3200 : 0);
+    const timeBonus = won ? Math.round(Math.max(0, baseTimeBonus - Math.floor(this.levelTime * 65)) * gameCfg.scoreMultiplier) : 0;
     if (won) this.score += timeBonus;
     this._updateHUD();
 
@@ -644,33 +1025,75 @@ class WordRunner {
 
     if (won) {
       Sfx.win();
-      if (this.currentLevel >= 5) {
+      if (this.currentLevel >= MAX_LEVEL) {
         icon.textContent = '🏆';
         title.textContent = 'Game Clear!';
         nextBtn.textContent = '▶ Play Again';
       } else {
         icon.textContent = '🎉';
-        title.textContent = `Level ${this.currentLevel} Clear!`;
+        title.textContent = `${stage.name} Clear!`;
         nextBtn.textContent = `▶ Start Level ${this.currentLevel + 1}`;
       }
-      msg.textContent = 'You answered all the word gates!';
-      stats.innerHTML = `
-        <div class="stat-line"><span>Score</span><span class="stat-val">${this.score}</span></div>
-        <div class="stat-line"><span>Time Bonus</span><span class="stat-val">+${timeBonus}</span></div>
-        <div class="stat-line"><span>Time</span><span class="stat-val">${this.levelTime.toFixed(1)}s</span></div>
-      `;
+      msg.textContent = `Focus: ${stage.focus}.`;
+      stats.innerHTML = this._renderEndStats(timeBonus);
     } else {
       Sfx.wrong();
       icon.textContent = '💀';
       title.textContent = 'Game Over';
-      msg.textContent = 'All players have fallen. Better luck next time!';
-      stats.innerHTML = `<div class="stat-line"><span>Final Score</span><span class="stat-val">${this.score}</span></div>`;
+      msg.textContent = `Level ${this.currentLevel}: ${stage.name}.`;
+      stats.innerHTML = this._renderEndStats(0);
       nextBtn.textContent = '▶ Restart Game';
     }
     document.getElementById('gameEnd').style.display = 'flex';
   }
 
   // ─── HUD ───
+  _renderEndStats(timeBonus) {
+    const accuracy = this._accuracy(this.levelStats);
+    const mastery = accuracy >= 90 ? 'Gold' : accuracy >= 75 ? 'Silver' : accuracy >= 60 ? 'Bronze' : 'Practice';
+    const skillRows = this._skillRows(this.levelStats);
+    const missedRows = this.levelStats.missed.slice(-3).map(m => `
+      <div class="missed-line">
+        <span>${this._escapeHtml(m.skill)}: ${this._escapeHtml(m.q)}</span>
+        <strong>${this._escapeHtml(m.answer)}</strong>
+      </div>
+    `).join('');
+
+    return `
+      <div class="stat-line"><span>Score</span><span class="stat-val">${this.score}</span></div>
+      <div class="stat-line"><span>Accuracy</span><span class="stat-val">${accuracy}%</span></div>
+      <div class="stat-line"><span>Mastery</span><span class="stat-val">${mastery}</span></div>
+      <div class="stat-line"><span>Time Bonus</span><span class="stat-val">+${timeBonus}</span></div>
+      <div class="stat-line"><span>Time</span><span class="stat-val">${this.levelTime.toFixed(1)}s</span></div>
+      ${skillRows ? `<div class="skill-report">${skillRows}</div>` : ''}
+      ${missedRows ? `<div class="missed-report"><div class="report-title">Review Next</div>${missedRows}</div>` : ''}
+    `;
+  }
+
+  _accuracy(stats) {
+    return stats.answered ? Math.round((stats.correct / stats.answered) * 100) : 100;
+  }
+
+  _skillRows(stats) {
+    return Object.entries(stats.skills)
+      .sort((a, b) => b[1].answered - a[1].answered)
+      .slice(0, 3)
+      .map(([skill, s]) => {
+        const pct = s.answered ? Math.round((s.correct / s.answered) * 100) : 100;
+        return `<div class="skill-line"><span>${this._escapeHtml(skill)}</span><span>${s.correct}/${s.answered} (${pct}%)</span></div>`;
+      }).join('');
+  }
+
+  _escapeHtml(value) {
+    return String(value).replace(/[&<>"']/g, ch => ({
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#39;'
+    }[ch]));
+  }
+
   _updateHUD() {
     document.getElementById('scoreDisplay').textContent = this.score.toString().padStart(5, '0');
     const p1 = this.players[0];
@@ -704,6 +1127,11 @@ class WordRunner {
     // Screen effects
     if (this.shakeTimer > 0) this.shakeTimer = Math.max(0, this.shakeTimer - dt);
     if (this.flashTimer > 0) this.flashTimer = Math.max(0, this.flashTimer - dt);
+    if (this.stageBannerTimer > 0) this.stageBannerTimer = Math.max(0, this.stageBannerTimer - dt);
+    if (this.lessonToast && this.lessonToast.timer > 0) {
+      this.lessonToast.timer = Math.max(0, this.lessonToast.timer - dt);
+      if (this.lessonToast.timer <= 0) this.lessonToast = null;
+    }
 
     // Platform bobbing for boss blocks
     const t = performance.now() / 1000;
@@ -958,13 +1386,15 @@ class WordRunner {
     }
 
     // Enemies
+    const gameCfg = this._getGameConfig();
+    const stageTier = this._getStage().tier || 0;
     for (const e of this.enemies) {
       if (e.dead) continue;
       e.anim = (e.anim || 0) + dt;
 
       if (e.type === 'shooter') {
         e.shootTimer += dt;
-        const rate = 2.8 - this.currentLevel * 0.4;
+        const rate = Math.max(1.1, (2.8 - stageTier * 0.28) / gameCfg.speedMultiplier);
         if (e.shootTimer > rate && e.x < this.cameraX + CW + 100) {
           e.shootTimer = 0;
           this.projectiles.push({ x: e.x - 8, y: e.y + e.h / 2 - 6, w: 14, h: 14, vx: -260, vy: 0 });
@@ -984,7 +1414,7 @@ class WordRunner {
           const d = Math.abs(p.x - e.x);
           if (d < minDist) { minDist = d; closest = p; }
         }
-        e.vx = closest ? (closest.x < e.x ? -120 : 120) : e.vx * 0.5;
+        e.vx = closest ? (closest.x < e.x ? -120 : 120) * gameCfg.speedMultiplier : e.vx * 0.5;
         e.x += e.vx * dt;
       } else { // walker
         e.x += e.vx * dt;
@@ -1027,7 +1457,7 @@ class WordRunner {
 
       if (be.shootTimer > 1.8 && be.x < this.cameraX + CW + 200) {
         be.shootTimer = 0;
-        const speed = 280 + Math.random() * 120;
+        const speed = (280 + Math.random() * 120) * gameCfg.speedMultiplier;
         this.projectiles.push({ x: be.x, y: be.y + 80, w: 18, h: 18, vx: -speed, vy: (Math.random() - 0.5) * 120 });
         if (this.bossHealth <= 2) {
           // Enraged: shoot 3
@@ -1044,6 +1474,7 @@ class WordRunner {
   _draw() {
     const ctx = this.ctx;
     const t = performance.now() / 1000;
+    const biome = this._getStage().biome || 'grass';
     ctx.save();
 
     // Screen shake
@@ -1057,23 +1488,23 @@ class WordRunner {
 
     // ── Sky gradient ──
     const skyGrad = ctx.createLinearGradient(0, 0, 0, CH);
-    if (this.currentLevel === 1) { // 1: Grasslands
+    if (biome === 'grass') {
       skyGrad.addColorStop(0, '#0f1f4a');
       skyGrad.addColorStop(0.6, '#1a3a6e');
       skyGrad.addColorStop(1, '#0d1b38');
-    } else if (this.currentLevel === 2) { // 2: Underground
+    } else if (biome === 'cave') {
       skyGrad.addColorStop(0, '#1a0a2e');
       skyGrad.addColorStop(0.5, '#2d1059');
       skyGrad.addColorStop(1, '#0e0520');
-    } else if (this.currentLevel === 3) { // 3: Jungle
+    } else if (biome === 'jungle') {
       skyGrad.addColorStop(0, '#051b0f');
       skyGrad.addColorStop(0.5, '#0a3a20');
       skyGrad.addColorStop(1, '#031008');
-    } else if (this.currentLevel === 4) { // 4: Clouds
+    } else if (biome === 'sky') {
       skyGrad.addColorStop(0, '#38bdf8');
       skyGrad.addColorStop(0.5, '#7dd3fc');
       skyGrad.addColorStop(1, '#e0f2fe');
-    } else { // 5: Volcano Boss
+    } else {
       skyGrad.addColorStop(0, '#200010');
       skyGrad.addColorStop(0.5, '#430018');
       skyGrad.addColorStop(1, '#0a0005');
@@ -1090,7 +1521,7 @@ class WordRunner {
     }
 
     // ── Stars ──
-    if (this.currentLevel !== 4) { // Hide stars in daytime cloud level
+    if (biome !== 'sky') {
       ctx.save();
       for (const star of this.bgStars) {
         const blink = 0.6 + 0.4 * Math.sin(t * 1.5 + star.blink);
@@ -1196,7 +1627,7 @@ class WordRunner {
         for (let y = plat.y; y < plat.y + plat.h; y += 22) ctx.strokeRect(plat.x, y, plat.w, 22);
         ctx.fillStyle = '#475569';
         ctx.fillRect(plat.x, plat.y, plat.w, 6);
-      } else if (this.currentLevel === 4) {
+      } else if (biome === 'sky') {
         // Cloud platform
         ctx.fillStyle = '#e2e8f0';
         ctx.beginPath();
@@ -1206,7 +1637,7 @@ class WordRunner {
         ctx.beginPath();
         rr(ctx, plat.x, plat.y, plat.w, Math.min(plat.h, 20), 20);
         ctx.fill();
-      } else if (this.currentLevel === 5) {
+      } else if (biome === 'volcano') {
         // Volcano platform
         ctx.fillStyle = '#3a0c0c';
         ctx.fillRect(plat.x, plat.y, plat.w, plat.h);
@@ -1216,7 +1647,7 @@ class WordRunner {
         ctx.fillRect(plat.x, plat.y, plat.w, 16);
         ctx.fillStyle = 'rgba(239,68,68,0.3)';
         ctx.fillRect(plat.x, plat.y, plat.w, 4);
-      } else if (this.currentLevel === 3) {
+      } else if (biome === 'jungle') {
         // Jungle platform
         ctx.fillStyle = '#3f260f';
         ctx.fillRect(plat.x, plat.y, plat.w, plat.h);
@@ -1230,6 +1661,19 @@ class WordRunner {
         ctx.fillStyle = '#15803d';
         for (let bx = plat.x + 10; bx < plat.x + plat.w - 10; bx += 30) {
           ctx.fillRect(bx, plat.y + 16, 4, 15 + ((bx % 7) * 2));
+        }
+      } else if (biome === 'cave') {
+        ctx.fillStyle = '#24133f';
+        ctx.fillRect(plat.x, plat.y, plat.w, plat.h);
+        ctx.fillStyle = '#130a24';
+        ctx.fillRect(plat.x, plat.y + 16, plat.w, plat.h - 16);
+        ctx.fillStyle = '#8b5cf6';
+        ctx.fillRect(plat.x, plat.y, plat.w, 16);
+        ctx.fillStyle = 'rgba(216,180,254,0.28)';
+        ctx.fillRect(plat.x, plat.y, plat.w, 5);
+        ctx.fillStyle = 'rgba(255,255,255,0.12)';
+        for (let bx = plat.x + 14; bx < plat.x + plat.w - 10; bx += 38) {
+          ctx.fillRect(bx, plat.y + 24, 16, 4);
         }
       } else {
         // Normal Grass platform (Level 1 & 2)
@@ -1343,21 +1787,7 @@ class WordRunner {
       if (gate.cleared) continue;
       // Prompt bubble
       const bx = gate.blocks[1].x + gate.blocks[1].w / 2;
-      ctx.save();
-      ctx.shadowBlur = 20;
-      ctx.shadowColor = 'rgba(192,132,252,0.5)';
-      ctx.fillStyle = '#1a1035';
-      ctx.beginPath();
-      rr(ctx, bx - 175, 145, 350, 64, 12);
-      ctx.fill();
-      ctx.strokeStyle = '#7c3aed';
-      ctx.lineWidth = 1.5;
-      ctx.stroke();
-      ctx.shadowBlur = 0;
-      ctx.fillStyle = '#e9d5ff';
-      ctx.font = '700 22px Outfit';
-      ctx.fillText(gate.prompt, bx, 183);
-      ctx.restore();
+      this._drawPromptCard(ctx, bx, 136, 470, gate.promptData || { q: gate.prompt, skill: 'Review' }, '#7c3aed', '#1a1035', '#e9d5ff');
 
       // Answer blocks
       for (const b of gate.blocks) {
@@ -1386,8 +1816,7 @@ class WordRunner {
         ctx.shadowBlur = 0;
         // Text
         ctx.fillStyle = '#1a0f00';
-        ctx.font = '800 17px Outfit';
-        ctx.fillText(b.text, b.x + b.w / 2, bobY + b.h / 2 + 7);
+        this._drawFittedText(ctx, b.text, b.x + b.w / 2, bobY + b.h / 2 + 7, b.w - 16, 17, 10, '800');
         ctx.restore();
       }
     }
@@ -1451,20 +1880,7 @@ class WordRunner {
       // Boss gate blocks
       ctx.save();
       const bcx = this.bossGate.blocks[1].x + this.bossGate.blocks[1].w / 2;
-      ctx.shadowBlur = 20;
-      ctx.shadowColor = 'rgba(239,68,68,0.6)';
-      ctx.fillStyle = '#1a0505';
-      ctx.beginPath();
-      rr(ctx, bcx - 200, 145, 400, 64, 12);
-      ctx.fill();
-      ctx.strokeStyle = '#dc2626';
-      ctx.lineWidth = 1.5;
-      ctx.stroke();
-      ctx.shadowBlur = 0;
-      ctx.fillStyle = '#fecaca';
-      ctx.font = '700 22px Outfit';
-      ctx.textAlign = 'center';
-      ctx.fillText(this.bossGate.prompt, bcx, 183);
+      this._drawPromptCard(ctx, bcx, 136, 540, this.bossGate.promptData || { q: this.bossGate.prompt, skill: 'Review' }, '#dc2626', '#1a0505', '#fecaca');
       ctx.restore();
 
       for (const b of this.bossGate.blocks) {
@@ -1485,9 +1901,8 @@ class WordRunner {
         ctx.fill();
         ctx.shadowBlur = 0;
         ctx.fillStyle = b.hit ? '#052e16' : '#fff1f2';
-        ctx.font = '800 18px Outfit';
         ctx.textAlign = 'center';
-        ctx.fillText(b.text, b.x + b.w / 2, bobY + b.h / 2 + 8);
+        this._drawFittedText(ctx, b.text, b.x + b.w / 2, bobY + b.h / 2 + 8, b.w - 16, 18, 10, '800');
         ctx.restore();
       }
     }
@@ -1730,10 +2145,122 @@ class WordRunner {
         if (p.invincibleTimer > 1.5) { ctx.fillStyle = '#fbbf24'; ctx.font = '700 14px Outfit'; ctx.fillText('★', startX + 115, startY + 36); }
       }
       ctx.restore();
+      this._drawLessonToast(ctx);
+      this._drawStageBanner(ctx);
     }
   }
 
   // ─── Draw Helpers ───
+  _drawStageBanner(ctx) {
+    if (!this.stageBannerTimer || this.stageBannerTimer <= 0) return;
+    const stage = this._getStage();
+    const alpha = Math.min(1, this.stageBannerTimer / 0.8);
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.textAlign = 'center';
+    ctx.fillStyle = 'rgba(5,8,20,0.78)';
+    ctx.beginPath();
+    rr(ctx, CW / 2 - 250, 74, 500, 84, 14);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,0.18)';
+    ctx.stroke();
+    ctx.fillStyle = '#f8fafc';
+    ctx.font = '900 26px Outfit';
+    ctx.fillText(`Level ${stage.id}: ${stage.name}`, CW / 2, 108);
+    ctx.fillStyle = '#cbd5e1';
+    ctx.font = '700 14px Outfit';
+    ctx.fillText(`${ACADEMIC_TRACKS[this.currentTrack]?.label || 'Mixed'} - ${this.currentDifficulty} - ${stage.focus}`, CW / 2, 135);
+    ctx.restore();
+  }
+
+  _drawLessonToast(ctx) {
+    if (!this.lessonToast) return;
+    const toast = this.lessonToast;
+    const alpha = Math.min(1, toast.timer / 0.45);
+    const lines = this._wrapText(ctx, toast.text, 560, '700 15px Outfit').slice(0, 2);
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = toast.correct ? 'rgba(5,46,22,0.9)' : 'rgba(69,10,10,0.92)';
+    ctx.beginPath();
+    rr(ctx, CW / 2 - 315, CH - 92, 630, 70, 12);
+    ctx.fill();
+    ctx.strokeStyle = toast.correct ? '#34d399' : '#f87171';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+    ctx.textAlign = 'center';
+    ctx.fillStyle = toast.correct ? '#bbf7d0' : '#fecaca';
+    ctx.font = '800 12px Outfit';
+    ctx.fillText(`${toast.correct ? 'Correct' : 'Review'} - ${toast.skill}`, CW / 2, CH - 66);
+    ctx.fillStyle = '#f8fafc';
+    ctx.font = '700 15px Outfit';
+    for (let i = 0; i < lines.length; i++) {
+      ctx.fillText(lines[i], CW / 2, CH - 43 + i * 18);
+    }
+    ctx.restore();
+  }
+
+  _drawPromptCard(ctx, cx, y, w, promptData, borderColor, fillColor, textColor) {
+    const prompt = this._normalizePrompt(promptData);
+    const lines = this._wrapText(ctx, prompt.q, w - 34, '700 18px Outfit');
+    const h = Math.max(66, 42 + lines.length * 20);
+    ctx.save();
+    ctx.shadowBlur = 20;
+    ctx.shadowColor = `${borderColor}88`;
+    ctx.fillStyle = fillColor;
+    ctx.beginPath();
+    rr(ctx, cx - w / 2, y, w, h, 12);
+    ctx.fill();
+    ctx.strokeStyle = borderColor;
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+
+    ctx.textAlign = 'center';
+    ctx.fillStyle = borderColor;
+    ctx.font = '800 11px Outfit';
+    ctx.fillText(`${prompt.track || 'Skill'} - ${prompt.skill || 'Review'}`, cx, y + 17);
+
+    ctx.fillStyle = textColor;
+    ctx.font = '700 18px Outfit';
+    const firstY = y + 40;
+    for (let i = 0; i < lines.length; i++) {
+      ctx.fillText(lines[i], cx, firstY + i * 20);
+    }
+    ctx.restore();
+  }
+
+  _wrapText(ctx, text, maxWidth, font) {
+    ctx.save();
+    ctx.font = font;
+    const words = String(text).split(/\s+/);
+    const lines = [];
+    let line = '';
+    for (const word of words) {
+      const next = line ? `${line} ${word}` : word;
+      if (ctx.measureText(next).width <= maxWidth || !line) {
+        line = next;
+      } else {
+        lines.push(line);
+        line = word;
+      }
+    }
+    if (line) lines.push(line);
+    ctx.restore();
+    return lines.slice(0, 3);
+  }
+
+  _drawFittedText(ctx, text, cx, cy, maxWidth, startSize, minSize, weight = '800') {
+    let size = startSize;
+    const content = String(text);
+    do {
+      ctx.font = `${weight} ${size}px Outfit`;
+      if (ctx.measureText(content).width <= maxWidth) break;
+      size--;
+    } while (size > minSize);
+    ctx.textAlign = 'center';
+    ctx.fillText(content, cx, cy);
+  }
+
   _drawHeart(ctx, cx, cy, r, col) {
     ctx.fillStyle = col;
     ctx.beginPath();

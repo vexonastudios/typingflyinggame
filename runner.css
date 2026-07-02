@@ -214,8 +214,8 @@ body {
   background: var(--bg-panel);
   border: 1px solid var(--border-bright);
   border-radius: 24px;
-  padding: 28px 36px;
-  max-width: 540px;
+  padding: 20px 30px;
+  max-width: 720px;
   width: 94%;
   max-height: 90vh;
   overflow-y: auto;
@@ -230,27 +230,27 @@ body {
 }
 
 .modal-icon {
-  font-size: 2.4rem;
-  margin-bottom: 6px;
+  font-size: 1.7rem;
+  margin-bottom: 2px;
   line-height: 1;
 }
 
 .wr-modal h2 {
-  font-size: 2rem;
+  font-size: 1.65rem;
   font-weight: 900;
   letter-spacing: -0.04em;
   background: linear-gradient(135deg, var(--accent2), var(--p1));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
-  margin-bottom: 8px;
+  margin-bottom: 5px;
 }
 
 .wr-modal p {
   color: #94a3b8;
-  line-height: 1.5;
-  margin-bottom: 16px;
-  font-size: 0.88rem;
+  line-height: 1.35;
+  margin-bottom: 10px;
+  font-size: 0.82rem;
 }
 .wr-modal p strong { color: var(--gold); }
 
@@ -259,14 +259,14 @@ body {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 10px;
-  margin-bottom: 14px;
+  margin-bottom: 10px;
 }
 
 .ctrl-card {
   background: rgba(255,255,255,0.04);
   border: 1px solid var(--border);
   border-radius: 12px;
-  padding: 10px 12px;
+  padding: 8px 12px;
   text-align: center;
 }
 .ctrl-title {
@@ -274,7 +274,7 @@ body {
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.1em;
-  margin-bottom: 10px;
+  margin-bottom: 5px;
 }
 .p1-card .ctrl-title { color: var(--p1); }
 .p2-card .ctrl-title { color: var(--p2); }
@@ -301,7 +301,7 @@ body {
 /* Difficulty */
 .difficulty-row, .mode-row {
   text-align: left;
-  margin-bottom: 12px;
+  margin-bottom: 8px;
 }
 .diff-label {
   font-size: 0.7rem;
@@ -309,7 +309,7 @@ body {
   text-transform: uppercase;
   letter-spacing: 0.12em;
   color: var(--text-muted);
-  margin-bottom: 8px;
+  margin-bottom: 5px;
   display: block;
 }
 .diff-options {
@@ -317,6 +317,7 @@ body {
   grid-template-columns: repeat(3, 1fr);
   gap: 8px;
 }
+.track-options { grid-template-columns: repeat(5, 1fr); }
 .diff-opt {
   display: flex;
   flex-direction: column;
@@ -325,7 +326,7 @@ body {
   background: rgba(255,255,255,0.04);
   border: 1px solid var(--border);
   border-radius: 10px;
-  padding: 8px 4px;
+  padding: 6px 4px;
   cursor: pointer;
   transition: all 0.2s;
   font-size: 0.82rem;
@@ -334,7 +335,7 @@ body {
 }
 .diff-opt input { display: none; }
 .diff-opt span { font-size: 0.88rem; font-weight: 800; color: #e2e8f0; }
-.diff-opt small { font-size: 0.68rem; color: var(--text-muted); font-weight: 500; }
+.diff-opt small { font-size: 0.62rem; color: var(--text-muted); font-weight: 500; }
 .diff-opt:hover { border-color: var(--accent); background: rgba(192,132,252,0.08); }
 .diff-opt.selected {
   border-color: var(--accent);
@@ -350,10 +351,10 @@ body {
   color: #fff;
   border: none;
   font-family: var(--font);
-  font-size: 1.1rem;
+  font-size: 1rem;
   font-weight: 800;
   width: 100%;
-  padding: 16px;
+  padding: 12px;
   border-radius: 12px;
   cursor: pointer;
   box-shadow: 0 8px 24px rgba(192, 132, 252, 0.4);
@@ -395,10 +396,41 @@ body {
 }
 .end-stats .stat-line { display: flex; justify-content: space-between; }
 .end-stats .stat-val { font-weight: 800; color: var(--gold); }
+.skill-report,
+.missed-report {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+}
+.skill-line,
+.missed-line {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  color: #cbd5e1;
+  line-height: 1.45;
+}
+.missed-line span {
+  text-align: left;
+}
+.missed-line strong {
+  color: var(--correct);
+  white-space: nowrap;
+}
+.report-title {
+  color: var(--accent2);
+  font-size: 0.72rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  margin-bottom: 6px;
+}
 
 @media (max-width: 768px) {
   .wr-header { grid-template-columns: 1fr; gap: 10px; justify-items: center; }
   .header-right { display: none; }
   .wr-modal { padding: 24px 20px; }
   .controls-grid { grid-template-columns: 1fr 1fr; }
+  .diff-options { grid-template-columns: 1fr; }
+  .track-options { grid-template-columns: repeat(2, 1fr); }
 }
