@@ -696,7 +696,7 @@ class WordRunner {
     this.players = [];
     const configs = [
       { id: 1, color: '#38bdf8', glow: 'rgba(56,189,248,0.4)', up: 'ArrowUp', down: 'ArrowDown', left: 'ArrowLeft', right: 'ArrowRight', x: 60 },
-      { id: 2, color: '#fb7185', glow: 'rgba(251,113,133,0.4)', up: 'w', down: 's', left: 'a', right: 'd', x: 100 }
+      { id: 2, color: '#22c55e', glow: 'rgba(34,197,94,0.4)', up: 'w', down: 's', left: 'a', right: 'd', x: 100 }
     ];
     for (let i = 0; i < this.playerCount; i++) {
       const c = configs[i];
@@ -2745,10 +2745,11 @@ class WordRunner {
     const dir = p.facingRight ? 1 : -1;
     const skin = '#f4c28b';
     const skinShadow = '#d8915f';
-    const hair = '#4b2e20';
+    const cheek = '#f8d0a5';
+    const hair = '#3f2416';
     const outfit = p.id === 1
-      ? { cap: '#ef4444', shirt: '#ef4444', overalls: '#2563eb', trim: '#bfdbfe' }
-      : { cap: '#a855f7', shirt: '#a855f7', overalls: '#db2777', trim: '#fbcfe8' };
+      ? { cap: '#ef4444', capDark: '#b91c1c', shirt: '#ef4444', overalls: '#2563eb', trim: '#bfdbfe', badge: '#facc15' }
+      : { cap: '#22c55e', capDark: '#15803d', shirt: '#22c55e', overalls: '#166534', trim: '#bbf7d0', badge: '#dcfce7' };
     const armSwing = p.grounded && Math.abs(p.vx) > 20 ? Math.sin(p.animTime * 14 + Math.PI) * 5 : 1;
     const kneeA = legSwing * 0.22;
     const kneeB = -legSwing * 0.22;
@@ -2758,109 +2759,136 @@ class WordRunner {
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
 
-    // Back arm
+    // Back arm and sleeve
+    ctx.strokeStyle = outfit.shirt;
+    ctx.lineWidth = 7;
+    ctx.beginPath();
+    ctx.moveTo(-9, -29);
+    ctx.lineTo(-14 - armSwing * 0.18, -21 + armSwing * 0.16);
+    ctx.stroke();
     ctx.strokeStyle = skinShadow;
     ctx.lineWidth = 5;
     ctx.beginPath();
-    ctx.moveTo(-8, -28);
-    ctx.lineTo(-13 - armSwing * 0.25, -17 + armSwing * 0.25);
+    ctx.moveTo(-14 - armSwing * 0.18, -21 + armSwing * 0.16);
+    ctx.lineTo(-16 - armSwing * 0.24, -12 + armSwing * 0.22);
     ctx.stroke();
 
     // Legs and shoes
     ctx.fillStyle = outfit.overalls;
     ctx.beginPath();
-    rr(ctx, -8 + kneeA, -16, 7, 16, 3);
+    rr(ctx, -9 + kneeA, -17, 8, 17, 3);
     ctx.fill();
     ctx.beginPath();
-    rr(ctx, 2 + kneeB, -16, 7, 16, 3);
+    rr(ctx, 2 + kneeB, -17, 8, 17, 3);
     ctx.fill();
     ctx.fillStyle = shoeCol;
     ctx.beginPath();
-    rr(ctx, -11 + kneeA, -4, 13, 6, 3);
+    rr(ctx, -13 + kneeA, -5, 15, 7, 3);
     ctx.fill();
     ctx.beginPath();
-    rr(ctx, 0 + kneeB, -4, 13, 6, 3);
+    rr(ctx, -1 + kneeB, -5, 15, 7, 3);
     ctx.fill();
 
     // Shirt and overalls
     ctx.fillStyle = outfit.shirt;
     ctx.beginPath();
-    rr(ctx, -12, -32, 24, 18, 6);
+    rr(ctx, -14, -33, 28, 18, 7);
+    ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,0.16)';
+    ctx.beginPath();
+    rr(ctx, -9, -31, 18, 5, 3);
     ctx.fill();
     ctx.fillStyle = outfit.overalls;
     ctx.beginPath();
-    rr(ctx, -9, -29, 18, 21, 4);
+    rr(ctx, -10, -28, 20, 22, 5);
     ctx.fill();
     ctx.strokeStyle = outfit.trim;
     ctx.lineWidth = 2;
     ctx.beginPath();
-    ctx.moveTo(-6, -29);
+    ctx.moveTo(-7, -28);
     ctx.lineTo(-2, -17);
-    ctx.moveTo(6, -29);
+    ctx.moveTo(7, -28);
     ctx.lineTo(2, -17);
     ctx.stroke();
-    ctx.fillStyle = '#facc15';
+    ctx.fillStyle = outfit.badge;
     ctx.beginPath();
-    ctx.arc(-4, -20, 1.8, 0, Math.PI * 2);
-    ctx.arc(4, -20, 1.8, 0, Math.PI * 2);
+    ctx.arc(-4, -19, 2, 0, Math.PI * 2);
+    ctx.arc(4, -19, 2, 0, Math.PI * 2);
     ctx.fill();
 
-    // Front arm
+    // Front arm and sleeve
+    ctx.strokeStyle = outfit.shirt;
+    ctx.lineWidth = 7;
+    ctx.beginPath();
+    ctx.moveTo(10, -29);
+    ctx.lineTo(15 + armSwing * 0.2, -21 - armSwing * 0.16);
+    ctx.stroke();
     ctx.strokeStyle = skin;
     ctx.lineWidth = 5;
     ctx.beginPath();
-    ctx.moveTo(9, -28);
-    ctx.lineTo(14 + armSwing * 0.25, -17 - armSwing * 0.25);
+    ctx.moveTo(15 + armSwing * 0.2, -21 - armSwing * 0.16);
+    ctx.lineTo(17 + armSwing * 0.26, -12 - armSwing * 0.22);
     ctx.stroke();
 
-    // Neck, head, and ear
+    // Neck, ears, and larger front-readable head
     ctx.fillStyle = skinShadow;
-    ctx.fillRect(-3, -35, 7, 6);
+    ctx.fillRect(-4, -36, 8, 6);
     ctx.fillStyle = skin;
     ctx.beginPath();
-    ctx.arc(0, -41, 9, 0, Math.PI * 2);
+    ctx.arc(-8, -41, 3.2, 0, Math.PI * 2);
+    ctx.arc(8, -41, 3.2, 0, Math.PI * 2);
     ctx.fill();
     ctx.beginPath();
-    ctx.arc(-7, -40, 3, 0, Math.PI * 2);
+    ctx.arc(0, -42, 10.8, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = cheek;
+    ctx.beginPath();
+    ctx.arc(0, -40, 7.7, 0, Math.PI * 2);
     ctx.fill();
 
-    // Hair and cap
+    // Hair and cap read from the front, with a small brim pointing forward.
     ctx.fillStyle = hair;
     ctx.beginPath();
-    rr(ctx, -8, -47, 12, 9, 4);
+    rr(ctx, -9, -49, 18, 9, 5);
+    ctx.fill();
+    ctx.fillStyle = outfit.capDark;
+    ctx.beginPath();
+    rr(ctx, -11, -52, 22, 7, 5);
     ctx.fill();
     ctx.fillStyle = outfit.cap;
     ctx.beginPath();
-    rr(ctx, -9, -50, 18, 8, 5);
+    rr(ctx, -12, -50, 24, 8, 5);
     ctx.fill();
     ctx.beginPath();
-    rr(ctx, 1, -47, 13, 4, 2);
+    rr(ctx, 1, -47, 14, 5, 3);
     ctx.fill();
-    ctx.fillStyle = 'rgba(255,255,255,0.35)';
+    ctx.fillStyle = outfit.badge;
     ctx.beginPath();
-    rr(ctx, -5, -49, 7, 2, 1);
+    ctx.arc(0, -47, 3.2, 0, Math.PI * 2);
     ctx.fill();
 
     // Face details
     ctx.fillStyle = '#111827';
     ctx.beginPath();
-    ctx.arc(4, -42, 1.4, 0, Math.PI * 2);
+    ctx.arc(-3.5, -42, 1.5, 0, Math.PI * 2);
+    ctx.arc(4.5, -42, 1.5, 0, Math.PI * 2);
     ctx.fill();
     ctx.fillStyle = skinShadow;
     ctx.beginPath();
-    ctx.arc(8, -38, 2.4, 0, Math.PI * 2);
+    ctx.arc(1.5, -39, 1.8, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = hair;
+    ctx.strokeStyle = '#7c2d12';
+    ctx.lineWidth = 1.4;
     ctx.beginPath();
-    rr(ctx, 2, -35, 9, 2.5, 2);
-    ctx.fill();
+    ctx.arc(0.5, -37, 4, 0.1 * Math.PI, 0.82 * Math.PI);
+    ctx.stroke();
 
     // Tiny chest badge for local co-op readability.
     ctx.save();
     ctx.scale(dir, 1);
     ctx.fillStyle = 'rgba(0,0,0,0.45)';
     ctx.beginPath();
-    ctx.arc(0, -18, 5, 0, Math.PI * 2);
+    ctx.arc(0, -18, 5.3, 0, Math.PI * 2);
     ctx.fill();
     ctx.fillStyle = '#fff';
     ctx.font = '800 6px Outfit';
