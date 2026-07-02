@@ -2788,13 +2788,41 @@ class WordRunner {
       ? { cap: '#0f766e', capDark: '#134e4a', shirt: '#f97316', overalls: '#2563eb', trim: '#bae6fd', badge: '#facc15' }
       : { cap: '#22c55e', capDark: '#15803d', shirt: '#22c55e', overalls: '#166534', trim: '#bbf7d0', badge: '#dcfce7' };
     const walkPower = p.grounded ? Math.min(1, Math.abs(p.vx) / MAX_SPEED) : 0;
-    const airPose = !p.grounded;
+    const onRope = Boolean(p.rope);
+    const rising = !p.grounded && !onRope && p.vy < -160;
+    const falling = !p.grounded && !onRope && p.vy > 150;
+    const powered = p.invincibleTimer > 1.5 || p.bootTimer > 0;
     const armSwing = Math.sin(p.animTime * 18 + Math.PI) * 5 * walkPower;
     const kneeA = legSwing * 0.22;
     const kneeB = -legSwing * 0.22;
     const footLiftA = Math.max(0, legSwing) * 0.34;
     const footLiftB = Math.max(0, -legSwing) * 0.34;
-    const armLift = airPose ? -7 : 0;
+    const climbPulse = Math.sin(p.animTime * 10) * 3;
+    let backArm = {
+      elbowX: -14 - armSwing * 0.32,
+      elbowY: -21 + armSwing * 0.18,
+      handX: -16 - armSwing * 0.4,
+      handY: -12 + armSwing * 0.24
+    };
+    let frontArm = {
+      elbowX: 15 + armSwing * 0.34,
+      elbowY: -21 - armSwing * 0.18,
+      handX: 17 + armSwing * 0.42,
+      handY: -12 - armSwing * 0.24
+    };
+    if (onRope) {
+      backArm = { elbowX: -11, elbowY: -36 + climbPulse, handX: -6, handY: -48 + climbPulse };
+      frontArm = { elbowX: 11, elbowY: -37 - climbPulse, handX: 6, handY: -49 - climbPulse };
+    } else if (powered) {
+      backArm = { elbowX: -18, elbowY: -35, handX: -24, handY: -43 };
+      frontArm = { elbowX: 18, elbowY: -35, handX: 24, handY: -43 };
+    } else if (rising) {
+      backArm = { elbowX: -13, elbowY: -37, handX: -9, handY: -48 };
+      frontArm = { elbowX: 13, elbowY: -37, handX: 9, handY: -48 };
+    } else if (falling) {
+      backArm = { elbowX: -19, elbowY: -29, handX: -22, handY: -20 };
+      frontArm = { elbowX: 19, elbowY: -29, handX: 22, handY: -20 };
+    }
 
     ctx.save();
     ctx.scale(dir, 1);
@@ -2806,13 +2834,13 @@ class WordRunner {
     ctx.lineWidth = 7;
     ctx.beginPath();
     ctx.moveTo(-9, -29);
-    ctx.lineTo(-14 - armSwing * 0.32, -21 + armSwing * 0.18 + armLift);
+    ctx.lineTo(backArm.elbowX, backArm.elbowY);
     ctx.stroke();
     ctx.strokeStyle = skinShadow;
     ctx.lineWidth = 5;
     ctx.beginPath();
-    ctx.moveTo(-14 - armSwing * 0.32, -21 + armSwing * 0.18 + armLift);
-    ctx.lineTo(-16 - armSwing * 0.4, -12 + armSwing * 0.24 + armLift);
+    ctx.moveTo(backArm.elbowX, backArm.elbowY);
+    ctx.lineTo(backArm.handX, backArm.handY);
     ctx.stroke();
 
     // Legs and shoes
@@ -2863,13 +2891,13 @@ class WordRunner {
     ctx.lineWidth = 7;
     ctx.beginPath();
     ctx.moveTo(10, -29);
-    ctx.lineTo(15 + armSwing * 0.34, -21 - armSwing * 0.18 + armLift);
+    ctx.lineTo(frontArm.elbowX, frontArm.elbowY);
     ctx.stroke();
     ctx.strokeStyle = skin;
     ctx.lineWidth = 5;
     ctx.beginPath();
-    ctx.moveTo(15 + armSwing * 0.34, -21 - armSwing * 0.18 + armLift);
-    ctx.lineTo(17 + armSwing * 0.42, -12 - armSwing * 0.24 + armLift);
+    ctx.moveTo(frontArm.elbowX, frontArm.elbowY);
+    ctx.lineTo(frontArm.handX, frontArm.handY);
     ctx.stroke();
 
     // Neck, ears, and larger front-readable head
