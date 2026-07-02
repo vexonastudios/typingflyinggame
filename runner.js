@@ -2173,22 +2173,58 @@ class WordRunner {
 
     // ── Springs ──
     for (const spring of this.springs) {
-      const squish = spring.cooldown > 0 ? 5 : 0;
+      const squish = spring.cooldown > 0 ? 4 : 0;
+      const topY = spring.y + squish;
       ctx.save();
-      ctx.fillStyle = '#0e7490';
+      ctx.shadowBlur = 10;
+      ctx.shadowColor = '#f97316';
+      ctx.fillStyle = '#1f2937';
       ctx.beginPath();
-      rr(ctx, spring.x, spring.y + squish, spring.w, spring.h - squish, 5);
+      rr(ctx, spring.x - 3, spring.y + spring.h - 4, spring.w + 6, 8, 4);
       ctx.fill();
-      ctx.fillStyle = '#67e8f9';
-      ctx.fillRect(spring.x + 5, spring.y + 3 + squish, spring.w - 10, 4);
-      ctx.strokeStyle = '#cffafe';
+
+      ctx.strokeStyle = '#facc15';
       ctx.lineWidth = 2;
       ctx.beginPath();
-      for (let sx = spring.x + 8; sx < spring.x + spring.w - 6; sx += 10) {
-        ctx.moveTo(sx, spring.y + spring.h);
-        ctx.lineTo(sx + 7, spring.y + 6 + squish);
+      for (let sx = spring.x + 9; sx < spring.x + spring.w - 6; sx += 12) {
+        ctx.moveTo(sx, spring.y + spring.h - 3);
+        ctx.lineTo(sx + 7, topY + 8);
       }
       ctx.stroke();
+
+      const padGrad = ctx.createLinearGradient(spring.x, topY, spring.x, topY + spring.h);
+      padGrad.addColorStop(0, '#fde68a');
+      padGrad.addColorStop(0.45, '#f97316');
+      padGrad.addColorStop(1, '#b45309');
+      ctx.fillStyle = padGrad;
+      ctx.beginPath();
+      rr(ctx, spring.x, topY, spring.w, Math.max(9, spring.h - squish), 6);
+      ctx.fill();
+      ctx.strokeStyle = '#7c2d12';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      ctx.fillStyle = '#fff7ed';
+      ctx.beginPath();
+      ctx.moveTo(spring.x + spring.w / 2, topY + 3);
+      ctx.lineTo(spring.x + spring.w / 2 - 7, topY + 11);
+      ctx.lineTo(spring.x + spring.w / 2 - 2, topY + 11);
+      ctx.lineTo(spring.x + spring.w / 2 - 2, topY + 15);
+      ctx.lineTo(spring.x + spring.w / 2 + 2, topY + 15);
+      ctx.lineTo(spring.x + spring.w / 2 + 2, topY + 11);
+      ctx.lineTo(spring.x + spring.w / 2 + 7, topY + 11);
+      ctx.closePath();
+      ctx.fill();
+
+      if (spring.cooldown > 0) {
+        ctx.globalAlpha = 0.55;
+        ctx.strokeStyle = '#facc15';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(spring.x + spring.w / 2, spring.y - 4, 12, Math.PI * 0.15, Math.PI * 0.85);
+        ctx.stroke();
+      }
+      ctx.shadowBlur = 0;
       ctx.restore();
     }
 
@@ -2846,41 +2882,47 @@ class WordRunner {
     ctx.arc(0, -40, 7.7, 0, Math.PI * 2);
     ctx.fill();
 
-    // Hair and cap read from the front, with a small brim pointing forward.
+    // Small side hair only; avoid a dark band across the eyes.
     ctx.fillStyle = hair;
     ctx.beginPath();
-    rr(ctx, -9, -49, 18, 9, 5);
+    rr(ctx, -10, -47, 4, 9, 2);
+    rr(ctx, 6, -47, 4, 9, 2);
     ctx.fill();
     ctx.fillStyle = outfit.capDark;
     ctx.beginPath();
-    rr(ctx, -11, -52, 22, 7, 5);
+    rr(ctx, -10, -57, 20, 7, 5);
     ctx.fill();
     ctx.fillStyle = outfit.cap;
     ctx.beginPath();
-    rr(ctx, -12, -50, 24, 8, 5);
+    rr(ctx, -11, -55, 22, 7, 5);
     ctx.fill();
     ctx.beginPath();
-    rr(ctx, 1, -47, 14, 5, 3);
+    rr(ctx, -7, -51, 22, 4, 3);
     ctx.fill();
     ctx.fillStyle = outfit.badge;
     ctx.beginPath();
-    ctx.arc(0, -47, 3.2, 0, Math.PI * 2);
+    ctx.arc(0, -52, 3.1, 0, Math.PI * 2);
     ctx.fill();
 
     // Face details
+    ctx.fillStyle = '#fff7ed';
+    ctx.beginPath();
+    ctx.arc(-4, -41.5, 2.3, 0, Math.PI * 2);
+    ctx.arc(4.5, -41.5, 2.3, 0, Math.PI * 2);
+    ctx.fill();
     ctx.fillStyle = '#111827';
     ctx.beginPath();
-    ctx.arc(-3.5, -42, 1.5, 0, Math.PI * 2);
-    ctx.arc(4.5, -42, 1.5, 0, Math.PI * 2);
+    ctx.arc(-3.5, -41.2, 1.05, 0, Math.PI * 2);
+    ctx.arc(5, -41.2, 1.05, 0, Math.PI * 2);
     ctx.fill();
     ctx.fillStyle = skinShadow;
     ctx.beginPath();
-    ctx.arc(1.5, -39, 1.8, 0, Math.PI * 2);
+    ctx.arc(0.7, -38, 1.8, 0, Math.PI * 2);
     ctx.fill();
     ctx.strokeStyle = '#7c2d12';
-    ctx.lineWidth = 1.4;
+    ctx.lineWidth = 1.7;
     ctx.beginPath();
-    ctx.arc(0.5, -37, 4, 0.1 * Math.PI, 0.82 * Math.PI);
+    ctx.arc(0.4, -36.2, 4.3, 0.12 * Math.PI, 0.88 * Math.PI);
     ctx.stroke();
 
     // Tiny chest badge for local co-op readability.
