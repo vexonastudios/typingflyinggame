@@ -732,6 +732,20 @@ class WordRunner {
     return ['rope', 'tilt', 'crumble', 'wind', 'timed', 'spring', 'moving'][sectionIndex % 7];
   }
 
+  _springThreatensAnswerBlock(spring, blocks) {
+    const centerX = spring.x + spring.w / 2;
+    return blocks.some(block => (
+      centerX > block.x - 90 &&
+      centerX < block.x + block.w + 90 &&
+      spring.y > block.y + block.h &&
+      spring.y - (block.y + block.h) < 150
+    ));
+  }
+
+  _removeAnswerZoneSprings(blocks) {
+    this.springs = this.springs.filter(spring => !this._springThreatensAnswerBlock(spring, blocks));
+  }
+
   // ─── Level Generation ───
   _generateLevel() {
     const stage = this._getStage();
@@ -989,25 +1003,17 @@ class WordRunner {
         });
       }
 
-      if (challengeType === 'spring') {
-        this.springs.push({
-          x: safeX + 40,
-          y: safeY - 18,
-          w: 54,
-          h: 18,
-          force: 900 + diff * 45,
-          cooldown: 0
-        });
-      }
+      const answerBlocks = [
+        { x: safeX + 100, y: 300, w: 150, h: 54, text: answers[0], isCorrect: answers[0] === prompt.a, hit: false, bob: Math.random() * Math.PI * 2 },
+        { x: safeX + 310, y: 300, w: 150, h: 54, text: answers[1], isCorrect: answers[1] === prompt.a, hit: false, bob: Math.random() * Math.PI * 2 + 1 },
+        { x: safeX + 520, y: 300, w: 150, h: 54, text: answers[2], isCorrect: answers[2] === prompt.a, hit: false, bob: Math.random() * Math.PI * 2 + 2 }
+      ];
+      this._removeAnswerZoneSprings(answerBlocks);
 
       this.gates.push({
         prompt: prompt.q,
         promptData: prompt,
-        blocks: [
-          { x: safeX + 100, y: 300, w: 150, h: 54, text: answers[0], isCorrect: answers[0] === prompt.a, hit: false, bob: Math.random() * Math.PI * 2 },
-          { x: safeX + 310, y: 300, w: 150, h: 54, text: answers[1], isCorrect: answers[1] === prompt.a, hit: false, bob: Math.random() * Math.PI * 2 + 1 },
-          { x: safeX + 520, y: 300, w: 150, h: 54, text: answers[2], isCorrect: answers[2] === prompt.a, hit: false, bob: Math.random() * Math.PI * 2 + 2 }
-        ],
+        blocks: answerBlocks,
         wall: gateWall,
         cleared: false
       });
