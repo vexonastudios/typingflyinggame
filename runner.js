@@ -421,6 +421,8 @@ const GRAVITY = 1600;
 const JUMP_FORCE = -780;
 const DOUBLE_JUMP_FORCE = -700;
 const MAX_SPEED = 360;
+const ROPE_CLIMB_SPEED = 175;
+const ROPE_GRAB_RANGE = 26;
 
 // ─────────────────────────────────────────────────────────────
 // Main Game Class
@@ -636,6 +638,10 @@ class WordRunner {
     this.hearts      = [];
     this.spikes      = [];
     this.powerups    = [];
+    this.ropes       = [];
+    this.springs     = [];
+    this.windZones   = [];
+    this.timedHazards = [];
     this.floatTexts  = [];
     this.levelTime   = 0;
     this.bossPhase   = false;
@@ -689,8 +695,8 @@ class WordRunner {
 
     this.players = [];
     const configs = [
-      { id: 1, color: '#38bdf8', glow: 'rgba(56,189,248,0.4)', up: 'ArrowUp', left: 'ArrowLeft', right: 'ArrowRight', x: 60 },
-      { id: 2, color: '#fb7185', glow: 'rgba(251,113,133,0.4)', up: 'w', left: 'a', right: 'd', x: 100 }
+      { id: 1, color: '#38bdf8', glow: 'rgba(56,189,248,0.4)', up: 'ArrowUp', down: 'ArrowDown', left: 'ArrowLeft', right: 'ArrowRight', x: 60 },
+      { id: 2, color: '#fb7185', glow: 'rgba(251,113,133,0.4)', up: 'w', down: 's', left: 'a', right: 'd', x: 100 }
     ];
     for (let i = 0; i < this.playerCount; i++) {
       const c = configs[i];
@@ -699,10 +705,11 @@ class WordRunner {
         x: c.x, y: 300, w: 32, h: 48,
         vx: 0, vy: 0,
         color: c.color, glow: c.glow,
-        grounded: false, up: c.up, left: c.left, right: c.right,
+        grounded: false, up: c.up, down: c.down, left: c.left, right: c.right,
         dead: false, jumpCount: 0,
         invincibleTimer: 0, bootTimer: 0,
         animTime: 0, squash: 1, squashVel: 0,
+        rope: null, ropeOffset: 0, ropeNudge: 0, ropeCooldown: 0,
         jumpReleased: true, wasGrounded: false,
         facingRight: true,
         trailFrames: []
@@ -711,6 +718,18 @@ class WordRunner {
 
     this._updateHUD();
     this._generateLevel();
+  }
+
+  _challengeTypeForSection(stage, sectionIndex) {
+    const level = stage?.id || this.currentLevel || 1;
+    if (level <= 1) return sectionIndex % 3 === 2 ? 'spring' : 'moving';
+    if (level <= 2) return ['moving', 'spring', 'crumble'][sectionIndex % 3];
+    if (level <= 4) return ['moving', 'spring', 'crumble', 'timed'][sectionIndex % 4];
+    if (level <= 5) return ['timed', 'crumble', 'spring'][sectionIndex % 3];
+    if (level <= 8) return ['rope', 'crumble', 'spring', 'tilt'][sectionIndex % 4];
+    if (level <= 10) return ['tilt', 'wind', 'timed', 'moving', 'rope'][sectionIndex % 5];
+    if (level <= 14) return ['rope', 'tilt', 'crumble', 'wind', 'timed', 'spring'][sectionIndex % 6];
+    return ['rope', 'tilt', 'crumble', 'wind', 'timed', 'spring', 'moving'][sectionIndex % 7];
   }
 
   // ─── Level Generation ───
@@ -726,6 +745,7 @@ class WordRunner {
     px += 400;
 
     for (let i = 0; i < gateCount; i++) {
+      const challengeType = this._challengeTypeForSection(stage, i);
       // ── 1. Navigation gap ──
       const gap = 150 + Math.random() * 40 + diff * 10;
       const platW = Math.max(280, 650 - diff * 120);
@@ -744,6 +764,33 @@ class WordRunner {
       // Main landing platform
       const landX = px + gap;
       this.platforms.push({ x: landX, y: 500, w: platW, h: 120, active: true, type: 'grass' });
+
+      if (challengeType === 'timed' && diff >= 1) {
+        this.timedHazards.push({
+          type: 'firejet',
+          x: landX + Math.max(130, platW * 0.58),
+          y: 422,
+          w: 34,
+          h: 78,
+          period: Math.max(1.55, 2.3 - diff * 0.12),
+          onTime: Math.min(1.05, 0.72 + diff * 0.07),
+          phase: i * 0.37,
+          active: false
+        });
+      }
+
+      if (challengeType === 'wind' && diff >= 3) {
+        const dir = i % 2 === 0 ? 1 : -1;
+        this.windZones.push({
+          x: landX + 80,
+          y: 160,
+          w: Math.max(260, platW - 160),
+          h: 300,
+          forceX: dir * (260 + diff * 55) * gameCfg.speedMultiplier,
+          forceY: -80,
+          phase: i * 0.9
+        });
+      }
 
       // Coins cluster
       for (let j = 0; j < 3; j++) {
@@ -783,6 +830,16 @@ class WordRunner {
       const stepGap = 90 + diff * 12;
       const stepW   = Math.max(80, 130 - diff * 18);
       this.platforms.push({ x: px + stepGap, y: 410, w: stepW, h: 210, active: true, type: 'stone' });
+      if (challengeType === 'spring') {
+        this.springs.push({
+          x: px + stepGap + Math.max(8, stepW * 0.24),
+          y: 392,
+          w: Math.min(52, Math.max(38, stepW * 0.55)),
+          h: 18,
+          force: 930 + diff * 55,
+          cooldown: 0
+        });
+      }
       if (diff >= 1 && Math.random() < 0.5 * gameCfg.hazardMultiplier) {
         // Only cover the right half of the step to leave a safe landing zone
         const spikeW = stepW / 2;
@@ -790,6 +847,19 @@ class WordRunner {
       }
       const step2x = px + stepGap + stepW + 70 + diff * 18;
       this.platforms.push({ x: step2x, y: 310, w: stepW, h: 310, active: true, type: 'stone' });
+      if (challengeType === 'timed' && diff >= 2) {
+        this.timedHazards.push({
+          type: 'firejet',
+          x: step2x + stepW / 2 - 16,
+          y: 250,
+          w: 32,
+          h: 60,
+          period: Math.max(1.45, 2.0 - diff * 0.1),
+          onTime: 0.62 + diff * 0.06,
+          phase: 0.65 + i * 0.41,
+          active: false
+        });
+      }
       for (let j = 0; j < 2; j++) {
         this.coins.push({ x: px + stepGap + stepW + j * 45, y: 210, w: 18, h: 18, collected: false });
       }
@@ -805,14 +875,70 @@ class WordRunner {
       for (let k = 0; k < numIslands; k++) {
         const iX = px + 100 + k * iSpacing;
         const iY = 430 - k * 25;
-        this.platforms.push({
+        let island = {
           x: iX, y: iY, w: 110, h: 28,
           active: true, type: 'moving',
           moveY: true, speed: iSpeed,
           startY: iY, endY: iY - 190,
           startX: iX, endX: iX,
           vx: 0, vy: -iSpeed
-        });
+        };
+        if (challengeType === 'tilt' && diff >= 2 && k % 2 === 0) {
+          island = {
+            x: iX - 10, y: iY, w: 132, h: 26,
+            active: true, type: 'tilt',
+            tiltAngle: 0, tiltTarget: 0, tiltLoad: 0, tiltLoadCount: 0
+          };
+        } else if (challengeType === 'crumble' && k % 2 === 0) {
+          island = {
+            x: iX, y: iY, w: 108, h: 26,
+            active: true, type: 'crumble',
+            crumbleDelay: Math.max(0.82, 1.35 - diff * 0.12),
+            crumbleTimer: null,
+            respawnTimer: 0,
+            shake: 0
+          };
+        } else if (challengeType === 'moving' && diff >= 3 && k % 2 === 0) {
+          island.moveY = false;
+          island.y = iY - 35;
+          island.startY = island.y;
+          island.endY = island.y;
+          island.startX = iX - 60;
+          island.endX = iX + 105;
+          island.x = island.startX;
+          island.vx = iSpeed * 0.85;
+          island.vy = 0;
+        }
+        this.platforms.push(island);
+
+        if (challengeType === 'rope' && diff >= 2 && k === 0) {
+          this.ropes.push({
+            x: iX + iSpacing * 0.78,
+            y: 138,
+            length: 292,
+            swingAmp: 34 + diff * 5,
+            swingSpeed: 1.08 + diff * 0.12,
+            phase: i * 0.8 + k,
+            vx: 0,
+            startX: iX + iSpacing * 0.78,
+            endX: iX + iSpacing * 0.78,
+            moveX: false
+          });
+        }
+
+        if (challengeType === 'wind' && diff >= 3 && k === Math.max(0, numIslands - 1)) {
+          const dir = i % 2 === 0 ? -1 : 1;
+          this.windZones.push({
+            x: iX - 40,
+            y: 120,
+            w: 200,
+            h: 310,
+            forceX: dir * (330 + diff * 45) * gameCfg.speedMultiplier,
+            forceY: -110,
+            phase: i * 0.6 + 1.3
+          });
+        }
+
         if (Math.random() < 0.4) {
           this.coins.push({ x: iX + 40, y: iY - 30, w: 18, h: 18, collected: false });
           this.coins.push({ x: iX + 65, y: iY - 30, w: 18, h: 18, collected: false });
@@ -831,6 +957,48 @@ class WordRunner {
       const gateWall = { x: gateWallX, y: 0, w: 36, h: 470, active: true, isGate: true };
       this.platforms.push(gateWall);
       this.platforms.push({ x: safeX, y: safeY, w: 890, h: 160, active: true, type: 'grass' });
+
+      if (challengeType === 'rope' && diff >= 2) {
+        this.ropes.push({
+          x: safeX - 78,
+          y: 130,
+          length: 330,
+          swingAmp: 38 + diff * 5,
+          swingSpeed: 1.18 + diff * 0.1,
+          phase: 1.7 + i * 0.6,
+          vx: 0,
+          startX: safeX - 78,
+          endX: safeX - 78,
+          moveX: false
+        });
+        this.coins.push({ x: safeX - 95, y: 240, w: 18, h: 18, collected: false });
+        this.coins.push({ x: safeX - 56, y: 204, w: 18, h: 18, collected: false });
+      }
+
+      if (challengeType === 'timed' && diff >= 1) {
+        this.timedHazards.push({
+          type: 'firejet',
+          x: safeX + 620,
+          y: safeY - 76,
+          w: 36,
+          h: 76,
+          period: Math.max(1.5, 2.2 - diff * 0.12),
+          onTime: Math.min(1.0, 0.68 + diff * 0.07),
+          phase: 0.25 + i * 0.55,
+          active: false
+        });
+      }
+
+      if (challengeType === 'spring') {
+        this.springs.push({
+          x: safeX + 40,
+          y: safeY - 18,
+          w: 54,
+          h: 18,
+          force: 900 + diff * 45,
+          cooldown: 0
+        });
+      }
 
       this.gates.push({
         prompt: prompt.q,
@@ -994,6 +1162,8 @@ class WordRunner {
     if (p.invincibleTimer > 0) return; // invincible
     p.invincibleTimer = 1.8; // brief iframes
     p.lives--;
+    p.rope = null;
+    p.ropeCooldown = 0.3;
     Sfx.hurt();
     const penalty = this._getGameConfig().wrongPenalty;
     this.score = Math.max(0, this.score - penalty);
@@ -1009,6 +1179,7 @@ class WordRunner {
       // Safe respawn
       const safePlat = this.platforms.find(pl =>
         pl.active && !pl.moveY && !pl.isGate && pl.type !== 'gate' &&
+        pl.type !== 'crumble' && pl.type !== 'tilt' &&
         pl.x + pl.w > this.cameraX + 60 && pl.w > 100
       );
       p.x = safePlat ? Math.max(this.cameraX + 60, safePlat.x + 60) : this.cameraX + 200;
@@ -1129,6 +1300,87 @@ class WordRunner {
   }
 
   // ─── Update ───
+  _ropeX(rope, offset = rope.length, nudge = 0) {
+    const t = performance.now() / 1000;
+    const ratio = Math.max(0, Math.min(1, offset / Math.max(1, rope.length)));
+    return rope.x + Math.sin(t * rope.swingSpeed + rope.phase) * rope.swingAmp * ratio + nudge * 34;
+  }
+
+  _ropeSwingVelocity(rope, offset = rope.length, nudge = 0) {
+    const t = performance.now() / 1000;
+    const ratio = Math.max(0, Math.min(1, offset / Math.max(1, rope.length)));
+    return Math.cos(t * rope.swingSpeed + rope.phase) * rope.swingAmp * rope.swingSpeed * ratio + nudge * 240;
+  }
+
+  _tryGrabRope(p) {
+    if (p.rope || p.ropeCooldown > 0) return;
+    const centerX = p.x + p.w / 2;
+    const centerY = p.y + p.h / 2;
+    for (const rope of this.ropes) {
+      const offset = centerY - rope.y;
+      if (offset < 22 || offset > rope.length - 10) continue;
+      const ropeX = this._ropeX(rope, offset, 0);
+      if (Math.abs(centerX - ropeX) > ROPE_GRAB_RANGE) continue;
+      p.rope = rope;
+      p.ropeOffset = offset;
+      p.ropeNudge = 0;
+      p.vx = 0;
+      p.vy = 0;
+      p.grounded = false;
+      p.jumpCount = 0;
+      p.jumpReleased = false;
+      Sfx.hit();
+      return;
+    }
+  }
+
+  _releaseRope(p, leapVy = -520) {
+    if (!p.rope) return;
+    const rope = p.rope;
+    const swingV = this._ropeSwingVelocity(rope, p.ropeOffset, p.ropeNudge);
+    p.vx = (rope.vx || 0) + swingV;
+    p.vy = leapVy;
+    p.rope = null;
+    p.ropeCooldown = 0.28;
+    p.jumpReleased = false;
+    p.jumpCount = 1;
+    Sfx.jump();
+  }
+
+  _updatePlayerOnRope(p, dt) {
+    const rope = p.rope;
+    if (!rope) return;
+    p.grounded = false;
+    p.vx = 0;
+    p.vy = 0;
+    p.jumpCount = 0;
+
+    if (this.keys[p.left])  { p.ropeNudge -= dt * 2.4; p.facingRight = false; }
+    if (this.keys[p.right]) { p.ropeNudge += dt * 2.4; p.facingRight = true; }
+    if (!this.keys[p.left] && !this.keys[p.right]) p.ropeNudge *= Math.pow(0.08, dt);
+    p.ropeNudge = Math.max(-1, Math.min(1, p.ropeNudge));
+
+    if (this.keys[p.up]) {
+      p.ropeOffset -= ROPE_CLIMB_SPEED * dt;
+      p.animTime += dt * 2;
+    }
+
+    if (this.keys[p.down]) {
+      if (p.jumpReleased) {
+        this._releaseRope(p, 130);
+        return;
+      }
+    } else {
+      p.jumpReleased = true;
+    }
+
+    p.ropeOffset = Math.max(20, Math.min(rope.length - 18, p.ropeOffset));
+    const ropeX = this._ropeX(rope, p.ropeOffset, p.ropeNudge);
+    p.x = ropeX - p.w / 2;
+    p.y = rope.y + p.ropeOffset - p.h / 2;
+    p.squash += (1 - p.squash) * dt * 10;
+  }
+
   _update(dt) {
     if (this.state !== 'playing') return;
 
@@ -1145,6 +1397,49 @@ class WordRunner {
 
     // Platform bobbing for boss blocks
     const t = performance.now() / 1000;
+
+    for (const hazard of this.timedHazards) {
+      const phaseTime = (t + hazard.phase) % hazard.period;
+      hazard.active = phaseTime < hazard.onTime;
+      hazard.warning = !hazard.active && phaseTime > hazard.period - 0.35;
+    }
+
+    for (const spring of this.springs) {
+      if (spring.cooldown > 0) spring.cooldown = Math.max(0, spring.cooldown - dt);
+    }
+
+    for (const rope of this.ropes) {
+      if (!rope.moveX || !rope.vx) continue;
+      rope.x += rope.vx * dt;
+      if (rope.x < rope.startX) { rope.x = rope.startX; rope.vx = Math.abs(rope.vx); }
+      else if (rope.x > rope.endX) { rope.x = rope.endX; rope.vx = -Math.abs(rope.vx); }
+    }
+
+    for (const plat of this.platforms) {
+      if (plat.type === 'tilt') {
+        plat.tiltLoad = 0;
+        plat.tiltLoadCount = 0;
+      }
+      if (plat.type !== 'crumble') continue;
+      if (!plat.active) {
+        plat.respawnTimer = Math.max(0, (plat.respawnTimer || 0) - dt);
+        if (plat.respawnTimer <= 0) {
+          plat.active = true;
+          plat.crumbleTimer = null;
+          plat.shake = 0;
+        }
+      } else if (plat.crumbleTimer !== null) {
+        plat.crumbleTimer -= dt;
+        plat.shake = Math.max(0, plat.crumbleTimer / Math.max(0.1, plat.crumbleDelay));
+        if (plat.crumbleTimer <= 0) {
+          plat.active = false;
+          plat.respawnTimer = 2.2;
+          plat.crumbleTimer = null;
+          this._spawnBurst(plat.x + plat.w / 2, plat.y + 10, '#f59e0b', 12);
+          Sfx.hit();
+        }
+      }
+    }
 
     // Sparks
     this.sparks = this.sparks.filter(s => {
@@ -1212,13 +1507,24 @@ class WordRunner {
     for (const p of this.players) {
       if (p.dead) continue;
       p.wasGrounded = p.grounded;
+      p.groundedPlatform = null;
+      if (p.ropeCooldown > 0) p.ropeCooldown = Math.max(0, p.ropeCooldown - dt);
 
+      if (p.rope) {
+        this._updatePlayerOnRope(p, dt);
+      } else {
       // Input
       const accel = 1300;
       const friction = 0.80;
       if (this.keys[p.left])  p.vx -= accel * dt;
       if (this.keys[p.right]) p.vx += accel * dt;
       if (!this.keys[p.left] && !this.keys[p.right]) p.vx *= friction;
+      for (const zone of this.windZones) {
+        if (intersect(p, zone)) {
+          p.vx += zone.forceX * dt;
+          p.vy += zone.forceY * dt;
+        }
+      }
       p.vx = Math.max(-MAX_SPEED, Math.min(MAX_SPEED, p.vx));
       if (Math.abs(p.vx) > 5) p.facingRight = p.vx > 0;
 
@@ -1267,6 +1573,18 @@ class WordRunner {
             if (!p.wasGrounded) Sfx.land();
             p.vy = 0;
             p.grounded = true;
+            p.groundedPlatform = plat;
+            if (plat.type === 'tilt') {
+              const rel = ((p.x + p.w / 2) - (plat.x + plat.w / 2)) / Math.max(1, plat.w / 2);
+              plat.tiltLoad += Math.max(-1, Math.min(1, rel));
+              plat.tiltLoadCount++;
+              p.vx += (plat.tiltAngle || 0) * 720 * dt;
+            }
+            if (plat.type === 'crumble' && plat.crumbleTimer === null) {
+              plat.crumbleTimer = plat.crumbleDelay;
+              plat.shake = 1;
+              Sfx.hit();
+            }
           } else {
             p.y = plat.y + plat.h;
             p.vy = 0;
@@ -1274,9 +1592,23 @@ class WordRunner {
         }
       }
 
+      for (const spring of this.springs) {
+        if (spring.cooldown <= 0 && intersect(p, spring)) {
+          p.y = spring.y - p.h;
+          p.vy = -spring.force;
+          p.grounded = false;
+          p.jumpCount = 1;
+          p.squash = 0.58;
+          spring.cooldown = 0.35;
+          Sfx.jump();
+          this._spawnBurst(spring.x + spring.w / 2, spring.y, '#22d3ee', 10);
+        }
+      }
+
       // Jump
       if (p.grounded) p.jumpCount = 0;
-      if (this.keys[p.up]) {
+      this._tryGrabRope(p);
+      if (!p.rope && this.keys[p.up]) {
         if (p.jumpReleased) {
           if (p.grounded) {
             p.vy = JUMP_FORCE;
@@ -1292,8 +1624,9 @@ class WordRunner {
           }
           p.jumpReleased = false;
         }
-      } else {
+      } else if (!p.rope) {
         p.jumpReleased = true;
+      }
       }
 
       // Gate block collisions
@@ -1339,6 +1672,10 @@ class WordRunner {
       // Spikes
       for (const s of this.spikes) {
         if (p.invincibleTimer <= 0 && intersect(p, s)) this._killPlayer(p);
+      }
+
+      for (const hazard of this.timedHazards) {
+        if (hazard.active && p.invincibleTimer <= 0 && intersect(p, hazard)) this._killPlayer(p);
       }
 
       // Coins
@@ -1395,6 +1732,14 @@ class WordRunner {
           }
         }
       }
+    }
+
+    for (const plat of this.platforms) {
+      if (plat.type !== 'tilt' || !plat.active) continue;
+      const avgLoad = plat.tiltLoadCount ? plat.tiltLoad / plat.tiltLoadCount : 0;
+      const target = plat.tiltLoadCount ? Math.max(-0.42, Math.min(0.42, avgLoad * 0.42)) : 0;
+      plat.tiltAngle += (target - (plat.tiltAngle || 0)) * Math.min(1, dt * (plat.tiltLoadCount ? 4.8 : 2.5));
+      plat.tiltTarget = target;
     }
 
     // Enemies
@@ -1591,9 +1936,49 @@ class WordRunner {
       ctx.shadowBlur = 0;
     }
 
+    // ── Wind zones ──
+    for (const zone of this.windZones) {
+      const pulse = 0.35 + Math.sin(t * 3 + zone.phase) * 0.12;
+      ctx.save();
+      ctx.globalAlpha = 0.22 + pulse * 0.25;
+      const windGrad = ctx.createLinearGradient(zone.x, zone.y, zone.x + zone.w, zone.y);
+      windGrad.addColorStop(0, 'rgba(125,211,252,0.05)');
+      windGrad.addColorStop(0.5, 'rgba(34,211,238,0.28)');
+      windGrad.addColorStop(1, 'rgba(125,211,252,0.05)');
+      ctx.fillStyle = windGrad;
+      ctx.fillRect(zone.x, zone.y, zone.w, zone.h);
+      ctx.strokeStyle = 'rgba(186,230,253,0.32)';
+      ctx.lineWidth = 2;
+      for (let wy = zone.y + 32; wy < zone.y + zone.h; wy += 44) {
+        for (let wx = zone.x + 24; wx < zone.x + zone.w; wx += 82) {
+          const dir = zone.forceX >= 0 ? 1 : -1;
+          const offset = Math.sin(t * 4 + wx * 0.01 + wy * 0.03) * 12;
+          ctx.beginPath();
+          ctx.moveTo(wx - dir * 20 + offset, wy);
+          ctx.lineTo(wx + dir * 24 + offset, wy);
+          ctx.lineTo(wx + dir * 14 + offset, wy - 8);
+          ctx.moveTo(wx + dir * 24 + offset, wy);
+          ctx.lineTo(wx + dir * 14 + offset, wy + 8);
+          ctx.stroke();
+        }
+      }
+      ctx.restore();
+    }
+
     // ── Platforms ──
     for (const plat of this.platforms) {
-      if (!plat.active) continue;
+      if (!plat.active) {
+        if (plat.type === 'crumble' && plat.respawnTimer > 0) {
+          ctx.save();
+          ctx.globalAlpha = 0.22 + Math.sin(t * 8) * 0.06;
+          ctx.strokeStyle = '#fbbf24';
+          ctx.lineWidth = 2;
+          ctx.setLineDash([8, 8]);
+          ctx.strokeRect(plat.x, plat.y, plat.w, plat.h);
+          ctx.restore();
+        }
+        continue;
+      }
       if (plat.isGate) {
         // Gate wall
         const gGrad = ctx.createLinearGradient(plat.x, 0, plat.x + plat.w, 0);
@@ -1627,6 +2012,56 @@ class WordRunner {
         ctx.fillStyle = '#fdba74';
         ctx.fillRect(plat.x, plat.y, plat.w, 5);
         ctx.shadowBlur = 0;
+      } else if (plat.type === 'tilt') {
+        ctx.save();
+        ctx.translate(plat.x + plat.w / 2, plat.y + plat.h / 2);
+        ctx.rotate(plat.tiltAngle || 0);
+        const boardGrad = ctx.createLinearGradient(0, -plat.h / 2, 0, plat.h / 2);
+        boardGrad.addColorStop(0, '#38bdf8');
+        boardGrad.addColorStop(0.55, '#0ea5e9');
+        boardGrad.addColorStop(1, '#075985');
+        ctx.fillStyle = '#082f49';
+        ctx.fillRect(-plat.w / 2 - 3, -plat.h / 2 + 4, plat.w + 6, plat.h);
+        ctx.fillStyle = boardGrad;
+        ctx.beginPath();
+        rr(ctx, -plat.w / 2, -plat.h / 2, plat.w, plat.h, 7);
+        ctx.fill();
+        ctx.fillStyle = 'rgba(255,255,255,0.22)';
+        ctx.fillRect(-plat.w / 2 + 8, -plat.h / 2 + 4, plat.w - 16, 4);
+        ctx.fillStyle = '#bae6fd';
+        ctx.beginPath();
+        ctx.arc(0, 0, 4, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      } else if (plat.type === 'crumble') {
+        const jitter = plat.crumbleTimer !== null ? (Math.random() - 0.5) * 5 * (plat.shake || 1) : 0;
+        ctx.save();
+        ctx.translate(jitter, 0);
+        const cGrad = ctx.createLinearGradient(plat.x, plat.y, plat.x, plat.y + plat.h);
+        cGrad.addColorStop(0, '#facc15');
+        cGrad.addColorStop(0.45, '#d97706');
+        cGrad.addColorStop(1, '#78350f');
+        ctx.fillStyle = '#451a03';
+        ctx.fillRect(plat.x, plat.y + 4, plat.w, plat.h);
+        ctx.fillStyle = cGrad;
+        ctx.beginPath();
+        rr(ctx, plat.x, plat.y, plat.w, plat.h, 6);
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(69,26,3,0.65)';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(plat.x + plat.w * 0.25, plat.y + 4);
+        ctx.lineTo(plat.x + plat.w * 0.38, plat.y + plat.h - 5);
+        ctx.moveTo(plat.x + plat.w * 0.58, plat.y + 3);
+        ctx.lineTo(plat.x + plat.w * 0.5, plat.y + plat.h - 4);
+        ctx.moveTo(plat.x + plat.w * 0.74, plat.y + 5);
+        ctx.lineTo(plat.x + plat.w * 0.86, plat.y + plat.h - 6);
+        ctx.stroke();
+        if (plat.crumbleTimer !== null) {
+          ctx.fillStyle = 'rgba(255,255,255,0.18)';
+          ctx.fillRect(plat.x, plat.y, plat.w * Math.max(0, plat.crumbleTimer / plat.crumbleDelay), 4);
+        }
+        ctx.restore();
       } else if (plat.type === 'stone') {
         // Stone step
         ctx.fillStyle = '#1e293b';
@@ -1706,6 +2141,82 @@ class WordRunner {
           ctx.fillRect(bx + 8, plat.y - 4, 2, 6);
         }
       }
+    }
+
+    // ── Timed hazards ──
+    for (const hazard of this.timedHazards) {
+      ctx.save();
+      ctx.fillStyle = '#451a03';
+      ctx.beginPath();
+      rr(ctx, hazard.x - 4, hazard.y + hazard.h - 12, hazard.w + 8, 16, 5);
+      ctx.fill();
+      ctx.fillStyle = hazard.warning ? '#facc15' : '#7f1d1d';
+      ctx.fillRect(hazard.x + 4, hazard.y + hazard.h - 17, hazard.w - 8, 7);
+      if (hazard.active) {
+        const flame = ctx.createLinearGradient(hazard.x, hazard.y, hazard.x, hazard.y + hazard.h);
+        flame.addColorStop(0, 'rgba(254,240,138,0.95)');
+        flame.addColorStop(0.45, 'rgba(249,115,22,0.92)');
+        flame.addColorStop(1, 'rgba(220,38,38,0.1)');
+        ctx.shadowBlur = 18;
+        ctx.shadowColor = '#f97316';
+        ctx.fillStyle = flame;
+        ctx.beginPath();
+        ctx.moveTo(hazard.x + hazard.w * 0.5, hazard.y + Math.sin(t * 16 + hazard.phase) * 7);
+        ctx.bezierCurveTo(hazard.x - 12, hazard.y + hazard.h * 0.36, hazard.x + 6, hazard.y + hazard.h * 0.78, hazard.x + hazard.w * 0.16, hazard.y + hazard.h);
+        ctx.bezierCurveTo(hazard.x + hazard.w * 0.42, hazard.y + hazard.h * 0.82, hazard.x + hazard.w * 0.66, hazard.y + hazard.h * 0.72, hazard.x + hazard.w * 0.84, hazard.y + hazard.h);
+        ctx.bezierCurveTo(hazard.x + hazard.w + 10, hazard.y + hazard.h * 0.58, hazard.x + hazard.w + 7, hazard.y + hazard.h * 0.26, hazard.x + hazard.w * 0.5, hazard.y);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+      }
+      ctx.restore();
+    }
+
+    // ── Springs ──
+    for (const spring of this.springs) {
+      const squish = spring.cooldown > 0 ? 5 : 0;
+      ctx.save();
+      ctx.fillStyle = '#0e7490';
+      ctx.beginPath();
+      rr(ctx, spring.x, spring.y + squish, spring.w, spring.h - squish, 5);
+      ctx.fill();
+      ctx.fillStyle = '#67e8f9';
+      ctx.fillRect(spring.x + 5, spring.y + 3 + squish, spring.w - 10, 4);
+      ctx.strokeStyle = '#cffafe';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      for (let sx = spring.x + 8; sx < spring.x + spring.w - 6; sx += 10) {
+        ctx.moveTo(sx, spring.y + spring.h);
+        ctx.lineTo(sx + 7, spring.y + 6 + squish);
+      }
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    // ── Ropes ──
+    for (const rope of this.ropes) {
+      ctx.save();
+      ctx.strokeStyle = '#a16207';
+      ctx.lineWidth = 5;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(rope.x, rope.y);
+      for (let r = 1; r <= 12; r++) {
+        const offset = (rope.length / 12) * r;
+        ctx.lineTo(this._ropeX(rope, offset, 0), rope.y + offset);
+      }
+      ctx.stroke();
+      ctx.fillStyle = '#78350f';
+      ctx.beginPath();
+      ctx.arc(rope.x, rope.y, 11, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#fbbf24';
+      for (let r = 3; r <= 11; r += 3) {
+        const offset = (rope.length / 12) * r;
+        ctx.beginPath();
+        ctx.arc(this._ropeX(rope, offset, 0), rope.y + offset, 3, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
     }
 
     // ── Spikes ──
