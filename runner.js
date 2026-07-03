@@ -1768,7 +1768,7 @@ class WordRunner {
       const stepGap = 90 + diff * 12;
       const stepW   = Math.max(80, 130 - diff * 18);
       const step1x = px + stepGap;
-      this.platforms.push({ x: step1x, y: 410, w: stepW, h: 26, active: true, type: 'stone' });
+      this.platforms.push({ x: step1x, y: 410, w: stepW, h: 210, active: true, type: 'stone' });
       if (challengeType === 'spring') {
         this.springs.push({
           x: step1x + Math.max(8, stepW * 0.24),
@@ -1786,7 +1786,7 @@ class WordRunner {
         this.spikes.push({ x: step1x + (stepW - spikeW), y: 395, w: spikeW, h: 15 });
       }
       const step2x = px + stepGap + stepW + 70 + diff * 18;
-      this.platforms.push({ x: step2x, y: 310, w: stepW, h: 26, active: true, type: 'stone' });
+      this.platforms.push({ x: step2x, y: 310, w: stepW, h: 310, active: true, type: 'stone' });
       if (challengeType === 'timed' && diff >= 2) {
         this.timedHazards.push({
           type: 'firejet',
