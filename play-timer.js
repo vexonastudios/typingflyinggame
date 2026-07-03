@@ -1,59 +1,45 @@
 // play-timer.js
 
 (function() {
-  const PIN_CODE = "1234"; // Default simple pin
-
   // Ensure this script only runs once per page
   if (window.__playTimerInitialized) return;
   window.__playTimerInitialized = true;
 
   // HTML to inject
   const htmlTemplate = `
-    <!-- Floating Settings Button -->
-    <div id="parent-timer-btn" title="Parent Settings">⚙️</div>
+    <!-- Floating Time Display / Settings Button -->
+    <div id="kid-timer-btn" title="Timer Settings">
+      <span class="kid-timer-icon">⏰</span>
+      <span id="kid-timer-text">Set Time</span>
+    </div>
 
     <!-- Main Overlay Container -->
     <div id="timer-main-overlay" class="timer-overlay">
-      
-      <!-- PIN Entry Modal -->
-      <div id="timer-pin-modal" class="timer-modal" style="display: none;">
-        <h2>Parent Settings</h2>
-        <p>Enter Parent PIN to continue.</p>
-        <input type="password" id="timer-pin-input" class="timer-pin-input" maxlength="4" placeholder="••••" autocomplete="off" />
-        <div id="timer-pin-error" class="timer-pin-error">Incorrect PIN. Try 1234.</div>
-        <div class="timer-btn-row">
-          <button id="timer-pin-submit" class="timer-btn timer-btn--primary">Unlock</button>
-          <button id="timer-pin-cancel" class="timer-btn timer-btn--cancel">Cancel</button>
-        </div>
-      </div>
 
       <!-- Settings Modal -->
       <div id="timer-settings-modal" class="timer-modal" style="display: none;">
-        <h2>Time Limits</h2>
-        <p>Set a playtime limit. The game will lock across all tabs when time is up.</p>
-        
-        <div id="timer-status-container" style="display: none;">
-          <p style="margin-bottom: 0;">Time Remaining:</p>
-          <div id="timer-status-display">00:00</div>
-          <button id="timer-stop-btn" class="timer-btn timer-btn--danger timer-btn--full">Stop Timer & Reset</button>
-          <hr style="border: 0; border-top: 1px solid #334155; margin: 24px 0;" />
-        </div>
+        <h2>Playtime Limit</h2>
+        <p>Set a playtime limit. We'll let you know when it's time to take a break or let someone else play.</p>
 
-        <p style="margin-bottom: 12px; color: #f1f5f9; font-weight: bold;">Set New Timer:</p>
         <div class="timer-btn-row">
           <button class="timer-btn timer-set-btn" data-minutes="15">15 Mins</button>
           <button class="timer-btn timer-set-btn" data-minutes="30">30 Mins</button>
           <button class="timer-btn timer-set-btn" data-minutes="45">45 Mins</button>
           <button class="timer-btn timer-set-btn" data-minutes="60">1 Hour</button>
         </div>
-        <button id="timer-settings-close" class="timer-btn timer-btn--cancel" style="margin-top: 16px;">Close</button>
+        
+        <div id="timer-stop-container" style="display: none; margin-top: 12px;">
+           <button id="timer-stop-btn" class="timer-btn timer-btn--cancel" style="border: 1px solid #334155;">Stop Timer</button>
+        </div>
+
+        <button id="timer-settings-close" class="timer-btn timer-btn--cancel" style="margin-top: 16px;">Cancel</button>
       </div>
 
       <!-- Block Modal (Time's Up) -->
       <div id="timer-block-modal" class="timer-modal" style="display: none;">
         <h2>⏰ Time's Up!</h2>
-        <p>Your playtime is over. Great job playing!</p>
-        <button id="timer-unlock-btn" class="timer-btn timer-btn--primary timer-btn--full">Parent Unlock</button>
+        <p>Great job playing! Your time is up for now. Let the next player have a turn, or take a break!</p>
+        <button id="timer-unlock-btn" class="timer-btn timer-btn--success timer-btn--full">Play Again (Reset)</button>
       </div>
 
     </div>
@@ -73,63 +59,34 @@
 
   function setupTimerLogic() {
     const overlay = document.getElementById('timer-main-overlay');
-    const pinModal = document.getElementById('timer-pin-modal');
     const settingsModal = document.getElementById('timer-settings-modal');
     const blockModal = document.getElementById('timer-block-modal');
     
-    const pinInput = document.getElementById('timer-pin-input');
-    const pinError = document.getElementById('timer-pin-error');
-    
-    const statusContainer = document.getElementById('timer-status-container');
-    const statusDisplay = document.getElementById('timer-status-display');
+    const stopContainer = document.getElementById('timer-stop-container');
+    const timerText = document.getElementById('kid-timer-text');
 
     let checkInterval = null;
     let isBlocked = false;
 
     // ----- UI Flow -----
 
-    // Open PIN modal
-    function openPinModal() {
-      overlay.classList.add('active');
-      pinModal.style.display = 'block';
-      settingsModal.style.display = 'none';
-      blockModal.style.display = 'none';
-      pinInput.value = '';
-      pinError.style.display = 'none';
-      setTimeout(() => pinInput.focus(), 100);
-    }
-
-    // Submit PIN
-    function submitPin() {
-      if (pinInput.value === PIN_CODE) {
-        // Success
-        pinModal.style.display = 'none';
-        openSettingsModal();
-      } else {
-        // Fail
-        pinError.style.display = 'block';
-        pinInput.value = '';
-        pinInput.focus();
-      }
-    }
-
     // Open Settings
     function openSettingsModal() {
+      overlay.classList.add('active');
       settingsModal.style.display = 'block';
+      blockModal.style.display = 'none';
       updateSettingsUI();
     }
 
-    // Close all (if not blocked)
+    // Close all
     function closeModals() {
       if (isBlocked) {
-        // If blocked, can't close back to game, go back to block screen
+        // If blocked, just show block screen
         settingsModal.style.display = 'none';
-        pinModal.style.display = 'none';
         blockModal.style.display = 'block';
       } else {
         overlay.classList.remove('active');
         setTimeout(() => {
-          pinModal.style.display = 'none';
           settingsModal.style.display = 'none';
           blockModal.style.display = 'none';
         }, 300);
@@ -140,26 +97,22 @@
     function showBlockScreen() {
       isBlocked = true;
       overlay.classList.add('active');
-      pinModal.style.display = 'none';
       settingsModal.style.display = 'none';
       blockModal.style.display = 'block';
     }
 
     // ----- Event Listeners -----
 
-    document.getElementById('parent-timer-btn').addEventListener('click', () => {
-      openPinModal();
-    });
-
-    document.getElementById('timer-pin-submit').addEventListener('click', submitPin);
-    
-    pinInput.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') submitPin();
-    });
-
-    document.getElementById('timer-pin-cancel').addEventListener('click', closeModals);
+    document.getElementById('kid-timer-btn').addEventListener('click', openSettingsModal);
     document.getElementById('timer-settings-close').addEventListener('click', closeModals);
-    document.getElementById('timer-unlock-btn').addEventListener('click', openPinModal);
+    
+    // Reset/Unlock button on the block screen (Honor system)
+    document.getElementById('timer-unlock-btn').addEventListener('click', () => {
+      localStorage.removeItem('typing_games_timer_end');
+      isBlocked = false;
+      closeModals();
+      updateSettingsUI();
+    });
 
     // Set Timer Buttons
     document.querySelectorAll('.timer-set-btn').forEach(btn => {
@@ -190,9 +143,10 @@
     function updateSettingsUI() {
       const endTimeStr = localStorage.getItem('typing_games_timer_end');
       if (endTimeStr) {
-        statusContainer.style.display = 'block';
+        stopContainer.style.display = 'block';
       } else {
-        statusContainer.style.display = 'none';
+        stopContainer.style.display = 'none';
+        timerText.textContent = "Set Time";
       }
     }
 
@@ -209,6 +163,7 @@
           isBlocked = false;
           closeModals();
         }
+        timerText.textContent = "Set Time";
         return; // No timer active
       }
 
@@ -221,11 +176,10 @@
         if (!isBlocked && overlay.style.display !== 'block') {
           showBlockScreen();
         }
-        statusDisplay.textContent = "00:00";
+        timerText.textContent = "00:00";
       } else {
         // Time still running
         if (isBlocked) {
-          // If they somehow had it blocked but time was extended in another tab
           isBlocked = false;
           closeModals();
         }
@@ -233,7 +187,7 @@
         const totalSecs = Math.floor(remainingMs / 1000);
         const m = Math.floor(totalSecs / 60).toString().padStart(2, '0');
         const s = (totalSecs % 60).toString().padStart(2, '0');
-        statusDisplay.textContent = `${m}:${s}`;
+        timerText.textContent = `${m}:${s}`;
       }
     }
 
