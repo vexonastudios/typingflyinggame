@@ -5005,11 +5005,11 @@ class WordRunner {
     const skin = '#f4c28b';
     const skinShadow = '#d8915f';
     const cheek = '#f8d0a5';
-    const hair = '#3f2416';
+    const hair = p.id === 1 ? '#3f2416' : '#eab308';
     const selectedOutfit = this._selectedCosmetic().colors;
     const outfit = p.id === 1
       ? selectedOutfit
-      : { ...selectedOutfit, trim: '#bbf7d0', badge: '#dcfce7' };
+      : { cap: '#4d7c0f', capDark: '#3f6212', hat: '#65a30d', hatLight: '#bef264', shirt: '#9333ea', overalls: '#581c87', trim: '#d8b4fe', badge: '#fef08a' };
     const walkPower = p.grounded ? Math.min(1, Math.abs(p.vx) / MAX_SPEED) : 0;
     const onRope = Boolean(p.rope);
     const rising = !p.grounded && !onRope && p.vy < -160;
