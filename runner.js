@@ -496,7 +496,19 @@ class WordRunner {
 
     this.keys = {};
     this._prevKeys = {};
+    const toggleFullscreen = () => {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(() => {});
+      } else {
+        document.exitFullscreen().catch(() => {});
+      }
+    };
     window.addEventListener('keydown', e => {
+      if ((e.key || '').toLowerCase() === 'f' && !e.repeat && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        e.preventDefault();
+        toggleFullscreen();
+        return;
+      }
       if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' '].includes(e.key)) e.preventDefault();
       if (e.key === 'Enter' && this.state === 'end') {
         e.preventDefault();
@@ -518,13 +530,7 @@ class WordRunner {
       }
     };
 
-    fullscreenBtn?.addEventListener('click', () => {
-      if (!document.fullscreenElement) {
-        document.documentElement.requestFullscreen().catch(() => {});
-      } else {
-        document.exitFullscreen().catch(() => {});
-      }
-    });
+    fullscreenBtn?.addEventListener('click', toggleFullscreen);
     document.addEventListener?.('fullscreenchange', syncFullscreenUi);
     syncFullscreenUi();
 
