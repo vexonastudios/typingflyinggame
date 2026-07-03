@@ -327,26 +327,8 @@ body {
 
 /* Runner art — platformer scene */
 .card-art--runner {
-  background: linear-gradient(180deg, #38bdf8 0%, #fef3c7 54%, #86efac 100%);
-  overflow: hidden;
-}
-.card-art--runner::before {
-  content: '';
-  position: absolute;
-  bottom: 30px;
-  left: 8%;
-  width: 68px;
-  height: 54px;
-  background: #f8fafc;
-  border: 3px solid #92400e;
-  box-shadow: 0 -18px 0 -2px #b45309, inset 18px 0 0 rgba(251,191,36,0.20);
-}
-.card-art--runner::after {
-  content: '';
-  position: absolute;
-  top: 20px;
-  right: 24px;
   background: linear-gradient(180deg, #0f172a 0%, #1e293b 70%, #0f172a 100%);
+  overflow: hidden;
 }
 .art-runner-ground {
   position: absolute;
