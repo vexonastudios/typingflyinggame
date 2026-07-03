@@ -1,0 +1,184 @@
+/* play-timer.css */
+
+/* Floating settings button */
+#parent-timer-btn {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  width: 40px;
+  height: 40px;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 50%;
+  color: rgba(255, 255, 255, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 999998;
+  font-size: 20px;
+  transition: all 0.2s ease;
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+#parent-timer-btn:hover {
+  background: rgba(0, 0, 0, 0.8);
+  color: white;
+  transform: scale(1.1) rotate(45deg);
+}
+
+/* Modals / Overlays */
+.timer-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 999999;
+  font-family: system-ui, -apple-system, sans-serif;
+  color: white;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+
+.timer-overlay.active {
+  opacity: 1;
+  pointer-events: all;
+}
+
+.timer-modal {
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 16px;
+  padding: 32px;
+  width: 90%;
+  max-width: 400px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+  transform: translateY(20px);
+  transition: transform 0.3s ease;
+  text-align: center;
+}
+
+.timer-overlay.active .timer-modal {
+  transform: translateY(0);
+}
+
+.timer-modal h2 {
+  margin: 0 0 8px 0;
+  font-size: 1.5rem;
+  color: #f1f5f9;
+}
+
+.timer-modal p {
+  color: #94a3b8;
+  margin: 0 0 24px 0;
+  font-size: 0.95rem;
+}
+
+/* Input styles */
+.timer-pin-input {
+  background: #0f172a;
+  border: 2px solid #334155;
+  color: white;
+  font-size: 2rem;
+  text-align: center;
+  letter-spacing: 0.5em;
+  padding: 12px;
+  border-radius: 8px;
+  width: 100%;
+  margin-bottom: 16px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.timer-pin-input:focus {
+  border-color: #3b82f6;
+}
+
+.timer-pin-error {
+  color: #ef4444;
+  font-size: 0.875rem;
+  margin-top: -12px;
+  margin-bottom: 16px;
+  display: none;
+}
+
+/* Buttons */
+.timer-btn-row {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.timer-btn {
+  background: #334155;
+  color: white;
+  border: none;
+  padding: 12px 20px;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  flex: 1 1 calc(50% - 12px);
+}
+
+.timer-btn:hover {
+  background: #475569;
+}
+
+.timer-btn--primary {
+  background: #3b82f6;
+}
+.timer-btn--primary:hover {
+  background: #2563eb;
+}
+
+.timer-btn--danger {
+  background: #ef4444;
+}
+.timer-btn--danger:hover {
+  background: #dc2626;
+}
+
+.timer-btn--full {
+  flex: 1 1 100%;
+  margin-top: 8px;
+}
+
+.timer-btn--cancel {
+  background: transparent;
+  color: #94a3b8;
+  padding: 8px;
+  margin-top: 8px;
+  flex: 1 1 100%;
+}
+.timer-btn--cancel:hover {
+  color: white;
+  background: rgba(255,255,255,0.05);
+}
+
+/* Block screen */
+#timer-block-modal {
+  border-color: #ef4444;
+  box-shadow: 0 0 40px rgba(239, 68, 68, 0.2);
+}
+#timer-block-modal h2 {
+  color: #ef4444;
+  font-size: 2.5rem;
+  margin-bottom: 16px;
+}
+
+/* Status display */
+#timer-status-display {
+  font-size: 2rem;
+  font-weight: bold;
+  color: #10b981;
+  margin: 16px 0;
+  font-variant-numeric: tabular-nums;
+}
