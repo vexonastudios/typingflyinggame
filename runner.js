@@ -617,16 +617,15 @@ class WordRunner {
     const setupOverlay = document.getElementById('gameSetup');
     const setupModal = setupOverlay?.querySelector('.wr-modal');
     if (setupOverlay && setupModal) {
-      setupModal.style.maxHeight = 'none';
-      setupModal.style.overflowY = 'visible';
+      setupModal.style.setProperty('max-height', 'none', 'important');
+      setupModal.style.setProperty('overflow', 'hidden', 'important');
       const ro = new ResizeObserver(() => {
-        setupModal.style.transform = 'none';
+        setupModal.style.zoom = 1; // Reset zoom to measure
         const availHeight = setupOverlay.clientHeight - 40; // 20px padding top/bottom
         const modalHeight = setupModal.scrollHeight;
         if (modalHeight > availHeight && availHeight > 100) {
           const scale = availHeight / modalHeight;
-          setupModal.style.transform = `scale(${scale})`;
-          setupModal.style.transformOrigin = 'center center';
+          setupModal.style.zoom = scale.toFixed(3);
         }
       });
       ro.observe(setupOverlay);
