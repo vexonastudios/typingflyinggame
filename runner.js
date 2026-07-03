@@ -884,8 +884,15 @@ class WordRunner {
     this.bossEntity  = null;
     this.bossGate    = null;
     this.bossHealth  = 0;
+    this.bossMaxHealth = 0;
     this.goalFlag    = null;
     this.levelEndTimer = -1;
+    this.harvestMeter = 0;
+    this.harvestUiPercent = -1;
+    this.harvestGateTotal = 0;
+    this.harvestStartX = 60;
+    this.harvestEndX = 1800;
+    this.harvestComplete = false;
   }
 
   // ─── Background Generation ───
@@ -990,6 +997,7 @@ class WordRunner {
 
     this._updateHUD();
     this._generateLevel();
+    this._updateHarvestMeter(true);
     Sfx.levelStart();
   }
 
@@ -1649,6 +1657,8 @@ class WordRunner {
     const diff = Math.max(0, Math.min(4, stage.tier || 0));
     const gateCount = Math.max(3, (stage.gates || 4) + gameCfg.gateDelta);
     let px = 0;
+    this.harvestGateTotal = gateCount;
+    this.harvestStartX = 60;
 
     // Starting platform
     this.platforms.push({ x: -300, y: 500, w: 700, h: 120, active: true, type: 'grass' });
@@ -1941,6 +1951,10 @@ class WordRunner {
       this.goalFlag = { x: landPad + 700, y: 130, w: 18, h: 380, wave: 0 };
     }
 
+    this.harvestEndX = this.goalFlag
+      ? this.goalFlag.x
+      : (this.bossEntity ? this.bossEntity.x + this.bossEntity.w + 280 : landPad + 1220);
+
     this._generateSceneDressing(stage, -300, landPad + 1450);
     this._cleanupGeneratedLayout(stage);
     this._resolveEnemyCollisions();
@@ -1963,6 +1977,7 @@ class WordRunner {
       this._spawnBurst(block.x + block.w / 2, block.y + block.h / 2, '#34d399', 20);
       this._showLessonToast(gate.promptData, true);
       this._flashScreen('rgba(52,211,153,0.12)');
+      this._updateHarvestMeter(true);
       // Revive dead teammates
       for (const p of this.players) {
         if (p.dead) {
@@ -1994,6 +2009,7 @@ class WordRunner {
     this.bossHealth = Math.max(0, this.bossHealth - amount);
     const scoreGain = source === 'answer' ? 600 : 450;
     this.score += Math.round(scoreGain * this._getGameConfig().scoreMultiplier);
+    this._updateHarvestMeter(true);
     this._updateHUD();
     Sfx.bossHit();
 
@@ -2233,6 +2249,12 @@ class WordRunner {
     const baseTimeBonus = (stage.gates || 4) * 1400 + (stage.boss ? 3200 : 0);
     const timeBonus = won ? Math.round(Math.max(0, baseTimeBonus - Math.floor(this.levelTime * 65)) * gameCfg.scoreMultiplier) : 0;
     if (won) this.score += timeBonus;
+    if (won) {
+      this.harvestComplete = true;
+      this.harvestMeter = 1;
+    } else {
+      this._updateHarvestMeter(true);
+    }
     this._updateHUD();
 
     const icon = document.getElementById('endIcon');
@@ -2291,6 +2313,7 @@ class WordRunner {
 
     return `
       <div class="stat-line"><span>Score</span><span class="stat-val">${this.score}</span></div>
+      <div class="stat-line"><span>Harvest</span><span class="stat-val">${this._harvestPercent()}%</span></div>
       <div class="stat-line"><span>Accuracy</span><span class="stat-val">${accuracy}%</span></div>
       <div class="stat-line"><span>Mastery</span><span class="stat-val">${mastery}</span></div>
       <div class="stat-line"><span>Time Bonus</span><span class="stat-val">+${timeBonus}</span></div>
@@ -2324,10 +2347,79 @@ class WordRunner {
     }[ch]));
   }
 
+  _clamp01(value) {
+    return Math.max(0, Math.min(1, Number.isFinite(value) ? value : 0));
+  }
+
+  _leaderX() {
+    let leader = this.cameraX + 60;
+    for (const p of this.players) {
+      if (!p.dead) leader = Math.max(leader, p.x + p.w / 2);
+    }
+    return leader;
+  }
+
+  _routeHarvestProgress() {
+    const span = Math.max(1, (this.harvestEndX || 1800) - (this.harvestStartX || 60));
+    return this._clamp01((this._leaderX() - (this.harvestStartX || 60)) / span);
+  }
+
+  _gateHarvestProgress() {
+    const total = this.harvestGateTotal || this.gates.length || 0;
+    if (!total) return 0;
+    const cleared = this.gates.filter(gate => gate.cleared).length;
+    return this._clamp01(cleared / total);
+  }
+
+  _coinHarvestProgress() {
+    const total = this.coins.length;
+    if (!total) return 0;
+    const collected = this.coins.filter(coin => coin.collected).length;
+    return this._clamp01(collected / Math.max(8, Math.min(total, 20)));
+  }
+
+  _bossHarvestProgress() {
+    if (!this.bossPhase || !this.bossMaxHealth) return 0;
+    return this._clamp01((this.bossMaxHealth - Math.max(0, this.bossHealth)) / this.bossMaxHealth);
+  }
+
+  _calculateHarvestMeter() {
+    if (this.harvestComplete) return 1;
+    const route = this._routeHarvestProgress();
+    const gates = this._gateHarvestProgress();
+    const coins = this._coinHarvestProgress();
+    if (this.bossPhase) {
+      const boss = this._bossHarvestProgress();
+      return this._clamp01(route * 0.30 + gates * 0.38 + coins * 0.07 + boss * 0.25);
+    }
+    return this._clamp01(route * 0.44 + gates * 0.46 + coins * 0.10);
+  }
+
+  _harvestPercent() {
+    return Math.round(this._clamp01(this.harvestMeter || 0) * 100);
+  }
+
+  _syncHarvestMeterUi(force = false) {
+    const percent = this._harvestPercent();
+    if (!force && percent === this.harvestUiPercent) return;
+    this.harvestUiPercent = percent;
+    const percentEl = document.getElementById('harvestPercent');
+    const fillEl = document.getElementById('harvestFill');
+    if (percentEl) percentEl.textContent = `${percent}%`;
+    if (fillEl) fillEl.style.width = `${percent}%`;
+  }
+
+  _updateHarvestMeter(force = false) {
+    const next = this._calculateHarvestMeter();
+    this.harvestMeter = this.harvestComplete ? 1 : Math.max(this.harvestMeter || 0, next);
+    this._syncHarvestMeterUi(force);
+  }
+
   _updateHUD() {
     document.getElementById('scoreDisplay').textContent = this.score.toString().padStart(5, '0');
     const p1 = this.players[0];
     const p2 = this.players[1];
+    this._syncHarvestMeterUi();
     document.getElementById('p1HeartsHud').textContent = p1 ? (p1.dead ? '💀' : '♥'.repeat(Math.max(0, p1.lives))) : '—';
     document.getElementById('p2HeartsHud').textContent = p2 ? (p2.dead ? '💀' : '♥'.repeat(Math.max(0, p2.lives))) : '—';
   }
@@ -2895,10 +2987,12 @@ class WordRunner {
           c.collected = true;
           this.score += 10;
           p.coinsCollected++;
+          this._updateHarvestMeter(true);
           this._updateHUD();
           if (p.coinsCollected >= 20) {
             p.coinsCollected -= 20;
             p.lives++;
+            this._updateHUD();
             Sfx.powerup();
             this._floatText('1-UP!', p.x + p.w / 2, p.y - 20, '#fbbf24');
           } else {
@@ -3049,6 +3143,7 @@ class WordRunner {
     }
 
     this._updateBoss(dt, gameCfg);
+    this._updateHarvestMeter();
   }
 
   // ─── Draw ───
@@ -4647,6 +4742,8 @@ class WordRunner {
       ctx.fillText(`⏱ ${this.levelTime.toFixed(1)}s`, CW / 2, 32);
       ctx.restore();
 
+      this._drawHarvestMeter(ctx);
+
       // Combo indicator
       if (this.combo > 1) {
         ctx.save();
@@ -4710,6 +4807,45 @@ class WordRunner {
   }
 
   // ─── Draw Helpers ───
+  _drawHarvestMeter(ctx) {
+    const percent = this._harvestPercent();
+    const x = CW / 2 - 158;
+    const y = 49;
+    const w = 316;
+    const h = 18;
+    const fillW = Math.max(0, (w - 4) * (percent / 100));
+
+    ctx.save();
+    ctx.fillStyle = 'rgba(7, 18, 14, 0.72)';
+    ctx.strokeStyle = 'rgba(251,191,36,0.38)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    rr(ctx, x, y, w, h, 8);
+    ctx.fill();
+    ctx.stroke();
+
+    if (fillW > 1) {
+      ctx.beginPath();
+      rr(ctx, x + 2, y + 2, fillW, h - 4, 6);
+      const grad = ctx.createLinearGradient(x, y, x + w, y);
+      grad.addColorStop(0, '#22c55e');
+      grad.addColorStop(0.55, '#84cc16');
+      grad.addColorStop(1, '#fbbf24');
+      ctx.fillStyle = grad;
+      ctx.fill();
+    }
+
+    ctx.font = '900 11px Outfit';
+    ctx.textBaseline = 'middle';
+    ctx.textAlign = 'left';
+    ctx.fillStyle = '#f8fafc';
+    ctx.fillText('HARVEST', x + 10, y + h / 2 + 0.5);
+    ctx.textAlign = 'right';
+    ctx.fillStyle = '#fff7ed';
+    ctx.fillText(`${percent}%`, x + w - 10, y + h / 2 + 0.5);
+    ctx.restore();
+  }
+
   _drawStageBanner(ctx) {
     if (!this.stageBannerTimer || this.stageBannerTimer <= 0) return;
     const stage = this._getStage();

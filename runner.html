@@ -7,7 +7,7 @@
   <meta name="description" content="Harvest Dash - a co-op farm platformer where you clear fields, jump on answer blocks, and defeat enemies!">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="runner.css?v=campaign15">
+  <link rel="stylesheet" href="runner.css?v=campaign16">
 </head>
 <body>
 
@@ -29,6 +29,15 @@
         <div class="score-block">
           <div class="score-label">SCORE</div>
           <div class="score-val" id="scoreDisplay">0</div>
+        </div>
+        <div class="harvest-block" aria-label="Harvest progress">
+          <div class="harvest-top">
+            <span>HARVEST</span>
+            <strong id="harvestPercent">0%</strong>
+          </div>
+          <div class="harvest-track">
+            <div class="harvest-fill" id="harvestFill"></div>
+          </div>
         </div>
         <div class="lives-badge p2-badge">
           <div class="badge-label">P2</div>
@@ -152,6 +161,6 @@
     </div>
   </div>
 
-  <script src="runner.js?v=campaign15"></script>
+  <script src="runner.js?v=campaign16"></script>
 </body>
 </html>

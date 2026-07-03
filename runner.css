@@ -62,7 +62,9 @@ body {
 .header-center {
   display: flex;
   align-items: center;
-  gap: 20px;
+  justify-content: center;
+  gap: 14px;
+  flex-wrap: wrap;
 }
 
 .header-right {
@@ -157,6 +159,51 @@ body {
   display: block;
   text-align: center;
   transition: color 0.2s;
+}
+
+/* Harvest Meter */
+.harvest-block {
+  width: clamp(138px, 15vw, 178px);
+  min-width: 138px;
+  background: rgba(7, 18, 14, 0.74);
+  border: 1px solid rgba(251,191,36,0.28);
+  border-radius: 12px;
+  padding: 7px 10px 8px;
+  box-shadow: inset 0 0 18px rgba(34,197,94,0.08);
+}
+.harvest-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 5px;
+}
+.harvest-top span {
+  color: #bef264;
+  font-size: 0.6rem;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+}
+.harvest-top strong {
+  color: var(--gold);
+  font-size: 0.78rem;
+  font-weight: 900;
+  line-height: 1;
+}
+.harvest-track {
+  height: 9px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(15,23,42,0.94);
+  border: 1px solid rgba(255,255,255,0.12);
+}
+.harvest-fill {
+  width: 0%;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #22c55e 0%, #84cc16 48%, #fbbf24 100%);
+  box-shadow: 0 0 12px rgba(132,204,22,0.45);
+  transition: width 0.24s ease;
 }
 
 /* Level badge */
