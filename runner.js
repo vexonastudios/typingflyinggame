@@ -479,6 +479,10 @@ const DOUBLE_JUMP_FORCE = -700;
 const MAX_SPEED = 360;
 const ROPE_CLIMB_SPEED = 175;
 const ROPE_GRAB_RANGE = 26;
+const COOP_LEFT_MARGIN = 88;
+const COOP_RIGHT_MARGIN = 128;
+const COOP_SOFT_TRAIL = 520;
+const COOP_HARD_TRAIL = 780;
 
 // ─────────────────────────────────────────────────────────────
 // Main Game Class
@@ -1634,6 +1638,104 @@ class WordRunner {
     }
   }
 
+  _coopAnchorFor(player) {
+    let anchor = null;
+    for (const other of this.players) {
+      if (other === player || other.dead) continue;
+      if (!anchor || other.x > anchor.x) anchor = other;
+    }
+    return anchor;
+  }
+
+  _findCoopCatchUpPlatform(targetX) {
+    let best = null;
+    let bestScore = Infinity;
+    const left = this.cameraX + 40;
+    const right = this.cameraX + CW - 40;
+    for (const plat of this.platforms) {
+      if (!plat.active || plat.isGate || plat.type === 'gate' ||
+          plat.type === 'crumble' || plat.type === 'tilt' || plat.w < 90) continue;
+      if (plat.y < 170 || plat.y > 520) continue;
+      if (plat.x + plat.w < left || plat.x > right) continue;
+      const center = plat.x + plat.w / 2;
+      const movingPenalty = (plat.moveY || plat.vx || plat.vy) ? 240 : 0;
+      const score = Math.abs(center - targetX) + Math.abs(plat.y - 460) * 0.35 + movingPenalty;
+      if (score < bestScore) {
+        best = plat;
+        bestScore = score;
+      }
+    }
+    return best;
+  }
+
+  _snapCoopPlayerToGroup(player, anchor) {
+    const desiredX = Math.max(
+      this.cameraX + COOP_LEFT_MARGIN + 40,
+      Math.min(
+        (anchor ? anchor.x - 76 : this.cameraX + 220),
+        this.cameraX + CW - COOP_RIGHT_MARGIN - player.w
+      )
+    );
+    const plat = this._findCoopCatchUpPlatform(desiredX);
+    if (plat) {
+      const minX = plat.x + 24;
+      const maxX = plat.x + plat.w - player.w - 24;
+      player.x = Math.max(minX, Math.min(maxX, desiredX));
+      player.y = plat.y - player.h - 2;
+      player.grounded = false;
+      player.groundedPlatform = null;
+    } else {
+      player.x = desiredX;
+      player.y = Math.max(120, Math.min(340, anchor ? anchor.y : 260));
+      player.grounded = false;
+      player.groundedPlatform = null;
+    }
+    player.vx = Math.max(120, anchor ? Math.max(0, anchor.vx || 0) * 0.35 : 120);
+    player.vy = 0;
+    player.rope = null;
+    player.ropeCooldown = 0.35;
+    player.jumpCount = 0;
+    player.squash = 0.88;
+    player.trailFrames = [];
+    player.invincibleTimer = Math.max(player.invincibleTimer || 0, 1.35);
+    this._spawnBurst(player.x + player.w / 2, player.y + player.h / 2, player.color || '#38bdf8', 10);
+    this._floatText(`P${player.id} CATCH UP`, player.x + player.w / 2, player.y - 10, player.color || '#38bdf8');
+  }
+
+  _keepCoopPlayerInViewport(player, dt) {
+    if (this.players.length < 2 || player.dead) return;
+    const anchor = this._coopAnchorFor(player);
+    if (!anchor) return;
+
+    const leftLimit = this.cameraX + COOP_LEFT_MARGIN;
+    const rightLimit = this.cameraX + CW - COOP_RIGHT_MARGIN - player.w;
+    const trailDistance = anchor.x - player.x;
+    const hardLost =
+      player.x < this.cameraX - 120 ||
+      player.x > this.cameraX + CW + 120 ||
+      player.y > CH + 80 ||
+      trailDistance > COOP_HARD_TRAIL;
+
+    if (hardLost) {
+      this._snapCoopPlayerToGroup(player, anchor);
+      return;
+    }
+
+    if (player.x < leftLimit || trailDistance > COOP_SOFT_TRAIL) {
+      const targetX = Math.max(leftLimit, Math.min(anchor.x - 112, this.cameraX + CW - 220));
+      const pull = Math.min(1, dt * 5.5);
+      player.x += (targetX - player.x) * pull;
+      player.x = Math.max(leftLimit, player.x);
+      if (!player.rope) player.vx = Math.max(player.vx, 140);
+      player.facingRight = true;
+    }
+
+    if (player.x > rightLimit) {
+      player.x = rightLimit;
+      player.vx = Math.min(0, player.vx);
+    }
+  }
+
   _endGame(won) {
     this.state = 'end';
     this.gameIsOver = !won;
@@ -2266,6 +2368,8 @@ class WordRunner {
           }
         }
       }
+
+      this._keepCoopPlayerInViewport(p, dt);
 
       // Death plane
       if (p.y > CH + 150) this._killPlayer(p);
