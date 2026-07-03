@@ -855,7 +855,17 @@ class WordRunner {
       2: ['upper-route', 'fire-hall', 'spring-tower', 'crumble-sprint', 'stomp-lane'],
       3: ['upper-route', 'rope-swing', 'crumble-bridge', 'enemy-perch', 'spring-tower'],
       4: ['spring-tower', 'stomp-lane', 'rope-swing', 'fire-hall', 'crumble-sprint', 'enemy-perch'],
-      5: ['fire-hall', 'crumble-sprint', 'rope-swing', 'enemy-perch']
+      5: ['fire-hall', 'crumble-sprint', 'rope-swing', 'enemy-perch'],
+      6: ['precision-crumble', 'tilt-run', 'shooter-crossfire', 'rope-swing', 'upper-route', 'crumble-sprint'],
+      7: ['spring-tower', 'precision-crumble', 'tilt-run', 'moving-switchback', 'enemy-perch', 'crumble-sprint', 'rope-swing'],
+      8: ['wind-tunnel', 'moving-switchback', 'rope-swing', 'flyer-swarm', 'tilt-run', 'upper-route', 'wind-crumble'],
+      9: ['upper-route', 'moving-switchback', 'stomp-lane', 'enemy-perch', 'tilt-run', 'precision-crumble', 'shooter-crossfire'],
+      10: ['wind-tunnel', 'shooter-crossfire', 'boss-gauntlet', 'rope-swing', 'fire-hall'],
+      11: ['precision-crumble', 'tilt-run', 'shooter-crossfire', 'moving-switchback', 'enemy-perch', 'wind-crumble', 'spring-tower'],
+      12: ['rope-swing', 'upper-route', 'shooter-crossfire', 'tilt-run', 'stomp-lane', 'precision-crumble', 'enemy-perch', 'moving-switchback'],
+      13: ['wind-tunnel', 'moving-switchback', 'flyer-swarm', 'wind-crumble', 'shooter-crossfire', 'tilt-run', 'boss-gauntlet', 'upper-route'],
+      14: ['rope-swing', 'enemy-perch', 'tilt-run', 'precision-crumble', 'moving-switchback', 'stomp-lane', 'shooter-crossfire', 'crumble-sprint'],
+      15: ['boss-gauntlet', 'fire-hall', 'wind-crumble', 'precision-crumble', 'shooter-crossfire', 'moving-switchback']
     };
     const plan = plans[level];
     return plan ? plan[sectionIndex % plan.length] : null;
@@ -886,6 +896,24 @@ class WordRunner {
       onTime,
       phase,
       active: false
+    });
+  }
+
+  _addWindZone(x, y, w, h, forceX, forceY, phase) {
+    this.windZones.push({ x, y, w, h, forceX, forceY, phase });
+  }
+
+  _addMovingPlatform(x, y, w, h, startX, endX, vx) {
+    this.platforms.push({
+      x, y, w, h,
+      active: true, type: 'moving',
+      moveY: false,
+      startY: y,
+      endY: y,
+      startX,
+      endX,
+      vx,
+      vy: 0
     });
   }
 
@@ -980,6 +1008,95 @@ class WordRunner {
       this._addCoinLine(startX + 26, 314, 6, 58);
       if (!forgiving) {
         this._addFireJet(startX + 220, 426, 32, 74, 2.0, 0.6, phase + 0.6);
+      }
+    } else if (kind === 'precision-crumble') {
+      const startX = landX + 150;
+      for (let n = 0; n < 4; n++) {
+        this._addCrumblePlatform(startX + n * 122, 390 - (n % 2) * 42, 86, Math.max(0.68, 1.08 - diff * 0.07));
+        this._addCoinLine(startX + n * 122 + 20, 342 - (n % 2) * 42, 2, 28);
+      }
+      if (!forgiving) {
+        this.spikes.push({ x: startX + 110, y: 485, w: 320, h: 15 });
+      }
+    } else if (kind === 'tilt-run') {
+      const startX = landX + 150;
+      for (let n = 0; n < 3; n++) {
+        this.platforms.push({
+          x: startX + n * 172,
+          y: 382 - n * 22,
+          w: 132,
+          h: 26,
+          active: true,
+          type: 'tilt',
+          tiltAngle: 0,
+          tiltTarget: 0,
+          tiltLoad: 0,
+          tiltLoadCount: 0
+        });
+        this.coins.push({ x: startX + n * 172 + 55, y: 330 - n * 22, w: 18, h: 18, collected: false });
+      }
+      if (!forgiving) {
+        this.spikes.push({ x: startX + 55, y: 485, w: 410, h: 15 });
+        this.enemies.push({ type: 'flyer', x: startX + 220, y: 284, w: 38, h: 30, vx: -92 * speed, startX: startX + 120, endX: startX + 495, startY: 284, flyOffset: phase, dead: false, anim: 0 });
+      }
+    } else if (kind === 'wind-tunnel') {
+      const dir = sectionIndex % 2 === 0 ? 1 : -1;
+      this._addWindZone(landX + 110, 150, Math.max(360, platW - 170), 310, dir * (280 + diff * 55) * speed, -95, phase);
+      this.platforms.push({ x: landX + 170, y: 360, w: 142, h: 24, active: true, type: 'stone' });
+      this.platforms.push({ x: landX + 390, y: 305, w: 134, h: 24, active: true, type: 'stone' });
+      this._addCoinLine(landX + 190, 302, 5, 46, -8);
+      if (!forgiving) {
+        this.enemies.push({ type: 'flyer', x: landX + 455, y: 275, w: 38, h: 30, vx: -95 * speed, startX: landX + 260, endX: landX + Math.min(650, platW - 40), startY: 275, flyOffset: phase + 0.9, dead: false, anim: 0 });
+      }
+    } else if (kind === 'shooter-crossfire') {
+      const leftPerch = landX + 180;
+      const rightPerch = landX + Math.min(520, platW - 170);
+      this.platforms.push({ x: leftPerch, y: 356, w: 132, h: 24, active: true, type: 'stone' });
+      this.platforms.push({ x: rightPerch, y: 314, w: 132, h: 24, active: true, type: 'stone' });
+      this._addMovingPlatform(landX + 310, 418, 118, 24, landX + 260, landX + 455, 82 * speed);
+      this._addCoinLine(landX + 250, 374, 5, 42);
+      if (!forgiving) {
+        this.enemies.push({ type: 'shooter', x: leftPerch + 46, y: 306, w: 38, h: 50, shootTimer: 0.4, dead: false, anim: 0 });
+        this.enemies.push({ type: 'shooter', x: rightPerch + 46, y: 264, w: 38, h: 50, shootTimer: 1.35, dead: false, anim: 0 });
+      }
+    } else if (kind === 'moving-switchback') {
+      const baseX = step1x + 130;
+      this._addMovingPlatform(baseX, 388, 112, 24, baseX - 50, baseX + 120, 88 * speed);
+      this._addMovingPlatform(baseX + 205, 326, 112, 24, baseX + 120, baseX + 300, -92 * speed);
+      this._addMovingPlatform(baseX + 410, 366, 112, 24, baseX + 330, baseX + 520, 96 * speed);
+      this._addCoinLine(baseX + 20, 340, 7, 72, -8);
+      if (!forgiving) {
+        this.spikes.push({ x: baseX + 110, y: 485, w: 360, h: 15 });
+      }
+    } else if (kind === 'flyer-swarm') {
+      const startX = landX + 155;
+      for (let n = 0; n < 3; n++) {
+        this.enemies.push({ type: 'flyer', x: startX + n * 145, y: 285 + n * 26, w: 38, h: 30, vx: (-82 - n * 12) * speed, startX: startX + n * 115 - 35, endX: startX + n * 115 + 210, startY: 285 + n * 26, flyOffset: phase + n, dead: false, anim: 0 });
+      }
+      this._addCoinLine(startX + 20, 238, 6, 48, 10);
+      this.platforms.push({ x: startX + 160, y: 390, w: 150, h: 24, active: true, type: 'stone' });
+    } else if (kind === 'wind-crumble') {
+      const dir = sectionIndex % 2 === 0 ? -1 : 1;
+      const startX = landX + 170;
+      this._addWindZone(startX - 40, 150, 520, 320, dir * (240 + diff * 45) * speed, -70, phase);
+      for (let n = 0; n < 3; n++) {
+        this._addCrumblePlatform(startX + n * 150, 372 - n * 22, 108, Math.max(0.72, 1.12 - diff * 0.08));
+      }
+      this._addCoinLine(startX + 24, 318, 6, 70, -8);
+      if (!forgiving) {
+        this._addFireJet(startX + 330, 424, 34, 76, 1.85, 0.58, phase + 0.4);
+      }
+    } else if (kind === 'boss-gauntlet') {
+      const startX = landX + 160;
+      this.platforms.push({ x: startX, y: 374, w: 140, h: 24, active: true, type: 'stone' });
+      this.platforms.push({ x: startX + 230, y: 326, w: 130, h: 24, active: true, type: 'stone' });
+      this._addMovingPlatform(startX + 430, 390, 120, 24, startX + 365, startX + 565, 95 * speed);
+      this._addCoinLine(startX + 22, 326, 7, 70, -5);
+      this.powerups.push({ type: 'star', x: startX + 258, y: 282, w: 26, h: 26, active: true, bob: 0 });
+      if (!forgiving) {
+        this._addFireJet(startX + 96, 426, 34, 74, 1.85, 0.58, phase);
+        this._addFireJet(startX + 500, 426, 34, 74, 1.85, 0.58, phase + 0.95);
+        this.enemies.push({ type: 'shooter', x: startX + 465, y: 340, w: 38, h: 50, shootTimer: 1.0, dead: false, anim: 0 });
       }
     }
   }
