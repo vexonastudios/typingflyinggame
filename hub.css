@@ -131,6 +131,7 @@ body {
 .game-card:hover .card-glow--red  { opacity: 1; }
 .game-card:hover .card-glow--gold { opacity: 1; }
 .game-card:hover .card-glow--pink { opacity: 1; }
+.game-card:hover .card-glow--harvest { opacity: 1; }
 .game-card:hover .card-glow--cyan { opacity: 1; }
 .game-card:hover .card-glow--orange { opacity: 1; }
 .game-card:hover .card-glow--purple { opacity: 1; }
@@ -160,6 +161,10 @@ body {
 .card-glow--pink {
   box-shadow: inset 0 0 0 2px rgba(255,77,184,0.7), 0 0 40px rgba(255,77,184,0.25);
   border: 2px solid rgba(255,77,184,0.7);
+}
+.card-glow--harvest {
+  box-shadow: inset 0 0 0 2px rgba(245,158,11,0.75), 0 0 42px rgba(34,197,94,0.24);
+  border: 2px solid rgba(245,158,11,0.72);
 }
 .card-glow--cyan {
   box-shadow: inset 0 0 0 2px rgba(6,182,212,0.7), 0 0 40px rgba(6,182,212,0.25);
@@ -322,8 +327,30 @@ body {
 
 /* Runner art — platformer scene */
 .card-art--runner {
-  background: linear-gradient(180deg, #0f172a 0%, #1e1b4b 55%, #312e81 100%);
+  background: linear-gradient(180deg, #38bdf8 0%, #fef3c7 54%, #86efac 100%);
   overflow: hidden;
+}
+.card-art--runner::before {
+  content: '';
+  position: absolute;
+  bottom: 30px;
+  left: 8%;
+  width: 68px;
+  height: 54px;
+  background: #f8fafc;
+  border: 3px solid #92400e;
+  box-shadow: 0 -18px 0 -2px #b45309, inset 18px 0 0 rgba(251,191,36,0.20);
+}
+.card-art--runner::after {
+  content: '';
+  position: absolute;
+  top: 20px;
+  right: 24px;
+  width: 42px;
+  height: 42px;
+  background: #fde68a;
+  border-radius: 50%;
+  box-shadow: 0 0 30px rgba(253,230,138,0.7);
 }
 /* Scrolling ground */
 .art-runner-ground {
@@ -331,9 +358,9 @@ body {
   bottom: 0; left: -10%;
   width: 120%; height: 30px;
   background: repeating-linear-gradient(90deg,
-    #3b2d8a 0px, #3b2d8a 38px,
-    #4c3a9e 38px, #4c3a9e 40px);
-  border-top: 3px solid #6d5fd0;
+    #7c2d12 0px, #7c2d12 34px,
+    #92400e 34px, #92400e 40px);
+  border-top: 5px solid #65a30d;
   animation: groundScroll 2s linear infinite;
 }
 @keyframes groundScroll {
@@ -346,9 +373,10 @@ body {
   bottom: 32px;
   left: 20%;
   width: 14px; height: 26px;
-  background: #60a5fa;           /* body */
+  background: #f97316;           /* body */
   border-radius: 3px 3px 0 0;
   animation: charRun 0.4s steps(2) infinite;
+  z-index: 2;
 }
 .art-runner-char::before {       /* head */
   content: '';
@@ -357,15 +385,16 @@ body {
   width: 12px; height: 12px;
   background: #fcd34d;
   border-radius: 50%;
+  box-shadow: 0 -5px 0 #ca8a04;
 }
 .art-runner-char::after {        /* legs */
   content: '';
   position: absolute;
   bottom: -8px; left: 1px;
   width: 5px; height: 8px;
-  background: #3b82f6;
+  background: #2563eb;
   border-radius: 2px;
-  box-shadow: 7px 0 0 #3b82f6;
+  box-shadow: 7px 0 0 #2563eb;
   animation: legSwap 0.4s steps(2) infinite;
 }
 @keyframes charRun {
@@ -373,8 +402,8 @@ body {
   50%  { transform: scaleX(1) translateY(-2px); }
 }
 @keyframes legSwap {
-  0%   { box-shadow:  7px  0 0 #3b82f6; transform: translateY(0); }
-  50%  { box-shadow:  7px -4px 0 #3b82f6; transform: translateY(2px); }
+  0%   { box-shadow:  7px  0 0 #2563eb; transform: translateY(0); }
+  50%  { box-shadow:  7px -4px 0 #2563eb; transform: translateY(2px); }
 }
 /* Floating answer-gate block */
 .art-runner-gate {
@@ -382,6 +411,7 @@ body {
   bottom: 62px; left: 50%;
   transform: translateX(-50%);
   display: flex; gap: 6px;
+  z-index: 2;
 }
 .art-runner-tile {
   width: 36px; height: 36px;
@@ -392,8 +422,8 @@ body {
   box-shadow: 0 4px 12px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.2);
   animation: floatBlock 2.2s ease-in-out infinite;
 }
-.art-runner-tile:nth-child(1) { background: #ff4db8; animation-delay: 0s; }   /* correct */
-.art-runner-tile:nth-child(2) { background: #334155; animation-delay: 0.3s; }  /* wrong */
+.art-runner-tile:nth-child(1) { background: #22c55e; animation-delay: 0s; }   /* correct */
+.art-runner-tile:nth-child(2) { background: #f59e0b; animation-delay: 0.3s; }  /* wrong */
 .art-runner-tile:nth-child(3) { background: #334155; animation-delay: 0.6s; }  /* wrong */
 /* Enemy blob */
 .art-runner-enemy {
@@ -404,6 +434,7 @@ body {
   border-radius: 50% 50% 40% 40%;
   box-shadow: 0 3px 8px rgba(248,113,113,0.5);
   animation: enemyBob 1s ease-in-out infinite alternate;
+  z-index: 2;
 }
 .art-runner-enemy::before {   /* eyes */
   content: '👀';
@@ -530,6 +561,7 @@ body {
 .badge--red     { background: rgba(255,77,77,0.18);  color: #ff9090; border: 1px solid rgba(255,77,77,0.3); }
 .badge--gold    { background: rgba(255,208,96,0.18); color: #ffd060; border: 1px solid rgba(255,208,96,0.3); }
 .badge--pink    { background: rgba(255,77,184,0.18); color: #ff90d2; border: 1px solid rgba(255,77,184,0.3); }
+.badge--harvest { background: rgba(245,158,11,0.18); color: #fcd34d; border: 1px solid rgba(245,158,11,0.35); }
 .badge--cyan    { background: rgba(6,182,212,0.18); color: #22d3ee; border: 1px solid rgba(6,182,212,0.3); }
 .badge--orange  { background: rgba(249,115,22,0.18); color: #fdba74; border: 1px solid rgba(249,115,22,0.3); }
 .badge--purple  { background: rgba(168,85,247,0.18); color: #d8b4fe; border: 1px solid rgba(168,85,247,0.3); }
@@ -580,7 +612,7 @@ body {
 }
 
 #card-runner .card-play-btn {
-  background: linear-gradient(135deg, #b8229e, #ff4db8);
+  background: linear-gradient(135deg, #16a34a, #f59e0b);
 }
 
 #card-tower .card-play-btn {
@@ -1113,4 +1145,3 @@ body {
   .hub-logo   { flex-direction: column; gap: 10px; text-align: center; }
   .game-card--featured { grid-column: 1; }
 }
-

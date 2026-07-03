@@ -270,8 +270,8 @@ const GAMEPLAY_DIFFICULTIES = {
 };
 
 const CAMPAIGN_LEVELS = [
-  { id: 1,  name: 'Meadow Warmup',      biome: 'grass',   tier: 0, gates: 4, tracks: ['Math', 'Language'], skills: ['Addition', 'Spelling'], focus: 'addition and spelling' },
-  { id: 2,  name: 'Rhyme Ravine',       biome: 'grass',   tier: 0, gates: 5, tracks: ['Language', 'Math'], skills: ['Rhyming', 'Subtraction'], focus: 'rhymes and subtraction' },
+  { id: 1,  name: 'Farmhouse Fields',   biome: 'farm',    tier: 0, gates: 4, tracks: ['Math', 'Language'], skills: ['Addition', 'Spelling'], focus: 'addition and spelling' },
+  { id: 2,  name: 'Meadow Rhyme Run',   biome: 'grass',   tier: 0, gates: 5, tracks: ['Language', 'Math'], skills: ['Rhyming', 'Subtraction'], focus: 'rhymes and subtraction' },
   { id: 3,  name: 'Grammar Grove',      biome: 'jungle',  tier: 1, gates: 5, tracks: ['Language', 'World'], skills: ['Grammar', 'Geography'], focus: 'grammar and map facts' },
   { id: 4,  name: 'Times Table Trail',  biome: 'jungle',  tier: 1, gates: 6, tracks: ['Math', 'Language'], skills: ['Multiplication', 'Vocabulary'], focus: 'times tables and vocabulary' },
   { id: 5,  name: 'Ember Review',       biome: 'volcano', tier: 1, gates: 4, tracks: ['Math', 'Language', 'Science'], skills: ['Review'], focus: 'first review boss', boss: true, bossHealth: 3 },
@@ -741,6 +741,7 @@ class WordRunner {
   }
 
   _sceneryKindsForBiome(biome) {
+    if (biome === 'farm') return ['farmFence', 'cornRows', 'hayBale', 'sunflowers', 'scarecrow', 'appleCrate', 'barn', 'windmill'];
     if (biome === 'jungle') return ['vineTree', 'broadLeaf', 'fallenLog', 'tallGrass'];
     if (biome === 'cave') return ['crystalCluster', 'stalagmite', 'glowMushroom', 'rockStack'];
     if (biome === 'sky') return ['cloudBank', 'windSock', 'floatingMarker', 'sunRay'];
@@ -753,6 +754,15 @@ class WordRunner {
     const kinds = this._sceneryKindsForBiome(biome);
     const props = [];
     let x = startX + 160;
+    if (biome === 'farm') {
+      props.push(
+        { kind: 'farmhouse', x: 85, y: 500, s: 1.08, layer: 'near', phase: 0 },
+        { kind: 'porchPath', x: 185, y: 500, s: 1, layer: 'near', phase: 0 },
+        { kind: 'gardenRows', x: 365, y: 500, s: 0.95, layer: 'near', phase: 0.4 },
+        { kind: 'clothesline', x: 535, y: 500, s: 0.82, layer: 'far', phase: 0.2 }
+      );
+      x = Math.max(x, 640);
+    }
     while (x < endX - 180) {
       const kind = kinds[Math.floor(Math.random() * kinds.length)];
       props.push({
@@ -2957,6 +2967,7 @@ class WordRunner {
 
   _drawParallaxBackdrop(ctx, biome, t) {
     const cfg = {
+      farm:    { far: '#7c4a1f', mid: '#4d7c0f', near: '#365314', glow: '#fde68a' },
       grass:   { far: '#17345d', mid: '#215f4b', near: '#173c2f', glow: '#fbbf24' },
       jungle:  { far: '#064e3b', mid: '#166534', near: '#052e16', glow: '#86efac' },
       cave:    { far: '#2e1065', mid: '#4c1d95', near: '#17082f', glow: '#c4b5fd' },
@@ -2965,9 +2976,9 @@ class WordRunner {
     }[biome] || { far: '#17345d', mid: '#215f4b', near: '#173c2f', glow: '#fbbf24' };
 
     ctx.save();
-    if (biome === 'grass' || biome === 'sky') {
+    if (biome === 'farm' || biome === 'grass' || biome === 'sky') {
       const sunX = CW - 140 - Math.sin(t * 0.1) * 20;
-      const sunY = biome === 'sky' ? 90 : 132;
+      const sunY = biome === 'sky' ? 90 : biome === 'farm' ? 104 : 132;
       const halo = ctx.createRadialGradient(sunX, sunY, 8, sunX, sunY, 120);
       halo.addColorStop(0, 'rgba(254,243,199,0.55)');
       halo.addColorStop(1, 'rgba(254,243,199,0)');
@@ -2975,7 +2986,7 @@ class WordRunner {
       ctx.fillRect(sunX - 140, sunY - 140, 280, 280);
       ctx.fillStyle = cfg.glow;
       ctx.beginPath();
-      ctx.arc(sunX, sunY, biome === 'sky' ? 34 : 24, 0, Math.PI * 2);
+      ctx.arc(sunX, sunY, biome === 'sky' ? 34 : biome === 'farm' ? 29 : 24, 0, Math.PI * 2);
       ctx.fill();
     }
 
@@ -3015,6 +3026,21 @@ class WordRunner {
     } else if (biome === 'sky') {
       drawRidge(500, 36, 'rgba(255,255,255,0.58)', 0.12, 190);
       drawRidge(545, 24, 'rgba(186,230,253,0.72)', 0.24, 160);
+    } else if (biome === 'farm') {
+      drawRidge(402, 34, 'rgba(77,124,15,0.58)', 0.11, 190);
+      drawRidge(468, 28, 'rgba(54,83,20,0.72)', 0.22, 145);
+      ctx.strokeStyle = 'rgba(254,240,138,0.30)';
+      ctx.lineWidth = 3;
+      for (let x = -80 - ((this.cameraX * 0.28) % 120); x < CW + 150; x += 120) {
+        ctx.beginPath();
+        ctx.moveTo(x, 520);
+        ctx.quadraticCurveTo(x + 45, 492, x + 118, 510);
+        ctx.stroke();
+      }
+      ctx.fillStyle = 'rgba(190,122,36,0.24)';
+      for (let x = -60 - ((this.cameraX * 0.18) % 180); x < CW + 220; x += 180) {
+        ctx.fillRect(x, 508, 118, 7);
+      }
     } else {
       drawRidge(404, 48, cfg.far, 0.12, 180);
       drawRidge(468, 34, cfg.mid, 0.24, 145);
@@ -3042,7 +3068,223 @@ class WordRunner {
     ctx.scale(s, s);
     ctx.globalAlpha = prop.layer === 'far' ? 0.42 : 0.82;
 
-    if (prop.kind === 'fence') {
+    if (prop.kind === 'farmhouse') {
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = 'rgba(0,0,0,0.20)';
+      ctx.beginPath(); rr(ctx, -142, -10, 304, 24, 12); ctx.fill();
+
+      ctx.fillStyle = '#7c2d12';
+      ctx.beginPath();
+      ctx.moveTo(-142, -132);
+      ctx.lineTo(-18, -218);
+      ctx.lineTo(134, -132);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = '#b45309';
+      ctx.beginPath();
+      ctx.moveTo(-118, -132);
+      ctx.lineTo(-16, -198);
+      ctx.lineTo(104, -132);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = '#fde68a';
+      ctx.fillRect(82, -192, 22, 48);
+      ctx.fillStyle = '#f8fafc';
+      ctx.beginPath(); rr(ctx, -112, -132, 230, 128, 8); ctx.fill();
+      ctx.fillStyle = '#e0f2fe';
+      ctx.fillRect(-90, -102, 42, 36);
+      ctx.fillRect(50, -102, 42, 36);
+      ctx.strokeStyle = '#7c2d12';
+      ctx.lineWidth = 4;
+      ctx.strokeRect(-90, -102, 42, 36);
+      ctx.strokeRect(50, -102, 42, 36);
+      ctx.beginPath();
+      ctx.moveTo(-69, -102); ctx.lineTo(-69, -66);
+      ctx.moveTo(-90, -84); ctx.lineTo(-48, -84);
+      ctx.moveTo(71, -102); ctx.lineTo(71, -66);
+      ctx.moveTo(50, -84); ctx.lineTo(92, -84);
+      ctx.stroke();
+      ctx.fillStyle = '#92400e';
+      ctx.beginPath(); rr(ctx, -20, -86, 42, 82, 5); ctx.fill();
+      ctx.fillStyle = '#fbbf24';
+      ctx.beginPath(); ctx.arc(12, -46, 3, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#78350f';
+      ctx.fillRect(-44, -18, 92, 14);
+      ctx.fillStyle = '#a16207';
+      ctx.fillRect(-62, -4, 128, 10);
+      ctx.fillStyle = '#5b3416';
+      for (let px = -56; px <= 56; px += 28) ctx.fillRect(px, -34, 7, 30);
+      ctx.strokeStyle = '#7c2d12';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(-68, -34); ctx.lineTo(72, -34);
+      ctx.moveTo(-68, -23); ctx.lineTo(72, -23);
+      ctx.stroke();
+    } else if (prop.kind === 'porchPath') {
+      ctx.globalAlpha = 0.72;
+      ctx.fillStyle = '#92400e';
+      ctx.beginPath();
+      ctx.moveTo(-42, 0);
+      ctx.lineTo(122, 0);
+      ctx.lineTo(190, 24);
+      ctx.lineTo(-90, 24);
+      ctx.closePath();
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(254,243,199,0.42)';
+      ctx.lineWidth = 3;
+      for (let p = -48; p < 150; p += 36) {
+        ctx.beginPath();
+        ctx.moveTo(p, 3);
+        ctx.lineTo(p + 52, 20);
+        ctx.stroke();
+      }
+    } else if (prop.kind === 'gardenRows' || prop.kind === 'cornRows') {
+      ctx.strokeStyle = prop.kind === 'cornRows' ? 'rgba(132,204,22,0.68)' : 'rgba(250,204,21,0.50)';
+      ctx.lineWidth = 4;
+      for (let i = 0; i < 5; i++) {
+        ctx.beginPath();
+        ctx.moveTo(-80 + i * 28, -4);
+        ctx.quadraticCurveTo(-18 + i * 10, -40 - i * 2, 96 + i * 14, -16);
+        ctx.stroke();
+      }
+      if (prop.kind === 'cornRows') {
+        ctx.fillStyle = '#84cc16';
+        for (let i = -42; i <= 72; i += 28) {
+          ctx.beginPath();
+          ctx.ellipse(i, -32 - Math.sin(t + i) * 2, 8, 28, -0.25, 0, Math.PI * 2);
+          ctx.ellipse(i + 12, -31 + Math.sin(t + i) * 2, 8, 26, 0.25, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+    } else if (prop.kind === 'farmFence') {
+      ctx.fillStyle = '#f8fafc';
+      for (let i = 0; i < 4; i++) ctx.fillRect(i * 32, -54, 8, 54);
+      ctx.fillStyle = '#e2e8f0';
+      ctx.fillRect(-12, -44, 142, 8);
+      ctx.fillRect(-12, -24, 142, 8);
+      ctx.strokeStyle = 'rgba(120,53,15,0.35)';
+      ctx.strokeRect(-12, -44, 142, 8);
+      ctx.strokeRect(-12, -24, 142, 8);
+    } else if (prop.kind === 'sunflowers') {
+      ctx.strokeStyle = '#365314';
+      ctx.lineWidth = 4;
+      for (let i = -34; i <= 42; i += 24) {
+        ctx.beginPath();
+        ctx.moveTo(i, 0);
+        ctx.lineTo(i + Math.sin(t * 2 + i) * 3, -44);
+        ctx.stroke();
+        ctx.fillStyle = '#facc15';
+        for (let p = 0; p < 8; p++) {
+          const a = p * Math.PI / 4;
+          ctx.beginPath();
+          ctx.ellipse(i + Math.cos(a) * 12, -48 + Math.sin(a) * 12, 7, 4, a, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.fillStyle = '#78350f';
+        ctx.beginPath(); ctx.arc(i, -48, 7, 0, Math.PI * 2); ctx.fill();
+      }
+    } else if (prop.kind === 'scarecrow') {
+      ctx.strokeStyle = '#78350f';
+      ctx.lineWidth = 5;
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.lineTo(0, -92);
+      ctx.moveTo(-48, -66);
+      ctx.lineTo(48, -66);
+      ctx.stroke();
+      ctx.fillStyle = '#facc15';
+      ctx.beginPath(); ctx.arc(0, -106, 16, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#78350f';
+      ctx.fillRect(-28, -124, 56, 8);
+      ctx.beginPath();
+      ctx.moveTo(-18, -124);
+      ctx.lineTo(0, -144);
+      ctx.lineTo(18, -124);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = '#2563eb';
+      ctx.beginPath(); rr(ctx, -24, -86, 48, 44, 6); ctx.fill();
+      ctx.fillStyle = '#ef4444';
+      ctx.fillRect(-46, -76, 92, 16);
+      ctx.fillStyle = '#111827';
+      ctx.fillRect(-7, -110, 4, 4);
+      ctx.fillRect(7, -110, 4, 4);
+    } else if (prop.kind === 'appleCrate') {
+      ctx.fillStyle = '#92400e';
+      ctx.beginPath(); rr(ctx, -34, -28, 72, 28, 5); ctx.fill();
+      ctx.strokeStyle = '#451a03';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(-28, -24, 60, 20);
+      ctx.fillStyle = '#ef4444';
+      for (let i = -20; i <= 22; i += 14) {
+        ctx.beginPath(); ctx.arc(i, -36 - Math.abs(i % 3), 7, 0, Math.PI * 2); ctx.fill();
+      }
+      ctx.fillStyle = '#22c55e';
+      ctx.beginPath(); ctx.ellipse(-3, -46, 5, 2.5, -0.5, 0, Math.PI * 2); ctx.fill();
+    } else if (prop.kind === 'barn') {
+      ctx.fillStyle = '#7f1d1d';
+      ctx.beginPath();
+      ctx.moveTo(-70, -112);
+      ctx.lineTo(0, -168);
+      ctx.lineTo(70, -112);
+      ctx.lineTo(70, 0);
+      ctx.lineTo(-70, 0);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = '#dc2626';
+      ctx.fillRect(-58, -108, 116, 108);
+      ctx.fillStyle = '#f8fafc';
+      ctx.fillRect(-46, -78, 92, 8);
+      ctx.fillRect(-46, -34, 92, 8);
+      ctx.strokeStyle = '#f8fafc';
+      ctx.lineWidth = 5;
+      ctx.strokeRect(-38, -70, 76, 70);
+      ctx.beginPath();
+      ctx.moveTo(-38, -70); ctx.lineTo(38, 0);
+      ctx.moveTo(38, -70); ctx.lineTo(-38, 0);
+      ctx.stroke();
+      ctx.fillStyle = '#fde68a';
+      ctx.beginPath(); rr(ctx, -18, -126, 36, 26, 4); ctx.fill();
+    } else if (prop.kind === 'windmill') {
+      ctx.strokeStyle = '#e5e7eb';
+      ctx.lineWidth = 5;
+      ctx.beginPath();
+      ctx.moveTo(-28, 0); ctx.lineTo(0, -126); ctx.lineTo(28, 0);
+      ctx.moveTo(-18, -58); ctx.lineTo(18, -58);
+      ctx.stroke();
+      ctx.save();
+      ctx.translate(0, -132);
+      ctx.rotate(t * 0.7 + prop.phase);
+      ctx.strokeStyle = '#f8fafc';
+      ctx.lineWidth = 7;
+      for (let b = 0; b < 4; b++) {
+        ctx.rotate(Math.PI / 2);
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(0, -48);
+        ctx.stroke();
+      }
+      ctx.fillStyle = '#94a3b8';
+      ctx.beginPath(); ctx.arc(0, 0, 8, 0, Math.PI * 2); ctx.fill();
+      ctx.restore();
+    } else if (prop.kind === 'clothesline') {
+      ctx.strokeStyle = '#5b3416';
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.moveTo(-66, 0); ctx.lineTo(-66, -82);
+      ctx.moveTo(74, 0); ctx.lineTo(74, -82);
+      ctx.moveTo(-66, -78); ctx.quadraticCurveTo(6, -65, 74, -78);
+      ctx.stroke();
+      const clothes = [
+        { x: -38, c: '#38bdf8', w: 24 },
+        { x: 0, c: '#f97316', w: 28 },
+        { x: 42, c: '#22c55e', w: 22 }
+      ];
+      for (const cloth of clothes) {
+        ctx.fillStyle = cloth.c;
+        ctx.beginPath(); rr(ctx, cloth.x, -75 + Math.sin(t * 2 + cloth.x) * 2, cloth.w, 28, 4); ctx.fill();
+      }
+    } else if (prop.kind === 'fence') {
       ctx.fillStyle = '#7c4a22';
       for (let i = 0; i < 3; i++) ctx.fillRect(i * 34, -54, 8, 54);
       ctx.fillStyle = '#a16207';
@@ -3341,7 +3583,11 @@ class WordRunner {
 
     // ── Sky gradient ──
     const skyGrad = ctx.createLinearGradient(0, 0, 0, CH);
-    if (biome === 'grass') {
+    if (biome === 'farm') {
+      skyGrad.addColorStop(0, '#60a5fa');
+      skyGrad.addColorStop(0.48, '#fef3c7');
+      skyGrad.addColorStop(1, '#86efac');
+    } else if (biome === 'grass') {
       skyGrad.addColorStop(0, '#0f1f4a');
       skyGrad.addColorStop(0.6, '#1a3a6e');
       skyGrad.addColorStop(1, '#0d1b38');
@@ -3375,7 +3621,7 @@ class WordRunner {
     }
 
     // ── Stars ──
-    if (biome !== 'sky') {
+    if (biome !== 'sky' && biome !== 'farm') {
       ctx.save();
       for (const star of this.bgStars) {
         const blink = 0.6 + 0.4 * Math.sin(t * 1.5 + star.blink);
@@ -3591,6 +3837,28 @@ class WordRunner {
         ctx.beginPath();
         rr(ctx, plat.x, plat.y, plat.w, Math.min(plat.h, 20), 20);
         ctx.fill();
+      } else if (biome === 'farm') {
+        ctx.fillStyle = '#5b3416';
+        ctx.fillRect(plat.x, plat.y, plat.w, plat.h);
+        ctx.fillStyle = '#7c2d12';
+        ctx.fillRect(plat.x, plat.y + 18, plat.w, plat.h - 18);
+        ctx.fillStyle = '#65a30d';
+        ctx.fillRect(plat.x, plat.y, plat.w, 18);
+        ctx.fillStyle = '#bef264';
+        ctx.fillRect(plat.x, plat.y, plat.w, 5);
+        ctx.strokeStyle = 'rgba(250,204,21,0.42)';
+        ctx.lineWidth = 2;
+        for (let bx = plat.x + 8; bx < plat.x + plat.w - 10; bx += 34) {
+          ctx.beginPath();
+          ctx.moveTo(bx, plat.y + 22);
+          ctx.quadraticCurveTo(bx + 8, plat.y + 42, bx + 27, plat.y + 58);
+          ctx.stroke();
+        }
+        ctx.fillStyle = '#84cc16';
+        for (let bx = plat.x + 14; bx < plat.x + plat.w - 8; bx += 30) {
+          ctx.fillRect(bx, plat.y - 9, 4, 10);
+          ctx.fillRect(bx + 9, plat.y - 6, 3, 7);
+        }
       } else if (biome === 'volcano') {
         // Volcano platform
         ctx.fillStyle = '#3a0c0c';

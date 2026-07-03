@@ -1,5 +1,5 @@
 /* ============================================================
-   WORD RUNNER – runner.css  (Prototype Polish)
+   HARVEST WORD RUN - runner.css  (Prototype Polish)
    ============================================================ */
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -15,8 +15,8 @@
   --text-muted: #64748b;
   --p1: #38bdf8;
   --p2: #22c55e;
-  --accent: #c084fc;
-  --accent2: #f0abfc;
+  --accent: #f59e0b;
+  --accent2: #22c55e;
   --correct: #34d399;
   --error: #f87171;
   --gold: #fbbf24;
