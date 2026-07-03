@@ -851,12 +851,12 @@ class WordRunner {
   _setPieceForSection(stage, sectionIndex) {
     const level = stage?.id || this.currentLevel || 1;
     const plans = {
-      1: ['stomp-lane', 'crumble-bridge', 'spring-tower', 'fire-hall'],
-      2: ['upper-route', 'fire-hall', 'spring-tower', 'crumble-sprint', 'stomp-lane'],
-      3: ['upper-route', 'rope-swing', 'crumble-bridge', 'enemy-perch', 'spring-tower'],
-      4: ['spring-tower', 'stomp-lane', 'rope-swing', 'fire-hall', 'crumble-sprint', 'enemy-perch'],
-      5: ['fire-hall', 'crumble-sprint', 'rope-swing', 'enemy-perch'],
-      6: ['precision-crumble', 'tilt-run', 'shooter-crossfire', 'rope-swing', 'upper-route', 'crumble-sprint'],
+      1: ['rope-practice', 'stomp-lane', 'high-road', 'crumble-bridge', 'spring-tower', 'fire-hall'],
+      2: ['rope-to-upper', 'upper-route', 'fire-hall', 'spring-tower', 'crumble-sprint', 'stomp-lane'],
+      3: ['rope-to-upper', 'upper-route', 'rope-swing', 'crumble-bridge', 'enemy-perch', 'spring-tower'],
+      4: ['spring-tower', 'rope-to-upper', 'stomp-lane', 'rope-swing', 'fire-hall', 'crumble-sprint', 'enemy-perch'],
+      5: ['fire-hall', 'rope-to-upper', 'crumble-sprint', 'rope-swing', 'enemy-perch'],
+      6: ['precision-crumble', 'tilt-run', 'shooter-crossfire', 'rope-to-upper', 'rope-swing', 'upper-route', 'crumble-sprint'],
       7: ['spring-tower', 'precision-crumble', 'tilt-run', 'moving-switchback', 'enemy-perch', 'crumble-sprint', 'rope-swing'],
       8: ['wind-tunnel', 'moving-switchback', 'rope-swing', 'flyer-swarm', 'tilt-run', 'upper-route', 'wind-crumble'],
       9: ['upper-route', 'moving-switchback', 'stomp-lane', 'enemy-perch', 'tilt-run', 'precision-crumble', 'shooter-crossfire'],
@@ -924,7 +924,79 @@ class WordRunner {
     const speed = gameCfg.speedMultiplier;
     const phase = sectionIndex * 0.53 + (stage.id || 1) * 0.17;
 
-    if (kind === 'upper-route') {
+    if (kind === 'rope-practice') {
+      const ropeX = landX + Math.min(360, Math.max(280, platW * 0.48));
+      this.platforms.push({ x: landX + 115, y: 392, w: 150, h: 24, active: true, type: 'stone' });
+      this.platforms.push({ x: ropeX + 118, y: 332, w: 190, h: 24, active: true, type: 'stone' });
+      this.springs.push({ x: landX + 54, y: 482, w: 50, h: 18, force: 860, cooldown: 0 });
+      this.ropes.push({
+        x: ropeX,
+        y: 118,
+        length: 340,
+        swingAmp: 24,
+        swingSpeed: 0.96,
+        phase,
+        vx: 0,
+        startX: ropeX,
+        endX: ropeX,
+        moveX: false
+      });
+      this._addCoinLine(landX + 136, 342, 4, 38, -12);
+      this._addCoinLine(ropeX - 12, 246, 4, 24, -12);
+      this._addCoinLine(ropeX + 145, 286, 4, 34);
+      this.powerups.push({ type: 'boots', x: ropeX + 178, y: 292, w: 26, h: 26, active: true, bob: 0 });
+    } else if (kind === 'rope-to-upper') {
+      const firstRopeX = landX + Math.min(300, Math.max(230, platW * 0.42));
+      const secondRopeX = firstRopeX + 230;
+      this.platforms.push({ x: landX + 90, y: 382, w: 140, h: 24, active: true, type: 'stone' });
+      this.platforms.push({ x: firstRopeX + 86, y: 320, w: 126, h: 24, active: true, type: 'stone' });
+      this.platforms.push({ x: secondRopeX + 98, y: 272, w: 220, h: 24, active: true, type: 'stone' });
+      this.ropes.push({
+        x: firstRopeX,
+        y: 108,
+        length: 342,
+        swingAmp: 32 + diff * 3,
+        swingSpeed: 1.02 + diff * 0.06,
+        phase,
+        vx: 0,
+        startX: firstRopeX,
+        endX: firstRopeX,
+        moveX: false
+      });
+      this.ropes.push({
+        x: secondRopeX,
+        y: 98,
+        length: 318,
+        swingAmp: 36 + diff * 3,
+        swingSpeed: 1.08 + diff * 0.06,
+        phase: phase + 0.7,
+        vx: 0,
+        startX: secondRopeX,
+        endX: secondRopeX,
+        moveX: false
+      });
+      this._addCoinLine(landX + 112, 332, 4, 36, -8);
+      this._addCoinLine(firstRopeX - 18, 232, 5, 44, -8);
+      this._addCoinLine(secondRopeX + 126, 228, 5, 38);
+      if (!forgiving) {
+        this.spikes.push({ x: firstRopeX + 60, y: 485, w: 280, h: 15 });
+        this.enemies.push({ type: 'flyer', x: secondRopeX + 130, y: 236, w: 38, h: 30, vx: -80 * speed, startX: secondRopeX + 90, endX: secondRopeX + 300, startY: 236, flyOffset: phase, dead: false, anim: 0 });
+      }
+    } else if (kind === 'high-road') {
+      const startX = landX + 145;
+      const ledges = [
+        { x: startX, y: 356, w: 130 },
+        { x: startX + 185, y: 300, w: 128 },
+        { x: startX + 370, y: 274, w: 170 },
+        { x: startX + 590, y: 330, w: 150 }
+      ];
+      ledges.forEach(p => this.platforms.push({ x: p.x, y: p.y, w: p.w, h: 24, active: true, type: 'stone' }));
+      ledges.forEach((p, idx) => this._addCoinLine(p.x + 24, p.y - 34, idx === 2 ? 4 : 3, 30));
+      this.springs.push({ x: landX + 62, y: 482, w: 50, h: 18, force: 890, cooldown: 0 });
+      if (!forgiving) {
+        this.enemies.push({ type: 'hopper', x: startX + 408, y: 236, w: 34, h: 38, vx: -38 * speed, startX: startX + 380, endX: startX + 525, baseY: 236, hopTime: phase, hopHeight: 22, dead: false, anim: 0 });
+      }
+    } else if (kind === 'upper-route') {
       const ledges = [
         { x: landX + 160, y: 370, w: 125 },
         { x: landX + 330, y: 324, w: 118 },
@@ -2952,8 +3024,10 @@ class WordRunner {
     // ── Ropes ──
     for (const rope of this.ropes) {
       ctx.save();
-      ctx.strokeStyle = '#a16207';
-      ctx.lineWidth = 5;
+      ctx.shadowBlur = 10;
+      ctx.shadowColor = '#facc15';
+      ctx.strokeStyle = '#78350f';
+      ctx.lineWidth = 8;
       ctx.lineCap = 'round';
       ctx.beginPath();
       ctx.moveTo(rope.x, rope.y);
@@ -2962,15 +3036,28 @@ class WordRunner {
         ctx.lineTo(this._ropeX(rope, offset, 0), rope.y + offset);
       }
       ctx.stroke();
+      ctx.shadowBlur = 0;
+      ctx.strokeStyle = '#facc15';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(rope.x, rope.y + 3);
+      for (let r = 1; r <= 12; r++) {
+        const offset = (rope.length / 12) * r;
+        ctx.lineTo(this._ropeX(rope, offset, 0) - 2, rope.y + offset);
+      }
+      ctx.stroke();
       ctx.fillStyle = '#78350f';
       ctx.beginPath();
       ctx.arc(rope.x, rope.y, 11, 0, Math.PI * 2);
       ctx.fill();
+      ctx.strokeStyle = '#facc15';
+      ctx.lineWidth = 3;
+      ctx.stroke();
       ctx.fillStyle = '#fbbf24';
       for (let r = 3; r <= 11; r += 3) {
         const offset = (rope.length / 12) * r;
         ctx.beginPath();
-        ctx.arc(this._ropeX(rope, offset, 0), rope.y + offset, 3, 0, Math.PI * 2);
+        ctx.arc(this._ropeX(rope, offset, 0), rope.y + offset, 4, 0, Math.PI * 2);
         ctx.fill();
       }
       ctx.restore();
