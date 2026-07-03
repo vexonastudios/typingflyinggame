@@ -779,8 +779,8 @@ class WordRunner {
 
   _challengeTypeForSection(stage, sectionIndex) {
     const level = stage?.id || this.currentLevel || 1;
-    if (level <= 1) return sectionIndex % 3 === 2 ? 'spring' : 'moving';
-    if (level <= 2) return ['moving', 'spring', 'crumble'][sectionIndex % 3];
+    if (level <= 1) return ['moving', 'crumble', 'spring', 'timed'][sectionIndex % 4];
+    if (level <= 2) return ['moving', 'timed', 'spring', 'crumble'][sectionIndex % 4];
     if (level <= 4) return ['moving', 'spring', 'crumble', 'timed'][sectionIndex % 4];
     if (level <= 5) return ['timed', 'crumble', 'spring'][sectionIndex % 3];
     if (level <= 8) return ['rope', 'crumble', 'spring', 'tilt'][sectionIndex % 4];
@@ -810,6 +810,16 @@ class WordRunner {
       return 1;
     }
     return Math.max(1, Math.round((1 + Math.min(3, diff)) * gameCfg.enemyMultiplier));
+  }
+
+  _earlyObstaclePlan(stage, sectionIndex, challengeType, gameCfg) {
+    const level = stage?.id || this.currentLevel || 1;
+    const isEarly = level <= 2;
+    const isForgiving = gameCfg.hazardMultiplier < 0.8;
+    return {
+      timedFire: isEarly && !isForgiving && challengeType === 'timed' && sectionIndex > 0,
+      stepSpikes: isEarly && !isForgiving && sectionIndex % 2 === 1
+    };
   }
 
   _earlyEnemyForSlot(landX, platW, sectionIndex, slot, total, gameCfg) {
@@ -852,6 +862,7 @@ class WordRunner {
 
     for (let i = 0; i < gateCount; i++) {
       const challengeType = this._challengeTypeForSection(stage, i);
+      const earlyPlan = this._earlyObstaclePlan(stage, i, challengeType, gameCfg);
       // ── 1. Navigation gap ──
       const gap = 150 + Math.random() * 40 + diff * 10;
       const platW = Math.max(280, 650 - diff * 120);
@@ -871,15 +882,15 @@ class WordRunner {
       const landX = px + gap;
       this.platforms.push({ x: landX, y: 500, w: platW, h: 120, active: true, type: 'grass' });
 
-      if (challengeType === 'timed' && diff >= 1) {
+      if (challengeType === 'timed' && (diff >= 1 || earlyPlan.timedFire)) {
         this.timedHazards.push({
           type: 'firejet',
           x: landX + Math.max(130, platW * 0.58),
           y: 422,
           w: 34,
           h: 78,
-          period: Math.max(1.55, 2.3 - diff * 0.12),
-          onTime: Math.min(1.05, 0.72 + diff * 0.07),
+          period: earlyPlan.timedFire ? 2.1 : Math.max(1.55, 2.3 - diff * 0.12),
+          onTime: earlyPlan.timedFire ? 0.7 : Math.min(1.05, 0.72 + diff * 0.07),
           phase: i * 0.37,
           active: false
         });
@@ -950,9 +961,10 @@ class WordRunner {
           cooldown: 0
         });
       }
-      if (diff >= 1 && Math.random() < 0.5 * gameCfg.hazardMultiplier) {
+      if ((diff >= 1 || earlyPlan.stepSpikes) &&
+          (earlyPlan.stepSpikes || Math.random() < 0.5 * gameCfg.hazardMultiplier)) {
         // Only cover the right half of the step to leave a safe landing zone
-        const spikeW = stepW / 2;
+        const spikeW = earlyPlan.stepSpikes ? stepW * 0.38 : stepW / 2;
         this.spikes.push({ x: px + stepGap + (stepW - spikeW), y: 395, w: spikeW, h: 15 });
       }
       const step2x = px + stepGap + stepW + 70 + diff * 18;
@@ -1085,15 +1097,15 @@ class WordRunner {
         this.coins.push({ x: safeX - 56, y: 204, w: 18, h: 18, collected: false });
       }
 
-      if (challengeType === 'timed' && diff >= 1) {
+      if (challengeType === 'timed' && (diff >= 1 || earlyPlan.timedFire)) {
         this.timedHazards.push({
           type: 'firejet',
           x: safeX + 620,
-          y: safeY - 76,
+          y: safeY - (earlyPlan.timedFire ? 64 : 76),
           w: 36,
-          h: 76,
-          period: Math.max(1.5, 2.2 - diff * 0.12),
-          onTime: Math.min(1.0, 0.68 + diff * 0.07),
+          h: earlyPlan.timedFire ? 64 : 76,
+          period: earlyPlan.timedFire ? 2.15 : Math.max(1.5, 2.2 - diff * 0.12),
+          onTime: earlyPlan.timedFire ? 0.66 : Math.min(1.0, 0.68 + diff * 0.07),
           phase: 0.25 + i * 0.55,
           active: false
         });
