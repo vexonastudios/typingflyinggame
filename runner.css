@@ -222,7 +222,7 @@ body {
 .wr-canvas-wrapper {
   position: relative;
   width: 100%;
-  min-height: 400px;
+  min-height: 650px;
   border: 1px solid var(--border-bright);
   border-radius: 20px;
   overflow: hidden;

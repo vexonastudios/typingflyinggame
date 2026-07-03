@@ -931,20 +931,26 @@ class WordRunner {
         { kind: 'farmhouse', x: 85, y: 500, s: 1.08, layer: 'near', phase: 0 },
         { kind: 'porchPath', x: 185, y: 500, s: 1, layer: 'near', phase: 0 },
         { kind: 'gardenRows', x: 365, y: 500, s: 0.95, layer: 'near', phase: 0.4 },
-        { kind: 'clothesline', x: 535, y: 500, s: 0.82, layer: 'far', phase: 0.2 }
+        { kind: 'clothesline', x: 265, y: 500, s: 0.82, layer: 'far', phase: 0.2 }
       );
-      x = Math.max(x, 640);
+      x = Math.max(x, 460);
     }
     while (x < endX - 180) {
       const kind = kinds[Math.floor(Math.random() * kinds.length)];
-      props.push({
-        kind,
-        x: x + Math.random() * 90,
-        y: 500,
-        s: 0.78 + Math.random() * 0.42,
-        layer: Math.random() < 0.38 ? 'far' : 'near',
-        phase: Math.random() * Math.PI * 2
-      });
+      const candidateX = x + Math.random() * 90;
+      
+      const hasFloor = this.platforms.some(p => p.type !== 'moving' && p.type !== 'tilt' && p.type !== 'crumble' && candidateX >= p.x + 20 && candidateX <= p.x + p.w - 50);
+      
+      if (hasFloor) {
+        props.push({
+          kind,
+          x: candidateX,
+          y: 500,
+          s: 0.78 + Math.random() * 0.42,
+          layer: Math.random() < 0.38 ? 'far' : 'near',
+          phase: Math.random() * Math.PI * 2
+        });
+      }
       x += 180 + Math.random() * 150;
     }
     this.sceneryProps = props;
