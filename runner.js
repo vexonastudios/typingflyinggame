@@ -613,6 +613,25 @@ class WordRunner {
       this.startGame(this.currentLevel);
     });
 
+    // Auto-scale the setup modal to fit the screen without a scrollbar
+    const setupOverlay = document.getElementById('gameSetup');
+    const setupModal = setupOverlay?.querySelector('.wr-modal');
+    if (setupOverlay && setupModal) {
+      setupModal.style.maxHeight = 'none';
+      setupModal.style.overflowY = 'visible';
+      const ro = new ResizeObserver(() => {
+        setupModal.style.transform = 'none';
+        const availHeight = setupOverlay.clientHeight - 40; // 20px padding top/bottom
+        const modalHeight = setupModal.scrollHeight;
+        if (modalHeight > availHeight && availHeight > 100) {
+          const scale = availHeight / modalHeight;
+          setupModal.style.transform = `scale(${scale})`;
+          setupModal.style.transformOrigin = 'center center';
+        }
+      });
+      ro.observe(setupOverlay);
+    }
+
     this.state = 'setup';
     this.currentLevel = 1;
     this.gameIsOver = false;
