@@ -848,6 +848,142 @@ class WordRunner {
     return { ...patrol, type, x, y: 460, w: 38, h: 40, vx: dir * 46 * gameCfg.speedMultiplier };
   }
 
+  _setPieceForSection(stage, sectionIndex) {
+    const level = stage?.id || this.currentLevel || 1;
+    const plans = {
+      1: ['stomp-lane', 'crumble-bridge', 'spring-tower', 'fire-hall'],
+      2: ['upper-route', 'fire-hall', 'spring-tower', 'crumble-sprint', 'stomp-lane'],
+      3: ['upper-route', 'rope-swing', 'crumble-bridge', 'enemy-perch', 'spring-tower'],
+      4: ['spring-tower', 'stomp-lane', 'rope-swing', 'fire-hall', 'crumble-sprint', 'enemy-perch'],
+      5: ['fire-hall', 'crumble-sprint', 'rope-swing', 'enemy-perch']
+    };
+    const plan = plans[level];
+    return plan ? plan[sectionIndex % plan.length] : null;
+  }
+
+  _addCoinLine(x, y, count, dx = 34, dy = 0) {
+    for (let c = 0; c < count; c++) {
+      this.coins.push({ x: x + c * dx, y: y + c * dy, w: 18, h: 18, collected: false });
+    }
+  }
+
+  _addCrumblePlatform(x, y, w, delay) {
+    this.platforms.push({
+      x, y, w, h: 26,
+      active: true, type: 'crumble',
+      crumbleDelay: delay,
+      crumbleTimer: null,
+      respawnTimer: 0,
+      shake: 0
+    });
+  }
+
+  _addFireJet(x, y, w, h, period, onTime, phase) {
+    this.timedHazards.push({
+      type: 'firejet',
+      x, y, w, h,
+      period,
+      onTime,
+      phase,
+      active: false
+    });
+  }
+
+  _applySetPieceChunk(kind, opts) {
+    if (!kind) return;
+    const { stage, sectionIndex, landX, platW, step1x, step2x, stepW, diff, gameCfg } = opts;
+    const forgiving = gameCfg.hazardMultiplier < 0.8;
+    const speed = gameCfg.speedMultiplier;
+    const phase = sectionIndex * 0.53 + (stage.id || 1) * 0.17;
+
+    if (kind === 'upper-route') {
+      const ledges = [
+        { x: landX + 160, y: 370, w: 125 },
+        { x: landX + 330, y: 324, w: 118 },
+        { x: landX + 500, y: 354, w: 132 }
+      ];
+      ledges.forEach(p => this.platforms.push({ x: p.x, y: p.y, w: p.w, h: 24, active: true, type: 'stone' }));
+      ledges.forEach((p, idx) => this._addCoinLine(p.x + 24, p.y - 34, idx === 1 ? 3 : 2, 30));
+      this.powerups.push({ type: 'boots', x: ledges[1].x + 45, y: ledges[1].y - 38, w: 26, h: 26, active: true, bob: 0 });
+      if (!forgiving) {
+        this.enemies.push({ type: 'flyer', x: landX + 250, y: 310, w: 38, h: 30, vx: -76 * speed, startX: landX + 170, endX: landX + 610, startY: 310, flyOffset: phase, dead: false, anim: 0 });
+      }
+    } else if (kind === 'spring-tower') {
+      const springX = landX + Math.min(180, Math.max(105, platW * 0.22));
+      this.springs.push({ x: springX, y: 482, w: 54, h: 18, force: 940 + diff * 45, cooldown: 0 });
+      const tower = [
+        { x: springX + 145, y: 372, w: 118 },
+        { x: springX + 310, y: 314, w: 122 },
+        { x: springX + 475, y: 366, w: 120 }
+      ];
+      tower.forEach(p => this.platforms.push({ x: p.x, y: p.y, w: p.w, h: 24, active: true, type: 'stone' }));
+      tower.forEach(p => this._addCoinLine(p.x + 20, p.y - 32, 3, 30));
+      if (!forgiving) {
+        this.enemies.push({ type: 'hopper', x: tower[2].x + 42, y: tower[2].y - 38, w: 34, h: 38, vx: -42 * speed, startX: tower[2].x + 12, endX: tower[2].x + tower[2].w - 12, baseY: tower[2].y - 38, hopTime: phase, hopHeight: 26, dead: false, anim: 0 });
+      }
+    } else if (kind === 'crumble-bridge') {
+      const startX = landX + Math.max(190, platW * 0.32);
+      for (let n = 0; n < 3; n++) {
+        this._addCrumblePlatform(startX + n * 138, 382 - (n % 2) * 30, 108, Math.max(0.95, 1.45 - diff * 0.08));
+        this._addCoinLine(startX + n * 138 + 30, 326 - (n % 2) * 30, 2, 28);
+      }
+      if (!forgiving) {
+        this.spikes.push({ x: startX + 102, y: 485, w: 150, h: 15 });
+      }
+    } else if (kind === 'fire-hall') {
+      this._addCoinLine(landX + 250, 378, 5, 42);
+      if (!forgiving) {
+        this._addFireJet(landX + 205, 432, 34, 68, 2.05, 0.62, phase);
+        this._addFireJet(landX + 455, 432, 34, 68, 2.05, 0.62, phase + 1.02);
+      }
+      this.platforms.push({ x: landX + 320, y: 350, w: 130, h: 24, active: true, type: 'stone' });
+    } else if (kind === 'stomp-lane') {
+      const mid = landX + platW * 0.48;
+      this._addCoinLine(mid - 78, 378, 5, 34);
+      this.enemies.push({ type: 'hopper', x: mid, y: 462, w: 34, h: 38, vx: -48 * speed, startX: mid - 95, endX: mid + 110, baseY: 462, hopTime: phase, hopHeight: 34, dead: false, anim: 0 });
+      if (!forgiving) {
+        this.enemies.push({ type: 'crawler', x: mid + 170, y: 472, w: 46, h: 28, vx: 38 * speed, startX: mid + 105, endX: mid + 260, dead: false, anim: 0 });
+      }
+    } else if (kind === 'rope-swing') {
+      const ropeX = step2x + Math.max(150, stepW + 80);
+      this.ropes.push({
+        x: ropeX,
+        y: 132,
+        length: 306,
+        swingAmp: 38 + diff * 4,
+        swingSpeed: 1.14 + diff * 0.08,
+        phase,
+        vx: 0,
+        startX: ropeX,
+        endX: ropeX,
+        moveX: false
+      });
+      this.platforms.push({ x: ropeX + 120, y: 344, w: 138, h: 24, active: true, type: 'stone' });
+      this._addCoinLine(ropeX - 22, 242, 4, 34, -10);
+      if (!forgiving) {
+        this.spikes.push({ x: ropeX + 60, y: 485, w: 128, h: 15 });
+      }
+    } else if (kind === 'enemy-perch') {
+      const perchX = landX + Math.max(260, platW - 280);
+      this.platforms.push({ x: perchX, y: 356, w: 152, h: 24, active: true, type: 'stone' });
+      this._addCoinLine(perchX + 28, 316, 3, 32);
+      if (!forgiving) {
+        this.enemies.push({ type: 'shooter', x: perchX + 58, y: 306, w: 38, h: 50, shootTimer: 0.9, dead: false, anim: 0 });
+      } else {
+        this.hearts.push({ x: perchX + 64, y: 316, w: 22, h: 22, collected: false });
+      }
+    } else if (kind === 'crumble-sprint') {
+      const startX = step1x + 150;
+      for (let n = 0; n < 4; n++) {
+        this._addCrumblePlatform(startX + n * 118, 360 + (n % 2) * 30, 92, Math.max(0.82, 1.22 - diff * 0.08));
+      }
+      this._addCoinLine(startX + 26, 314, 6, 58);
+      if (!forgiving) {
+        this._addFireJet(startX + 220, 426, 32, 74, 2.0, 0.6, phase + 0.6);
+      }
+    }
+  }
+
   // ─── Level Generation ───
   _generateLevel() {
     const stage = this._getStage();
@@ -950,10 +1086,11 @@ class WordRunner {
       // ── 2. Step section ──
       const stepGap = 90 + diff * 12;
       const stepW   = Math.max(80, 130 - diff * 18);
-      this.platforms.push({ x: px + stepGap, y: 410, w: stepW, h: 210, active: true, type: 'stone' });
+      const step1x = px + stepGap;
+      this.platforms.push({ x: step1x, y: 410, w: stepW, h: 210, active: true, type: 'stone' });
       if (challengeType === 'spring') {
         this.springs.push({
-          x: px + stepGap + Math.max(8, stepW * 0.24),
+          x: step1x + Math.max(8, stepW * 0.24),
           y: 392,
           w: Math.min(52, Math.max(38, stepW * 0.55)),
           h: 18,
@@ -965,7 +1102,7 @@ class WordRunner {
           (earlyPlan.stepSpikes || Math.random() < 0.5 * gameCfg.hazardMultiplier)) {
         // Only cover the right half of the step to leave a safe landing zone
         const spikeW = earlyPlan.stepSpikes ? stepW * 0.38 : stepW / 2;
-        this.spikes.push({ x: px + stepGap + (stepW - spikeW), y: 395, w: spikeW, h: 15 });
+        this.spikes.push({ x: step1x + (stepW - spikeW), y: 395, w: spikeW, h: 15 });
       }
       const step2x = px + stepGap + stepW + 70 + diff * 18;
       this.platforms.push({ x: step2x, y: 310, w: stepW, h: 310, active: true, type: 'stone' });
@@ -988,6 +1125,9 @@ class WordRunner {
       if (diff >= 1 && Math.random() < 0.5) {
         this.enemies.push({ type: 'shooter', x: step2x + stepW / 2 - 19, y: 260, w: 38, h: 50, shootTimer: 0, dead: false, anim: 0 });
       }
+      this._applySetPieceChunk(this._setPieceForSection(stage, i), {
+        stage, sectionIndex: i, landX, platW, step1x, step2x, stepW, diff, gameCfg
+      });
       px += stepGap + stepW * 2 + 70 + diff * 18;
 
       // ── 3. Approach islands ──
