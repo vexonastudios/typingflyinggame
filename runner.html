@@ -7,7 +7,7 @@
   <meta name="description" content="Harvest Dash - a co-op farm platformer where you clear fields, jump on answer blocks, and defeat enemies!">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="runner.css?v=campaign14">
+  <link rel="stylesheet" href="runner.css?v=campaign15">
 </head>
 <body>
 
@@ -53,6 +53,20 @@
           <div class="mission-callout">
             <span>Main Mission</span>
             <strong>Finish the harvest by clearing every field.</strong>
+          </div>
+          <div class="campaign-map-panel">
+            <div class="panel-head">
+              <span>Farm Map</span>
+              <strong id="mapProgressText">0/15 fields cleared</strong>
+            </div>
+            <div class="campaign-map" id="campaignMap"></div>
+          </div>
+          <div class="wardrobe-panel">
+            <div class="panel-head">
+              <span>Unlockable Looks</span>
+              <strong id="wardrobeProgressText">Clear fields to unlock outfits</strong>
+            </div>
+            <div class="wardrobe-grid" id="wardrobeGrid"></div>
           </div>
           <p>Run, jump, and stomp enemies through a 15-level farm adventure. Hit the <strong>correct answer block</strong> from below to open gates, keep the harvest moving, and unlock review bosses.</p>
 
@@ -122,6 +136,14 @@
           <div class="modal-icon" id="endIcon">🎉</div>
           <h2 id="endTitle">Level Complete!</h2>
           <p id="endMessage">Field cleared! Keep the harvest moving.</p>
+          <div class="campaign-map-panel end-map-panel">
+            <div class="panel-head">
+              <span>Farm Map</span>
+              <strong id="endMapProgressText">0/15 fields cleared</strong>
+            </div>
+            <div class="campaign-map" id="endCampaignMap"></div>
+          </div>
+          <div class="unlock-message" id="unlockMessage" style="display:none"></div>
           <div class="end-stats" id="endStats"></div>
           <button id="playAgainBtn" class="start-btn" style="margin-top:24px">Next Level →</button>
           <button id="retryBtn" class="secondary-btn">↺ Retry Level</button>
@@ -130,6 +152,6 @@
     </div>
   </div>
 
-  <script src="runner.js?v=campaign14"></script>
+  <script src="runner.js?v=campaign15"></script>
 </body>
 </html>

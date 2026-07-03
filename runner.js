@@ -289,6 +289,52 @@ const CAMPAIGN_LEVELS = [
 
 const MAX_LEVEL = CAMPAIGN_LEVELS.length;
 
+const PROGRESS_STORAGE_KEY = 'harvestDashProgressV1';
+const COSMETIC_LOOKS = [
+  {
+    id: 'classic',
+    name: 'Farmhand',
+    unlockLevel: 0,
+    note: 'Ready',
+    colors: { cap: '#0f766e', capDark: '#134e4a', hat: '#ca8a04', hatLight: '#facc15', shirt: '#f97316', overalls: '#2563eb', trim: '#bae6fd', badge: '#facc15' }
+  },
+  {
+    id: 'sunrise',
+    name: 'Sunrise',
+    unlockLevel: 2,
+    note: 'Clear 2',
+    colors: { cap: '#b45309', capDark: '#7c2d12', hat: '#f59e0b', hatLight: '#fde68a', shirt: '#f97316', overalls: '#7c2d12', trim: '#fed7aa', badge: '#facc15' }
+  },
+  {
+    id: 'ribbon',
+    name: 'Blue Ribbon',
+    unlockLevel: 4,
+    note: 'Clear 4',
+    colors: { cap: '#1d4ed8', capDark: '#1e3a8a', hat: '#ca8a04', hatLight: '#fef08a', shirt: '#38bdf8', overalls: '#1e40af', trim: '#dbeafe', badge: '#fef08a' }
+  },
+  {
+    id: 'grove',
+    name: 'Grove Gear',
+    unlockLevel: 6,
+    note: 'Clear 6',
+    colors: { cap: '#15803d', capDark: '#14532d', hat: '#854d0e', hatLight: '#d9f99d', shirt: '#22c55e', overalls: '#166534', trim: '#bbf7d0', badge: '#facc15' }
+  },
+  {
+    id: 'storm',
+    name: 'Storm Coat',
+    unlockLevel: 10,
+    note: 'Clear 10',
+    colors: { cap: '#0f172a', capDark: '#020617', hat: '#64748b', hatLight: '#e0f2fe', shirt: '#7dd3fc', overalls: '#334155', trim: '#bae6fd', badge: '#38bdf8' }
+  },
+  {
+    id: 'gold',
+    name: 'Gold Harvest',
+    unlockLevel: 15,
+    note: 'Clear all',
+    colors: { cap: '#a16207', capDark: '#713f12', hat: '#f59e0b', hatLight: '#fef3c7', shirt: '#facc15', overalls: '#92400e', trim: '#fef9c3', badge: '#22c55e' }
+  }
+];
+
 const ACADEMIC_PROMPTS = [
   P('Math', 'Easy', 'Addition', '8 + 5 = ?', '13', ['12', '14'], '8 + 5 combines to make 13.'),
   P('Math', 'Easy', 'Addition', '9 + 6 = ?', '15', ['14', '16'], '9 + 6 is 15.'),
@@ -574,6 +620,8 @@ class WordRunner {
     this.currentTrack = 'Mixed';
     this.gameplayDifficulty = 'Adventure';
     this.playerCount = 1;
+    this.progress = this._loadProgress();
+    this.selectedCosmeticId = this._validCosmeticId(this.progress.selectedCosmeticId || 'classic');
     this.score = 0;
     this.combo = 0;
     this.reviewPrompts = [];
@@ -588,8 +636,125 @@ class WordRunner {
 
     // Init empty arrays
     this._clearWorld();
+    this._renderProgressPanels();
+    this._renderWardrobe();
 
     requestAnimationFrame((ts) => this._loop(ts));
+  }
+
+  _loadProgress() {
+    try {
+      const raw = localStorage.getItem(PROGRESS_STORAGE_KEY);
+      if (!raw) return { maxLevelCleared: 0, selectedCosmeticId: 'classic', clearedLevels: {} };
+      const parsed = JSON.parse(raw);
+      return {
+        maxLevelCleared: Math.max(0, Math.min(MAX_LEVEL, Number(parsed.maxLevelCleared) || 0)),
+        selectedCosmeticId: parsed.selectedCosmeticId || 'classic',
+        clearedLevels: parsed.clearedLevels && typeof parsed.clearedLevels === 'object' ? parsed.clearedLevels : {}
+      };
+    } catch {
+      return { maxLevelCleared: 0, selectedCosmeticId: 'classic', clearedLevels: {} };
+    }
+  }
+
+  _saveProgress() {
+    try {
+      localStorage.setItem(PROGRESS_STORAGE_KEY, JSON.stringify(this.progress));
+    } catch {
+      // Progress is a bonus; keep the game playable if storage is blocked.
+    }
+  }
+
+  _validCosmeticId(id) {
+    const maxCleared = this.progress?.maxLevelCleared || 0;
+    const look = COSMETIC_LOOKS.find(item => item.id === id && maxCleared >= item.unlockLevel);
+    return look ? look.id : 'classic';
+  }
+
+  _selectedCosmetic() {
+    return COSMETIC_LOOKS.find(item => item.id === this.selectedCosmeticId) || COSMETIC_LOOKS[0];
+  }
+
+  _recordLevelClear(stage, timeBonus) {
+    const beforeMax = this.progress.maxLevelCleared || 0;
+    const level = stage?.id || this.currentLevel || 1;
+    const accuracy = this._accuracy(this.levelStats);
+    const prior = this.progress.clearedLevels[level] || {};
+    this.progress.maxLevelCleared = Math.max(beforeMax, level);
+    this.progress.clearedLevels[level] = {
+      cleared: true,
+      bestScore: Math.max(prior.bestScore || 0, this.score),
+      bestAccuracy: Math.max(prior.bestAccuracy || 0, accuracy),
+      bestTimeBonus: Math.max(prior.bestTimeBonus || 0, timeBonus)
+    };
+    const unlocked = COSMETIC_LOOKS.filter(item => item.unlockLevel > beforeMax && item.unlockLevel <= this.progress.maxLevelCleared);
+    this.selectedCosmeticId = this._validCosmeticId(this.selectedCosmeticId);
+    this.progress.selectedCosmeticId = this.selectedCosmeticId;
+    this._saveProgress();
+    this._renderProgressPanels();
+    this._renderWardrobe();
+    return unlocked;
+  }
+
+  _mapNodeHtml(stage, maxCleared) {
+    const id = stage.id;
+    const isCleared = id <= maxCleared;
+    const isCurrent = id === Math.min(MAX_LEVEL, maxCleared + 1);
+    const state = isCleared ? 'cleared' : isCurrent ? 'current' : 'locked';
+    const icon = isCleared ? '✓' : stage.boss ? '★' : id;
+    return `
+      <div class="map-node ${state} ${stage.boss ? 'boss' : ''}" title="Level ${id}: ${this._escapeHtml(stage.name)}">
+        <span>${icon}</span>
+        <small>${id}</small>
+      </div>
+    `;
+  }
+
+  _renderCampaignMap(targetId, progressId) {
+    const map = document.getElementById(targetId);
+    if (!map) return;
+    const maxCleared = this.progress?.maxLevelCleared || 0;
+    map.innerHTML = CAMPAIGN_LEVELS.map(stage => this._mapNodeHtml(stage, maxCleared)).join('');
+    const progress = document.getElementById(progressId);
+    if (progress) {
+      progress.textContent = `${maxCleared}/${MAX_LEVEL} fields cleared`;
+    }
+  }
+
+  _renderProgressPanels() {
+    this._renderCampaignMap('campaignMap', 'mapProgressText');
+    this._renderCampaignMap('endCampaignMap', 'endMapProgressText');
+  }
+
+  _renderWardrobe() {
+    const grid = document.getElementById('wardrobeGrid');
+    if (!grid) return;
+    const maxCleared = this.progress?.maxLevelCleared || 0;
+    this.selectedCosmeticId = this._validCosmeticId(this.selectedCosmeticId);
+    grid.innerHTML = COSMETIC_LOOKS.map(look => {
+      const unlocked = maxCleared >= look.unlockLevel;
+      const selected = this.selectedCosmeticId === look.id;
+      return `
+        <button class="look-option ${selected ? 'selected' : ''}" data-look="${look.id}" ${unlocked ? '' : 'disabled'}>
+          <span class="look-swatch" style="--shirt:${look.colors.shirt};--overalls:${look.colors.overalls};--hat:${look.colors.hat}"></span>
+          <strong>${this._escapeHtml(look.name)}</strong>
+          <small>${unlocked ? (selected ? 'Equipped' : 'Unlocked') : look.note}</small>
+        </button>
+      `;
+    }).join('');
+    grid.querySelectorAll('.look-option:not([disabled])').forEach(btn => {
+      btn.addEventListener('click', () => {
+        this.selectedCosmeticId = btn.dataset.look || 'classic';
+        this.progress.selectedCosmeticId = this.selectedCosmeticId;
+        this._saveProgress();
+        this._renderWardrobe();
+      });
+    });
+    const label = document.getElementById('wardrobeProgressText');
+    if (label) {
+      const selected = this._selectedCosmetic();
+      label.textContent = `Equipped: ${selected.name}`;
+    }
   }
 
   _newStats() {
@@ -2075,6 +2240,17 @@ class WordRunner {
     const msg = document.getElementById('endMessage');
     const stats = document.getElementById('endStats');
     const nextBtn = document.getElementById('playAgainBtn');
+    const unlockMsg = document.getElementById('unlockMessage');
+    const unlockedLooks = won ? this._recordLevelClear(stage, timeBonus) : [];
+    if (unlockMsg) {
+      if (unlockedLooks.length) {
+        unlockMsg.style.display = 'block';
+        unlockMsg.textContent = `New look unlocked: ${unlockedLooks.map(item => item.name).join(', ')}!`;
+      } else {
+        unlockMsg.style.display = 'none';
+        unlockMsg.textContent = '';
+      }
+    }
 
     if (won) {
       Sfx.win();
@@ -4651,9 +4827,10 @@ class WordRunner {
     const skinShadow = '#d8915f';
     const cheek = '#f8d0a5';
     const hair = '#3f2416';
+    const selectedOutfit = this._selectedCosmetic().colors;
     const outfit = p.id === 1
-      ? { cap: '#0f766e', capDark: '#134e4a', hat: '#ca8a04', hatLight: '#facc15', shirt: '#f97316', overalls: '#2563eb', trim: '#bae6fd', badge: '#facc15' }
-      : { cap: '#22c55e', capDark: '#15803d', hat: '#a16207', hatLight: '#fde68a', shirt: '#22c55e', overalls: '#166534', trim: '#bbf7d0', badge: '#dcfce7' };
+      ? selectedOutfit
+      : { ...selectedOutfit, trim: '#bbf7d0', badge: '#dcfce7' };
     const walkPower = p.grounded ? Math.min(1, Math.abs(p.vx) / MAX_SPEED) : 0;
     const onRope = Boolean(p.rope);
     const rising = !p.grounded && !onRope && p.vy < -160;
