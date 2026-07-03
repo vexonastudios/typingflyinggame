@@ -934,6 +934,95 @@ class WordRunner {
     });
   }
 
+  _overlapX(a, b) {
+    return Math.max(0, Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x));
+  }
+
+  _isFloatingRoutePlatform(plat) {
+    return plat.active && !plat.isGate && plat.type !== 'gate' &&
+      plat.y < 470 && plat.h <= 40 && plat.w >= 70;
+  }
+
+  _liftCollectiblesOffFloatingPlatforms(items, clearance = 16) {
+    const floaters = this.platforms.filter(p => this._isFloatingRoutePlatform(p));
+    for (const item of items) {
+      for (let pass = 0; pass < 3; pass++) {
+        let moved = false;
+        const centerX = item.x + item.w / 2;
+        for (const plat of floaters) {
+          if (centerX < plat.x - 4 || centerX > plat.x + plat.w + 4) continue;
+          const targetY = plat.y - item.h - clearance;
+          const tooLowOverPlatform = item.y > targetY + 3 && item.y < plat.y + plat.h + 30;
+          if (tooLowOverPlatform || intersect(item, plat)) {
+            item.y = targetY;
+            moved = true;
+          }
+        }
+        if (!moved) break;
+      }
+    }
+  }
+
+  _spikeHasGroundSupport(spike) {
+    const bottom = spike.y + spike.h;
+    return this.platforms.some(plat =>
+      plat.active && !plat.isGate && plat.type !== 'gate' &&
+      Math.abs(plat.y - bottom) <= 8 &&
+      this._overlapX(spike, plat) >= Math.min(spike.w, plat.w) * 0.35
+    );
+  }
+
+  _visibleSpikeSegments(spike) {
+    if (!this._spikeHasGroundSupport(spike)) return [];
+    const coveredRanges = [];
+    for (const plat of this.platforms) {
+      if (!this._isFloatingRoutePlatform(plat)) continue;
+      const gap = spike.y - (plat.y + plat.h);
+      if (gap < 36 || gap > 170) continue;
+      const overlap = this._overlapX(spike, plat);
+      if (overlap < Math.min(spike.w, plat.w) * 0.35) continue;
+      coveredRanges.push([
+        Math.max(spike.x, plat.x - 8),
+        Math.min(spike.x + spike.w, plat.x + plat.w + 8)
+      ]);
+    }
+    if (!coveredRanges.length) return [spike];
+
+    let segments = [{ ...spike }];
+    for (const [coverStart, coverEnd] of coveredRanges) {
+      const next = [];
+      for (const seg of segments) {
+        const segEnd = seg.x + seg.w;
+        if (coverEnd <= seg.x || coverStart >= segEnd) {
+          next.push(seg);
+          continue;
+        }
+        if (coverStart > seg.x) next.push({ ...seg, w: coverStart - seg.x });
+        if (coverEnd < segEnd) next.push({ ...seg, x: coverEnd, w: segEnd - coverEnd });
+      }
+      segments = next;
+    }
+    return segments.filter(seg => seg.w >= 42);
+  }
+
+  _cleanupGeneratedLayout(stage = this._getStage()) {
+    this._liftCollectiblesOffFloatingPlatforms(this.coins, 16);
+    this._liftCollectiblesOffFloatingPlatforms(this.hearts, 14);
+    this._liftCollectiblesOffFloatingPlatforms(this.powerups, 14);
+
+    const level = stage?.id || this.currentLevel || 1;
+    if (level <= 3) {
+      this.spikes = this.spikes.flatMap(spike => this._visibleSpikeSegments(spike));
+    } else {
+      this.spikes = this.spikes.filter(spike => this._spikeHasGroundSupport(spike));
+    }
+
+    const solidPlatforms = this.platforms.filter(plat => plat.active && !plat.isGate && plat.type !== 'gate');
+    this.coins = this.coins.filter(coin => !solidPlatforms.some(plat => intersect(coin, plat)));
+    this.hearts = this.hearts.filter(heart => !solidPlatforms.some(plat => intersect(heart, plat)));
+    this.powerups = this.powerups.filter(powerup => !solidPlatforms.some(plat => intersect(powerup, plat)));
+  }
+
   _bossProfileForStage(stage = this._getStage()) {
     const level = stage?.id || this.currentLevel || 1;
     if (level >= 15) {
@@ -1642,6 +1731,7 @@ class WordRunner {
       this.goalFlag = { x: landPad + 700, y: 130, w: 18, h: 380, wave: 0 };
     }
 
+    this._cleanupGeneratedLayout(stage);
     this._resolveEnemyCollisions();
   }
 
