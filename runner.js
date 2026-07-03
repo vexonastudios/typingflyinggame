@@ -2788,12 +2788,22 @@ class WordRunner {
     });
 
     // Camera — smoothly track furthest alive player
-    let targetX = this.cameraX;
+    let targetX = null;
     let aliveCount = 0;
     for (const p of this.players) {
-      if (!p.dead) { targetX = Math.max(targetX, p.x - 380); aliveCount++; }
+      if (!p.dead) { 
+        if (targetX === null) targetX = p.x - 380;
+        else targetX = Math.max(targetX, p.x - 380);
+        aliveCount++; 
+      }
     }
-    if (aliveCount > 0) this.cameraX += (targetX - this.cameraX) * Math.min(1, dt * 8);
+    if (aliveCount === 0) targetX = this.cameraX;
+    
+    if (aliveCount > 0) {
+      // Prevent scrolling left past the start of the level
+      targetX = Math.max(0, targetX);
+      this.cameraX += (targetX - this.cameraX) * Math.min(1, dt * 8);
+    }
 
     // Moving platforms
     for (const plat of this.platforms) {
