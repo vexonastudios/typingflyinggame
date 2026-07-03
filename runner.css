@@ -1,5 +1,5 @@
 /* ============================================================
-   HARVEST WORD RUN - runner.css  (Prototype Polish)
+   HARVEST DASH - runner.css  (Prototype Polish)
    ============================================================ */
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -306,6 +306,29 @@ body.fs-mode #runnerCanvas {
   font-size: 0.82rem;
 }
 .wr-modal p strong { color: var(--gold); }
+
+.mission-callout {
+  display: grid;
+  gap: 2px;
+  max-width: 520px;
+  margin: 0 auto 10px;
+  padding: 9px 14px;
+  border: 1px solid rgba(245,158,11,0.35);
+  border-radius: 10px;
+  background: rgba(120,53,15,0.22);
+}
+.mission-callout span {
+  color: var(--gold);
+  font-size: 0.68rem;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.mission-callout strong {
+  color: #f8fafc;
+  font-size: 0.95rem;
+  line-height: 1.25;
+}
 
 /* Controls Grid */
 .controls-grid {

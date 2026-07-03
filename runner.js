@@ -270,21 +270,21 @@ const GAMEPLAY_DIFFICULTIES = {
 };
 
 const CAMPAIGN_LEVELS = [
-  { id: 1,  name: 'Farmhouse Fields',   biome: 'farm',    tier: 0, gates: 4, tracks: ['Math', 'Language'], skills: ['Addition', 'Spelling'], focus: 'addition and spelling' },
-  { id: 2,  name: 'Meadow Rhyme Run',   biome: 'grass',   tier: 0, gates: 5, tracks: ['Language', 'Math'], skills: ['Rhyming', 'Subtraction'], focus: 'rhymes and subtraction' },
-  { id: 3,  name: 'Grammar Grove',      biome: 'jungle',  tier: 1, gates: 5, tracks: ['Language', 'World'], skills: ['Grammar', 'Geography'], focus: 'grammar and map facts' },
-  { id: 4,  name: 'Times Table Trail',  biome: 'jungle',  tier: 1, gates: 6, tracks: ['Math', 'Language'], skills: ['Multiplication', 'Vocabulary'], focus: 'times tables and vocabulary' },
-  { id: 5,  name: 'Ember Review',       biome: 'volcano', tier: 1, gates: 4, tracks: ['Math', 'Language', 'Science'], skills: ['Review'], focus: 'first review boss', boss: true, bossHealth: 3 },
-  { id: 6,  name: 'Crystal Cave',       biome: 'cave',    tier: 2, gates: 6, tracks: ['Math', 'Science'], skills: ['Division', 'Earth Science'], focus: 'division and earth science' },
-  { id: 7,  name: 'Fraction Falls',     biome: 'cave',    tier: 2, gates: 7, tracks: ['Math', 'Language'], skills: ['Fractions', 'Grammar'], focus: 'fractions and sentence work' },
-  { id: 8,  name: 'Science Skyway',     biome: 'sky',     tier: 2, gates: 7, tracks: ['Science', 'Math'], skills: ['Life Science', 'Measurement'], focus: 'science facts and measurement' },
-  { id: 9,  name: 'Mapmaker Mesa',      biome: 'grass',   tier: 3, gates: 7, tracks: ['World', 'Language'], skills: ['Geography', 'Vocabulary'], focus: 'geography and word meanings' },
-  { id: 10, name: 'Storm Review',       biome: 'sky',     tier: 3, gates: 5, tracks: ['Math', 'Language', 'Science', 'World'], skills: ['Review'], focus: 'second review boss', boss: true, bossHealth: 4 },
-  { id: 11, name: 'Algebra Outpost',    biome: 'cave',    tier: 3, gates: 7, tracks: ['Math', 'Science'], skills: ['Algebra', 'Physical Science'], focus: 'algebra and physical science' },
-  { id: 12, name: 'Reading Ridge',      biome: 'jungle',  tier: 3, gates: 8, tracks: ['Language', 'World'], skills: ['Comprehension', 'History'], focus: 'reading and history clues' },
-  { id: 13, name: 'Energy Lab',         biome: 'sky',     tier: 4, gates: 8, tracks: ['Science', 'Math'], skills: ['Energy', 'Algebra'], focus: 'energy and advanced math' },
-  { id: 14, name: 'History Heights',    biome: 'jungle',  tier: 4, gates: 8, tracks: ['World', 'Language'], skills: ['History', 'Root Words'], focus: 'history and word roots' },
-  { id: 15, name: 'Final Archive',      biome: 'volcano', tier: 4, gates: 6, tracks: ['Math', 'Language', 'Science', 'World'], skills: ['Mastery'], focus: 'full academic mastery', boss: true, bossHealth: 5 }
+  { id: 1,  name: 'Farmhouse Fields',   biome: 'farm',    tier: 0, gates: 4, tracks: ['Math', 'Language'], skills: ['Addition', 'Spelling'], focus: 'addition and spelling', mission: 'Leave the farmhouse and clear the first field.' },
+  { id: 2,  name: 'Meadow Rhyme Run',   biome: 'grass',   tier: 0, gates: 5, tracks: ['Language', 'Math'], skills: ['Rhyming', 'Subtraction'], focus: 'rhymes and subtraction', mission: 'Open the meadow gate and keep the harvest moving.' },
+  { id: 3,  name: 'Grammar Grove',      biome: 'jungle',  tier: 1, gates: 5, tracks: ['Language', 'World'], skills: ['Grammar', 'Geography'], focus: 'grammar and map facts', mission: 'Push through the grove and gather the next load.' },
+  { id: 4,  name: 'Times Table Trail',  biome: 'jungle',  tier: 1, gates: 6, tracks: ['Math', 'Language'], skills: ['Multiplication', 'Vocabulary'], focus: 'times tables and vocabulary', mission: 'Climb the trail and bring this field home.' },
+  { id: 5,  name: 'Ember Review',       biome: 'volcano', tier: 1, gates: 4, tracks: ['Math', 'Language', 'Science'], skills: ['Review'], focus: 'first review boss', mission: 'Break the ember blockade so the harvest can continue.', boss: true, bossHealth: 3 },
+  { id: 6,  name: 'Crystal Cave',       biome: 'cave',    tier: 2, gates: 6, tracks: ['Math', 'Science'], skills: ['Division', 'Earth Science'], focus: 'division and earth science', mission: 'Find the cave route and carry the harvest forward.' },
+  { id: 7,  name: 'Fraction Falls',     biome: 'cave',    tier: 2, gates: 7, tracks: ['Math', 'Language'], skills: ['Fractions', 'Grammar'], focus: 'fractions and sentence work', mission: 'Clear the falls path before the trail closes.' },
+  { id: 8,  name: 'Science Skyway',     biome: 'sky',     tier: 2, gates: 7, tracks: ['Science', 'Math'], skills: ['Life Science', 'Measurement'], focus: 'science facts and measurement', mission: 'Cross the skyway and protect the day\'s work.' },
+  { id: 9,  name: 'Mapmaker Mesa',      biome: 'grass',   tier: 3, gates: 7, tracks: ['World', 'Language'], skills: ['Geography', 'Vocabulary'], focus: 'geography and word meanings', mission: 'Map the mesa route and open the next field.' },
+  { id: 10, name: 'Storm Review',       biome: 'sky',     tier: 3, gates: 5, tracks: ['Math', 'Language', 'Science', 'World'], skills: ['Review'], focus: 'second review boss', mission: 'Beat the storm boss and save the harvest route.', boss: true, bossHealth: 4 },
+  { id: 11, name: 'Algebra Outpost',    biome: 'cave',    tier: 3, gates: 7, tracks: ['Math', 'Science'], skills: ['Algebra', 'Physical Science'], focus: 'algebra and physical science', mission: 'Clear the outpost and keep the wagons moving.' },
+  { id: 12, name: 'Reading Ridge',      biome: 'jungle',  tier: 3, gates: 8, tracks: ['Language', 'World'], skills: ['Comprehension', 'History'], focus: 'reading and history clues', mission: 'Climb the ridge and open the harvest trail.' },
+  { id: 13, name: 'Energy Lab',         biome: 'sky',     tier: 4, gates: 8, tracks: ['Science', 'Math'], skills: ['Energy', 'Algebra'], focus: 'energy and advanced math', mission: 'Power through the lab and finish the late harvest.' },
+  { id: 14, name: 'History Heights',    biome: 'jungle',  tier: 4, gates: 8, tracks: ['World', 'Language'], skills: ['History', 'Root Words'], focus: 'history and word roots', mission: 'Reach the heights and open the last route.' },
+  { id: 15, name: 'Final Archive',      biome: 'volcano', tier: 4, gates: 6, tracks: ['Math', 'Language', 'Science', 'World'], skills: ['Mastery'], focus: 'full academic mastery', mission: 'Clear the final gauntlet and finish the harvest.', boss: true, bossHealth: 5 }
 ];
 
 const MAX_LEVEL = CAMPAIGN_LEVELS.length;
@@ -2080,20 +2080,21 @@ class WordRunner {
       Sfx.win();
       if (this.currentLevel >= MAX_LEVEL) {
         icon.textContent = '🏆';
-        title.textContent = 'Game Clear!';
+        title.textContent = 'Harvest Complete!';
         nextBtn.textContent = '▶ Play Again';
+        msg.textContent = `You cleared every field and brought the harvest home. Focus: ${stage.focus}.`;
       } else {
         icon.textContent = '🎉';
-        title.textContent = `${stage.name} Clear!`;
+        title.textContent = `${stage.name} Cleared!`;
         nextBtn.textContent = `▶ Start Level ${this.currentLevel + 1}`;
+        msg.textContent = `${stage.boss ? 'Boss cleared.' : 'Field cleared.'} Keep the harvest moving. Focus: ${stage.focus}.`;
       }
-      msg.textContent = `Focus: ${stage.focus}.`;
       stats.innerHTML = this._renderEndStats(timeBonus);
     } else {
       Sfx.wrong();
       icon.textContent = '💀';
       title.textContent = 'Game Over';
-      msg.textContent = `Level ${this.currentLevel}: ${stage.name}.`;
+      msg.textContent = `Try again: clear ${stage.name} to keep the harvest moving.`;
       stats.innerHTML = this._renderEndStats(0);
       nextBtn.textContent = '▶ Restart Game';
     }
@@ -4542,16 +4543,17 @@ class WordRunner {
     ctx.textAlign = 'center';
     ctx.fillStyle = 'rgba(5,8,20,0.78)';
     ctx.beginPath();
-    rr(ctx, CW / 2 - 250, 74, 500, 84, 14);
+    rr(ctx, CW / 2 - 282, 68, 564, 104, 14);
     ctx.fill();
     ctx.strokeStyle = 'rgba(255,255,255,0.18)';
     ctx.stroke();
     ctx.fillStyle = '#f8fafc';
     ctx.font = '900 26px Outfit';
-    ctx.fillText(`Level ${stage.id}: ${stage.name}`, CW / 2, 108);
+    ctx.fillText(`Level ${stage.id}: ${stage.name}`, CW / 2, 102);
+    ctx.fillStyle = '#fde68a';
+    this._drawFittedText(ctx, stage.mission || 'Finish the harvest by clearing every field.', CW / 2, 130, 506, 15, 11, '900');
     ctx.fillStyle = '#cbd5e1';
-    ctx.font = '700 14px Outfit';
-    ctx.fillText(`${ACADEMIC_TRACKS[this.currentTrack]?.label || 'Mixed'} - ${this.currentDifficulty} - ${stage.focus}`, CW / 2, 135);
+    this._drawFittedText(ctx, `${ACADEMIC_TRACKS[this.currentTrack]?.label || 'Mixed'} - ${this.currentDifficulty} - ${stage.focus}`, CW / 2, 154, 506, 13, 10, '700');
     ctx.restore();
   }
 
