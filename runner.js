@@ -483,6 +483,8 @@ const COOP_LEFT_MARGIN = 88;
 const COOP_RIGHT_MARGIN = 128;
 const COOP_SOFT_TRAIL = 520;
 const COOP_HARD_TRAIL = 780;
+const BOSS_STOMP_BOUNCE = -840;
+const BOSS_HIT_COOLDOWN = 0.58;
 
 // ─────────────────────────────────────────────────────────────
 // Main Game Class
@@ -903,6 +905,17 @@ class WordRunner {
     });
   }
 
+  _addLightningTrap(x, y, w, h, period, onTime, phase) {
+    this.timedHazards.push({
+      type: 'lightning',
+      x, y, w, h,
+      period,
+      onTime,
+      phase,
+      active: false
+    });
+  }
+
   _addWindZone(x, y, w, h, forceX, forceY, phase) {
     this.windZones.push({ x, y, w, h, forceX, forceY, phase });
   }
@@ -919,6 +932,159 @@ class WordRunner {
       vx,
       vy: 0
     });
+  }
+
+  _bossProfileForStage(stage = this._getStage()) {
+    const level = stage?.id || this.currentLevel || 1;
+    if (level >= 15) {
+      return {
+        kind: 'archive',
+        name: 'Archive Guardian',
+        title: 'FINAL BOSS',
+        xOffset: 1040,
+        y: 262,
+        w: 190,
+        h: 170,
+        minOffset: 850,
+        maxOffset: 1215,
+        walkSpeed: 84,
+        shootRate: 1.12,
+        colors: ['#facc15', '#dc2626', '#450a0a'],
+        glow: '#f59e0b',
+        eye: '#fef3c7'
+      };
+    }
+    if (level >= 10) {
+      return {
+        kind: 'storm',
+        name: 'Storm Wing',
+        title: 'SKY BOSS',
+        xOffset: 1050,
+        y: 205,
+        w: 176,
+        h: 140,
+        minOffset: 820,
+        maxOffset: 1185,
+        walkSpeed: 68,
+        shootRate: 1.28,
+        colors: ['#7dd3fc', '#2563eb', '#172554'],
+        glow: '#38bdf8',
+        eye: '#ecfeff'
+      };
+    }
+    return {
+      kind: 'ember',
+      name: 'Ember Stomper',
+      title: 'BOSS',
+      xOffset: 1025,
+      y: 334,
+      w: 172,
+      h: 156,
+      minOffset: 780,
+      maxOffset: 1165,
+      walkSpeed: 74,
+      shootRate: 1.55,
+      colors: ['#fb923c', '#dc2626', '#450a0a'],
+      glow: '#f97316',
+      eye: '#fff7ed'
+    };
+  }
+
+  _refreshBossQuestion() {
+    if (!this.bossGate) return;
+    const bp = this._getPrompt(this.currentDifficulty);
+    const ba = [bp.a, bp.w[0], bp.w[1]].sort(() => Math.random() - 0.5);
+    this.bossGate.prompt = bp.q;
+    this.bossGate.promptData = bp;
+    for (let i = 0; i < 3; i++) {
+      this.bossGate.blocks[i].text = ba[i];
+      this.bossGate.blocks[i].isCorrect = ba[i] === bp.a;
+      this.bossGate.blocks[i].hit = false;
+    }
+  }
+
+  _bossGateBlocksForArena(landPad, profile) {
+    const y = profile.kind === 'storm' ? 252 : profile.kind === 'archive' ? 272 : 288;
+    return [
+      { x: landPad + 240, y, w: 150, h: 60, text: '', isCorrect: false, hit: false, bob: 0 },
+      { x: landPad + 470, y: y - (profile.kind === 'archive' ? 22 : 0), w: 150, h: 60, text: '', isCorrect: false, hit: false, bob: 1 },
+      { x: landPad + 700, y, w: 150, h: 60, text: '', isCorrect: false, hit: false, bob: 2 }
+    ];
+  }
+
+  _buildBossArena(landPad, stage, gameCfg) {
+    const profile = this._bossProfileForStage(stage);
+    const speed = gameCfg.speedMultiplier;
+    const hazardScale = gameCfg.hazardMultiplier;
+    const arenaX = landPad + 120;
+    const bossX = landPad + profile.xOffset;
+
+    this.platforms.push({ x: arenaX + 40, y: 396, w: 150, h: 24, active: true, type: 'stone' });
+    this.platforms.push({ x: arenaX + 300, y: 350, w: 145, h: 24, active: true, type: 'stone' });
+    this.platforms.push({ x: arenaX + 580, y: 394, w: 150, h: 24, active: true, type: 'stone' });
+    this.springs.push({ x: arenaX + 760, y: 482, w: 52, h: 18, force: 970, cooldown: 0 });
+
+    if (profile.kind === 'ember') {
+      this._addFireJet(arenaX + 230, 426, 38, 74, 1.75, 0.54 * hazardScale, 0.15);
+      this._addFireJet(arenaX + 520, 426, 38, 74, 1.95, 0.58 * hazardScale, 1.05);
+      this._addMovingPlatform(arenaX + 785, 382, 126, 24, arenaX + 710, arenaX + 910, 92 * speed);
+      this.powerups.push({ type: 'boots', x: arenaX + 328, y: 306, w: 26, h: 26, active: true, bob: 0 });
+    } else if (profile.kind === 'storm') {
+      this._addWindZone(arenaX + 80, 140, 720, 330, 250 * speed, -60, 0.4);
+      this._addLightningTrap(arenaX + 260, 114, 38, 366, 1.75, 0.5 * hazardScale, 0.2);
+      this._addLightningTrap(arenaX + 612, 114, 38, 366, 1.85, 0.5 * hazardScale, 1.12);
+      this._addMovingPlatform(arenaX + 785, 312, 132, 24, arenaX + 720, arenaX + 930, 105 * speed);
+      this.ropes.push({
+        x: arenaX + 510, y: 120, length: 275,
+        swingAmp: 48, swingSpeed: 1.75,
+        phase: 0.4, moveX: false, vx: 0,
+        startX: arenaX + 510, endX: arenaX + 510
+      });
+      this.powerups.push({ type: 'star', x: arenaX + 345, y: 304, w: 26, h: 26, active: true, bob: 0 });
+    } else {
+      this._addFireJet(arenaX + 190, 426, 36, 74, 1.62, 0.54 * hazardScale, 0.1);
+      this._addLightningTrap(arenaX + 420, 116, 38, 364, 1.68, 0.48 * hazardScale, 0.75);
+      this._addFireJet(arenaX + 650, 426, 36, 74, 1.58, 0.54 * hazardScale, 1.25);
+      this._addCrumblePlatform(arenaX + 835, 346, 122, 0.9);
+      this._addMovingPlatform(arenaX + 995, 394, 126, 24, arenaX + 930, arenaX + 1120, 116 * speed);
+      this.ropes.push({
+        x: arenaX + 720, y: 104, length: 300,
+        swingAmp: 58, swingSpeed: 1.9,
+        phase: 0.85, moveX: false, vx: 0,
+        startX: arenaX + 720, endX: arenaX + 720
+      });
+      this.powerups.push({ type: 'star', x: arenaX + 326, y: 304, w: 26, h: 26, active: true, bob: 0 });
+      this.powerups.push({ type: 'boots', x: arenaX + 858, y: 304, w: 26, h: 26, active: true, bob: 0 });
+    }
+
+    this.bossEntity = {
+      x: bossX,
+      y: profile.y,
+      w: profile.w,
+      h: profile.h,
+      baseY: profile.y,
+      active: true,
+      shootTimer: 0,
+      patternTimer: 0,
+      burstTimer: 0,
+      hitCooldown: 0,
+      enrageTimer: 0,
+      walkX: landPad + profile.xOffset,
+      minX: landPad + profile.minOffset,
+      maxX: landPad + profile.maxOffset,
+      walkDir: -1,
+      walkSpeed: profile.walkSpeed * speed,
+      anim: 0,
+      profile
+    };
+
+    this.bossGate = {
+      prompt: '',
+      promptData: null,
+      blocks: this._bossGateBlocksForArena(landPad, profile)
+    };
+    this._refreshBossQuestion();
+    this._removeAnswerZoneSprings(this.bossGate.blocks);
   }
 
   _applySetPieceChunk(kind, opts) {
@@ -1470,23 +1636,7 @@ class WordRunner {
       this.bossPhase = true;
       this.bossHealth = Math.max(2, (stage.bossHealth || 4) + gameCfg.bossHealthDelta);
       this.bossMaxHealth = this.bossHealth;
-      this.bossEntity = {
-        x: landPad + 1100, y: 240, w: 160, h: 160,
-        active: true, shootTimer: 0,
-        walkX: landPad + 900, walkDir: -1, walkSpeed: 60 * gameCfg.speedMultiplier,
-        anim: 0
-      };
-      const bp = this._getPrompt(this.currentDifficulty);
-      const ba = [bp.a, bp.w[0], bp.w[1]].sort(() => Math.random() - 0.5);
-      this.bossGate = {
-        prompt: bp.q,
-        promptData: bp,
-        blocks: [
-          { x: landPad + 250, y: 290, w: 150, h: 60, text: ba[0], isCorrect: ba[0] === bp.a, hit: false, bob: 0 },
-          { x: landPad + 480, y: 290, w: 150, h: 60, text: ba[1], isCorrect: ba[1] === bp.a, hit: false, bob: 1 },
-          { x: landPad + 710, y: 290, w: 150, h: 60, text: ba[2], isCorrect: ba[2] === bp.a, hit: false, bob: 2 }
-        ]
-      };
+      this._buildBossArena(landPad, stage, gameCfg);
       this.goalFlag = null;
     } else {
       this.goalFlag = { x: landPad + 700, y: 130, w: 18, h: 380, wave: 0 };
@@ -1533,38 +1683,76 @@ class WordRunner {
     this._updateHUD();
   }
 
+  _damageBoss(amount = 1, player = null, source = 'stomp') {
+    const be = this.bossEntity;
+    if (!this.bossPhase || !be || !be.active || this.bossHealth <= 0) return false;
+    if (source !== 'answer' && be.hitCooldown > 0) return false;
+
+    if (source !== 'answer') be.hitCooldown = BOSS_HIT_COOLDOWN;
+    be.enrageTimer = 0.55;
+    this.bossHealth = Math.max(0, this.bossHealth - amount);
+    const scoreGain = source === 'answer' ? 600 : 450;
+    this.score += Math.round(scoreGain * this._getGameConfig().scoreMultiplier);
+    this._updateHUD();
+    Sfx.bossHit();
+
+    const hitX = player ? player.x + player.w / 2 : be.x + be.w / 2;
+    const hitY = player ? player.y + player.h : be.y + be.h * 0.28;
+    this._spawnBurst(hitX, hitY, be.profile?.glow || '#fbbf24', source === 'answer' ? 25 : 18);
+    this._floatText(source === 'answer' ? '-1 HP!' : 'STOMP!', be.x + be.w / 2, be.y - 12, be.profile?.glow || '#fbbf24');
+    this._shakeScreen(12 + (this.bossMaxHealth - this.bossHealth), 0.42);
+
+    if (this.bossHealth <= 0) {
+      be.active = false;
+      this.projectiles = this.projectiles.filter(proj => !proj.fromBoss);
+      Sfx.win();
+      this._floatText('BOSS DEFEATED!', CW / 2 + this.cameraX, 200, '#fbbf24');
+      this._spawnBurst(be.x + be.w / 2, be.y + be.h / 2, be.profile?.glow || '#fbbf24', 56);
+      this.goalFlag = { x: be.x + be.w / 2, y: 130, w: 18, h: 380, wave: 0 };
+      return true;
+    }
+    return true;
+  }
+
+  _handleBossContact(player, dt) {
+    const be = this.bossEntity;
+    if (!be || !be.active || this.bossHealth <= 0 || !intersect(player, be)) return;
+    const previousBottom = player.y + player.h - player.vy * dt;
+    const weakTop = be.y + Math.min(42, be.h * 0.28);
+    const stompHit = player.vy > 90 && previousBottom <= weakTop;
+    const starHit = player.invincibleTimer > 2.0;
+
+    if (stompHit || starHit) {
+      const damaged = this._damageBoss(1, player, 'stomp');
+      if (damaged || stompHit) {
+        player.y = be.y - player.h - 3;
+        player.vy = BOSS_STOMP_BOUNCE;
+        player.grounded = false;
+        player.jumpCount = 1;
+        player.squash = 0.82;
+        player.invincibleTimer = Math.max(player.invincibleTimer || 0, 0.42);
+      }
+      return;
+    }
+
+    if (player.invincibleTimer <= 0) {
+      this._killPlayer(player);
+    } else {
+      const dir = player.x + player.w / 2 < be.x + be.w / 2 ? -1 : 1;
+      player.x += dir * 22;
+      player.vx = dir * 240;
+    }
+  }
+
   _hitBossBlock(block, player) {
     if (block.hit) return;
     block.hit = true;
     this._recordAnswer(this.bossGate.promptData, block.isCorrect, block.text);
     if (block.isCorrect) {
       Sfx.correct();
-      Sfx.bossHit();
-      this.bossHealth--;
-      this.score += Math.round(600 * this._getGameConfig().scoreMultiplier);
-      this._updateHUD();
       this._showLessonToast(this.bossGate.promptData, true);
-      this._spawnBurst(this.bossEntity.x + 80, this.bossEntity.y + 80, '#fbbf24', 25);
-      this._floatText(`-1 HP!`, this.bossEntity.x + 80, this.bossEntity.y - 10, '#fbbf24');
-      this._shakeScreen(12, 0.4);
-      if (this.bossHealth <= 0) {
-        this.bossEntity.active = false;
-        Sfx.win();
-        this._floatText('BOSS DEFEATED!', CW / 2 + this.cameraX, 200, '#fbbf24');
-        this._spawnBurst(this.bossEntity.x + 80, this.bossEntity.y + 80, '#fbbf24', 50);
-        this.goalFlag = { x: this.bossEntity.x + 60, y: 130, w: 18, h: 380, wave: 0 };
-      } else {
-        // New question
-        const bp = this._getPrompt(this.currentDifficulty);
-        const ba = [bp.a, bp.w[0], bp.w[1]].sort(() => Math.random() - 0.5);
-        this.bossGate.prompt = bp.q;
-        this.bossGate.promptData = bp;
-        for (let i = 0; i < 3; i++) {
-          this.bossGate.blocks[i].text = ba[i];
-          this.bossGate.blocks[i].isCorrect = ba[i] === bp.a;
-          this.bossGate.blocks[i].hit = false;
-        }
-      }
+      this._damageBoss(1, player, 'answer');
+      if (this.bossHealth > 0) this._refreshBossQuestion();
     } else {
       Sfx.wrong();
       this.combo = 0;
@@ -2102,7 +2290,8 @@ class WordRunner {
       if (hazard.soundCooldown > 0) hazard.soundCooldown = Math.max(0, hazard.soundCooldown - dt);
       if (hazard.active && !wasActive && hazard.soundCooldown <= 0 &&
           hazard.x + hazard.w > this.cameraX - 80 && hazard.x < this.cameraX + CW + 80) {
-        Sfx.fire();
+        if (hazard.type === 'lightning') Sfx.shoot();
+        else Sfx.fire();
         hazard.soundCooldown = 1.2;
       }
     }
@@ -2192,15 +2381,18 @@ class WordRunner {
 
     // Projectiles
     this.projectiles = this.projectiles.filter(proj => {
+      proj.vy += (proj.ay || 0) * dt;
       proj.x += proj.vx * dt;
       proj.y += (proj.vy || 0) * dt;
+      proj.spin = (proj.spin || 0) + dt * 8;
       for (const p of this.players) {
         if (!p.dead && p.invincibleTimer <= 0 && intersect(p, proj)) {
           this._killPlayer(p);
           return false;
         }
       }
-      return proj.x > this.cameraX - 200 && proj.x < this.cameraX + CW + 200;
+      return proj.x > this.cameraX - 240 && proj.x < this.cameraX + CW + 260 &&
+             proj.y > -160 && proj.y < CH + 160;
     });
 
     // Powerup bobbing
@@ -2369,6 +2561,7 @@ class WordRunner {
         }
       }
 
+      this._handleBossContact(p, dt);
       this._keepCoopPlayerInViewport(p, dt);
 
       // Death plane
@@ -2542,31 +2735,100 @@ class WordRunner {
       }
     }
 
-    // Boss actions
-    if (this.bossPhase && this.bossEntity && this.bossEntity.active && this.bossHealth > 0) {
-      const be = this.bossEntity;
-      be.anim = (be.anim || 0) + dt;
-      be.shootTimer += dt;
-      be.x += be.walkDir * be.walkSpeed * dt;
-      if (be.x < be.walkX - 150 || be.x > be.walkX + 50) be.walkDir *= -1;
-
-      if (be.shootTimer > 1.8 && be.x < this.cameraX + CW + 200) {
-        be.shootTimer = 0;
-        const speed = (280 + Math.random() * 120) * gameCfg.speedMultiplier;
-        this.projectiles.push({ x: be.x, y: be.y + 80, w: 18, h: 18, vx: -speed, vy: (Math.random() - 0.5) * 120 });
-        Sfx.shoot();
-        if (this.bossHealth <= 2) {
-          // Enraged: shoot 3
-          setTimeout(() => {
-            this.projectiles.push({ x: be.x, y: be.y + 80, w: 18, h: 18, vx: -speed * 0.8, vy: 80 });
-            this.projectiles.push({ x: be.x, y: be.y + 80, w: 18, h: 18, vx: -speed * 0.8, vy: -80 });
-          }, 200);
-        }
-      }
-    }
+    this._updateBoss(dt, gameCfg);
   }
 
   // ─── Draw ───
+  _fireBossProjectile(kind, x, y, vx, vy, extra = {}) {
+    this.projectiles.push({
+      type: kind,
+      x,
+      y,
+      w: extra.w || 18,
+      h: extra.h || 18,
+      vx,
+      vy,
+      ay: extra.ay || 0,
+      fromBoss: true,
+      spin: Math.random() * Math.PI * 2
+    });
+  }
+
+  _updateBoss(dt, gameCfg) {
+    if (!this.bossPhase || !this.bossEntity || !this.bossEntity.active || this.bossHealth <= 0) return;
+    const be = this.bossEntity;
+    const profile = be.profile || this._bossProfileForStage();
+    const speedMult = gameCfg.speedMultiplier;
+    const lowHealth = this.bossHealth <= Math.ceil(this.bossMaxHealth * 0.45);
+
+    be.anim = (be.anim || 0) + dt;
+    be.patternTimer = (be.patternTimer || 0) + dt;
+    be.shootTimer = (be.shootTimer || 0) + dt;
+    be.hitCooldown = Math.max(0, (be.hitCooldown || 0) - dt);
+    be.enrageTimer = Math.max(0, (be.enrageTimer || 0) - dt);
+
+    const visible = be.x < this.cameraX + CW + 240 && be.x + be.w > this.cameraX - 80;
+    if (!visible) return;
+
+    if (profile.kind === 'storm') {
+      be.x += be.walkDir * be.walkSpeed * dt;
+      if (be.x < be.minX || be.x > be.maxX) {
+        be.x = Math.max(be.minX, Math.min(be.maxX, be.x));
+        be.walkDir *= -1;
+      }
+      be.y = be.baseY + Math.sin(be.anim * 2.1) * 34;
+
+      const rate = Math.max(0.82, profile.shootRate / speedMult - (lowHealth ? 0.22 : 0));
+      if (be.shootTimer >= rate) {
+        be.shootTimer = 0;
+        const baseSpeed = (300 + Math.random() * 80) * speedMult;
+        this._fireBossProjectile('stormOrb', be.x + 12, be.y + be.h * 0.54, -baseSpeed, -55, { w: 20, h: 20, ay: 130 });
+        if (lowHealth) this._fireBossProjectile('stormOrb', be.x + 18, be.y + be.h * 0.38, -baseSpeed * 0.85, 95, { w: 18, h: 18, ay: 70 });
+        Sfx.shoot();
+      }
+      return;
+    }
+
+    if (profile.kind === 'archive') {
+      be.x += be.walkDir * be.walkSpeed * dt;
+      if (be.x < be.minX || be.x > be.maxX) {
+        be.x = Math.max(be.minX, Math.min(be.maxX, be.x));
+        be.walkDir *= -1;
+      }
+      be.y = be.baseY + Math.sin(be.anim * 1.6) * 22;
+
+      const rate = Math.max(0.72, profile.shootRate / speedMult - (lowHealth ? 0.25 : 0));
+      if (be.shootTimer >= rate) {
+        be.shootTimer = 0;
+        const baseSpeed = (330 + Math.random() * 90) * speedMult;
+        this._fireBossProjectile('archiveBolt', be.x + 16, be.y + be.h * 0.46, -baseSpeed, -35, { w: 22, h: 22, ay: 90 });
+        this._fireBossProjectile('emberWave', be.x + 20, 462, -baseSpeed * 0.72, 0, { w: 34, h: 28 });
+        if (lowHealth) {
+          this._fireBossProjectile('archiveBolt', be.x + 24, be.y + be.h * 0.32, -baseSpeed * 0.86, 120, { w: 18, h: 18, ay: 110 });
+        }
+        Sfx.shoot();
+      }
+      return;
+    }
+
+    const chargeSpeed = (lowHealth ? 128 : 94) * speedMult;
+    be.x += be.walkDir * chargeSpeed * dt;
+    if (be.x < be.minX || be.x > be.maxX) {
+      be.x = Math.max(be.minX, Math.min(be.maxX, be.x));
+      be.walkDir *= -1;
+    }
+    be.y = be.baseY + Math.sin(be.anim * 7) * (be.enrageTimer > 0 ? 6 : 2);
+
+    const rate = Math.max(0.95, profile.shootRate / speedMult - (lowHealth ? 0.28 : 0));
+    if (be.shootTimer >= rate) {
+      be.shootTimer = 0;
+      const waveSpeed = (285 + Math.random() * 70) * speedMult;
+      this._fireBossProjectile('emberWave', be.x + 4, 464, -waveSpeed, 0, { w: 32, h: 26 });
+      if (lowHealth) this._fireBossProjectile('emberShot', be.x + 10, be.y + 58, -waveSpeed * 0.95, -110, { w: 18, h: 18, ay: 260 });
+      Sfx.shoot();
+    }
+  }
+
   _drawEnemy(ctx, e, t) {
     const facingRight = !Number.isFinite(e.vx) || e.vx >= 0;
     const eyeDir = facingRight ? 1 : -1;
@@ -3043,6 +3305,26 @@ class WordRunner {
     // ── Timed hazards ──
     for (const hazard of this.timedHazards) {
       ctx.save();
+      if (hazard.type === 'lightning') {
+        ctx.globalAlpha = hazard.active ? 1 : 0.48;
+        ctx.strokeStyle = hazard.active ? '#ecfeff' : '#67e8f9';
+        ctx.lineWidth = hazard.active ? 7 : 3;
+        ctx.shadowBlur = hazard.active ? 24 : 10;
+        ctx.shadowColor = '#38bdf8';
+        const xMid = hazard.x + hazard.w / 2;
+        ctx.beginPath();
+        ctx.moveTo(xMid - 4, hazard.y);
+        ctx.lineTo(xMid + 14, hazard.y + hazard.h * 0.26);
+        ctx.lineTo(xMid - 10, hazard.y + hazard.h * 0.52);
+        ctx.lineTo(xMid + 10, hazard.y + hazard.h * 0.72);
+        ctx.lineTo(xMid - 2, hazard.y + hazard.h);
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+        ctx.fillStyle = hazard.warning ? '#facc15' : 'rgba(14,116,144,0.85)';
+        ctx.fillRect(hazard.x - 5, hazard.y + hazard.h - 9, hazard.w + 10, 9);
+        ctx.restore();
+        continue;
+      }
       ctx.fillStyle = '#451a03';
       ctx.beginPath();
       rr(ctx, hazard.x - 4, hazard.y + hazard.h - 12, hazard.w + 8, 16, 5);
@@ -3242,12 +3524,62 @@ class WordRunner {
     // ── Projectiles ──
     for (const proj of this.projectiles) {
       ctx.save();
-      ctx.shadowBlur = 10;
-      ctx.shadowColor = '#fbbf24';
-      ctx.fillStyle = '#fcd34d';
-      ctx.beginPath();
-      ctx.arc(proj.x + proj.w / 2, proj.y + proj.h / 2, proj.w / 2, 0, Math.PI * 2);
-      ctx.fill();
+      const cx = proj.x + proj.w / 2;
+      const cy = proj.y + proj.h / 2;
+      if (proj.type === 'emberWave') {
+        ctx.shadowBlur = 14;
+        ctx.shadowColor = '#fb923c';
+        const wave = ctx.createLinearGradient(proj.x, proj.y, proj.x, proj.y + proj.h);
+        wave.addColorStop(0, '#fef3c7');
+        wave.addColorStop(0.45, '#f97316');
+        wave.addColorStop(1, '#7f1d1d');
+        ctx.fillStyle = wave;
+        ctx.beginPath();
+        rr(ctx, proj.x, proj.y + 5, proj.w, proj.h - 4, 10);
+        ctx.fill();
+        ctx.fillStyle = '#fde68a';
+        ctx.beginPath();
+        ctx.moveTo(proj.x + 7, proj.y + 7);
+        ctx.lineTo(proj.x + 15, proj.y - 4);
+        ctx.lineTo(proj.x + 23, proj.y + 7);
+        ctx.fill();
+      } else if (proj.type === 'stormOrb') {
+        ctx.shadowBlur = 16;
+        ctx.shadowColor = '#38bdf8';
+        ctx.strokeStyle = '#ecfeff';
+        ctx.lineWidth = 3;
+        ctx.fillStyle = '#2563eb';
+        ctx.beginPath();
+        ctx.arc(cx, cy, proj.w / 2, 0, Math.PI * 2);
+        ctx.fill();
+        for (let z = 0; z < 3; z++) {
+          ctx.beginPath();
+          ctx.arc(cx, cy, proj.w * (0.32 + z * 0.08), (proj.spin || 0) + z, (proj.spin || 0) + z + Math.PI * 0.75);
+          ctx.stroke();
+        }
+      } else if (proj.type === 'archiveBolt') {
+        ctx.translate(cx, cy);
+        ctx.rotate((proj.spin || 0) * 0.8);
+        ctx.shadowBlur = 16;
+        ctx.shadowColor = '#facc15';
+        ctx.fillStyle = '#facc15';
+        ctx.beginPath();
+        ctx.moveTo(0, -proj.h * 0.62);
+        ctx.lineTo(proj.w * 0.54, 0);
+        ctx.lineTo(0, proj.h * 0.62);
+        ctx.lineTo(-proj.w * 0.54, 0);
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = '#dc2626';
+        ctx.fillRect(-3, -proj.h * 0.35, 6, proj.h * 0.7);
+      } else {
+        ctx.shadowBlur = 10;
+        ctx.shadowColor = '#fbbf24';
+        ctx.fillStyle = proj.type === 'emberShot' ? '#fb923c' : '#fcd34d';
+        ctx.beginPath();
+        ctx.arc(cx, cy, proj.w / 2, 0, Math.PI * 2);
+        ctx.fill();
+      }
       ctx.shadowBlur = 0;
       ctx.restore();
     }
@@ -3295,20 +3627,38 @@ class WordRunner {
     // ── Boss ──
     if (this.bossPhase && this.bossEntity && this.bossEntity.active && this.bossHealth > 0) {
       const be = this.bossEntity;
+      const profile = be.profile || this._bossProfileForStage();
+      const bossColors = profile.colors || ['#ef4444', '#991b1b', '#450a0a'];
       const bAnim = t * 3;
       ctx.save();
       // Body shadow
       ctx.shadowBlur = 30;
-      ctx.shadowColor = '#dc2626';
+      ctx.shadowColor = profile.glow || '#dc2626';
       // Pulsing outline
-      const pulse = 1 + Math.sin(bAnim) * 0.03;
+      const pulse = 1 + Math.sin(bAnim) * 0.03 + (be.enrageTimer > 0 ? 0.04 : 0);
       const bW = be.w * pulse, bH = be.h * pulse;
       const bX = be.x - (bW - be.w) / 2, bY = be.y - (bH - be.h) / 2;
+      if (profile.kind === 'storm') {
+        ctx.fillStyle = 'rgba(125,211,252,0.55)';
+        ctx.beginPath();
+        ctx.ellipse(bX - 12, bY + bH * 0.46, bW * 0.34, bH * 0.18, -0.35, 0, Math.PI * 2);
+        ctx.ellipse(bX + bW + 12, bY + bH * 0.46, bW * 0.34, bH * 0.18, 0.35, 0, Math.PI * 2);
+        ctx.fill();
+      } else if (profile.kind === 'archive') {
+        ctx.fillStyle = '#facc15';
+        for (let sx = bX + 24; sx < bX + bW - 16; sx += 36) {
+          ctx.beginPath();
+          ctx.moveTo(sx, bY + 8);
+          ctx.lineTo(sx + 14, bY - 22);
+          ctx.lineTo(sx + 28, bY + 8);
+          ctx.fill();
+        }
+      }
       // Body
       const bosGrad = ctx.createRadialGradient(bX + bW / 2, bY + bH / 2, 10, bX + bW / 2, bY + bH / 2, bW / 2);
-      bosGrad.addColorStop(0, '#ef4444');
-      bosGrad.addColorStop(0.6, '#991b1b');
-      bosGrad.addColorStop(1, '#450a0a');
+      bosGrad.addColorStop(0, bossColors[0]);
+      bosGrad.addColorStop(0.58, bossColors[1]);
+      bosGrad.addColorStop(1, bossColors[2]);
       ctx.fillStyle = bosGrad;
       ctx.beginPath();
       rr(ctx, bX, bY, bW, bH, 20);
@@ -3319,15 +3669,23 @@ class WordRunner {
       const eyeY = bY + bH * 0.3;
       const eyeR = 14;
       [eyeX, eyeX2].forEach(ex => {
-        ctx.fillStyle = '#fff1f2';
+        ctx.fillStyle = profile.eye || '#fff1f2';
         ctx.beginPath();
         ctx.arc(ex, eyeY, eyeR, 0, Math.PI * 2);
         ctx.fill();
-        ctx.fillStyle = '#7f1d1d';
+        ctx.fillStyle = bossColors[2];
         ctx.beginPath();
         ctx.arc(ex + Math.sin(bAnim * 0.5) * 4, eyeY + 2, eyeR * 0.55, 0, Math.PI * 2);
         ctx.fill();
       });
+      // Stomp target
+      ctx.shadowBlur = 12;
+      ctx.shadowColor = '#fef08a';
+      ctx.fillStyle = '#fef08a';
+      ctx.beginPath();
+      ctx.ellipse(bX + bW / 2, bY + 10, bW * 0.22, 12 + Math.sin(t * 7) * 2, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.shadowBlur = 0;
       // Teeth
       ctx.fillStyle = '#fff';
       const mouthY = bY + bH * 0.65;
@@ -3342,16 +3700,20 @@ class WordRunner {
       const barW = bW + 20;
       ctx.fillStyle = 'rgba(0,0,0,0.6)';
       ctx.beginPath(); rr(ctx, bX - 10, bY - 28, barW, 16, 4); ctx.fill();
-      ctx.fillStyle = '#dc2626';
+      ctx.fillStyle = profile.glow || '#dc2626';
       ctx.beginPath(); rr(ctx, bX - 10, bY - 28, barW * (this.bossHealth / this.bossMaxHealth), 16, 4); ctx.fill();
       ctx.fillStyle = 'rgba(255,255,255,0.15)';
       ctx.fillRect(bX - 10, bY - 28, barW, 7);
+      ctx.fillStyle = '#fff7ed';
+      ctx.font = '800 12px Outfit';
+      ctx.textAlign = 'center';
+      ctx.fillText(profile.name || 'Boss', bX + bW / 2, bY - 34);
       ctx.restore();
 
       // Boss gate blocks
       ctx.save();
       const bcx = this.bossGate.blocks[1].x + this.bossGate.blocks[1].w / 2;
-      this._drawPromptCard(ctx, bcx, 136, 540, this.bossGate.promptData || { q: this.bossGate.prompt, skill: 'Review' }, '#dc2626', '#1a0505', '#fecaca');
+      this._drawPromptCard(ctx, bcx, 136, 540, this.bossGate.promptData || { q: this.bossGate.prompt, skill: 'Review' }, profile.glow || '#dc2626', '#1a0505', '#fecaca');
       ctx.restore();
 
       for (const b of this.bossGate.blocks) {
