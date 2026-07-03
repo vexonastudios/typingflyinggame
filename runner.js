@@ -1528,7 +1528,7 @@ class WordRunner {
         this.enemies.push({ type: 'crawler', x: mid + 170, y: 472, w: 46, h: 28, vx: 38 * speed, startX: mid + 105, endX: mid + 260, dead: false, anim: 0 });
       }
     } else if (kind === 'rope-swing') {
-      const ropeX = step2x + Math.max(150, stepW + 80);
+      const ropeX = landX + 280;
       this.ropes.push({
         x: ropeX,
         y: 132,
@@ -1556,7 +1556,7 @@ class WordRunner {
         this.hearts.push({ x: perchX + 64, y: 316, w: 22, h: 22, collected: false });
       }
     } else if (kind === 'crumble-sprint') {
-      const startX = step1x + 150;
+      const startX = landX + 160;
       for (let n = 0; n < 4; n++) {
         this._addCrumblePlatform(startX + n * 118, 360 + (n % 2) * 30, 92, Math.max(0.82, 1.22 - diff * 0.08));
       }
@@ -1675,7 +1675,14 @@ class WordRunner {
       const earlyPlan = this._earlyObstaclePlan(stage, i, challengeType, gameCfg);
       // ── 1. Navigation gap ──
       const gap = 150 + Math.random() * 40 + diff * 10;
-      const platW = Math.max(280, 650 - diff * 120);
+      const setPieceKind = this._setPieceForSection(stage, i);
+      let platW = Math.max(280, 650 - diff * 120);
+      
+      if (setPieceKind) {
+        if (['crumble-bridge', 'rope-swing', 'precision-crumble', 'enemy-perch'].includes(setPieceKind)) platW = Math.max(platW, 600);
+        if (['crumble-sprint', 'tilt-run'].includes(setPieceKind)) platW = Math.max(platW, 700);
+        if (['high-road', 'upper-route', 'spring-tower'].includes(setPieceKind)) platW = Math.max(platW, 850);
+      }
 
       // Moving island in gap
       const islandSpeed = (70 + diff * 25) * gameCfg.speedMultiplier;
@@ -1761,7 +1768,7 @@ class WordRunner {
       const stepGap = 90 + diff * 12;
       const stepW   = Math.max(80, 130 - diff * 18);
       const step1x = px + stepGap;
-      this.platforms.push({ x: step1x, y: 410, w: stepW, h: 210, active: true, type: 'stone' });
+      this.platforms.push({ x: step1x, y: 410, w: stepW, h: 26, active: true, type: 'stone' });
       if (challengeType === 'spring') {
         this.springs.push({
           x: step1x + Math.max(8, stepW * 0.24),
@@ -1779,7 +1786,7 @@ class WordRunner {
         this.spikes.push({ x: step1x + (stepW - spikeW), y: 395, w: spikeW, h: 15 });
       }
       const step2x = px + stepGap + stepW + 70 + diff * 18;
-      this.platforms.push({ x: step2x, y: 310, w: stepW, h: 310, active: true, type: 'stone' });
+      this.platforms.push({ x: step2x, y: 310, w: stepW, h: 26, active: true, type: 'stone' });
       if (challengeType === 'timed' && diff >= 2) {
         this.timedHazards.push({
           type: 'firejet',
@@ -2592,7 +2599,9 @@ class WordRunner {
           const overlapY = Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y);
           if (overlapX <= 0 || overlapY <= 0) continue;
 
-          const axis = overlapX <= overlapY ? 'x' : 'y';
+          let axis = overlapX <= overlapY ? 'x' : 'y';
+          if (!a.flyOffset && !b.flyOffset) axis = 'x'; // Force ground enemies to resolve on X to prevent burying
+          
           const amount = (axis === 'x' ? overlapX : overlapY) + 0.8;
           const aWeight = this._enemyPushWeight(a, axis);
           const bWeight = this._enemyPushWeight(b, axis);
