@@ -54,84 +54,90 @@
     <div class="wr-canvas-wrapper" id="canvasContainer">
       <canvas id="runnerCanvas" width="1200" height="600"></canvas>
 
-      <!-- Setup Overlay -->
       <div id="gameSetup" class="wr-overlay">
         <div class="wr-modal">
           <div class="modal-icon">🏃</div>
           <h2>Harvest Dash</h2>
-          <div class="mission-callout">
-            <span>Main Mission</span>
-            <strong>Finish the harvest by clearing every field.</strong>
-          </div>
-          <div class="campaign-map-panel">
-            <div class="panel-head">
-              <span>Farm Map</span>
-              <strong id="mapProgressText">0/15 fields cleared</strong>
-            </div>
-            <div class="campaign-map" id="campaignMap"></div>
-          </div>
-          <div class="wardrobe-panel">
-            <div class="panel-head">
-              <span>Unlockable Looks</span>
-              <strong id="wardrobeProgressText">Clear fields to unlock outfits</strong>
-            </div>
-            <div class="wardrobe-grid" id="wardrobeGrid"></div>
-          </div>
           <p>Run, jump, and stomp enemies through a 15-level farm adventure. Hit the <strong>correct answer block</strong> from below to open gates, keep the harvest moving, and unlock review bosses.</p>
-
-          <div class="controls-grid">
-            <div class="ctrl-card p1-card">
-              <div class="ctrl-title">Player 1</div>
-              <div class="ctrl-keys">
-                <span class="key">↑</span> Jump / Climb<br>
-                <span class="key">↓</span> Drop<br>
-                <span class="key">←</span><span class="key">→</span> Move
+          
+          <div class="modal-columns">
+            <div class="modal-col">
+              <div class="mission-callout">
+                <span>Main Mission</span>
+                <strong>Finish the harvest by clearing every field.</strong>
+              </div>
+              <div class="campaign-map-panel">
+                <div class="panel-head">
+                  <span>Farm Map</span>
+                  <strong id="mapProgressText">0/15 fields cleared</strong>
+                </div>
+                <div class="campaign-map" id="campaignMap"></div>
+              </div>
+              <div class="wardrobe-panel">
+                <div class="panel-head">
+                  <span>Unlockable Looks</span>
+                  <strong id="wardrobeProgressText">Clear fields to unlock outfits</strong>
+                </div>
+                <div class="wardrobe-grid" id="wardrobeGrid"></div>
               </div>
             </div>
-            <div class="ctrl-card p2-card">
-              <div class="ctrl-title">Player 2</div>
-              <div class="ctrl-keys">
-                <span class="key">W</span> Jump / Climb<br>
-                <span class="key">S</span> Drop<br>
-                <span class="key">A</span><span class="key">D</span> Move
+
+            <div class="modal-col">
+              <div class="controls-grid">
+                <div class="ctrl-card p1-card">
+                  <div class="ctrl-title">Player 1</div>
+                  <div class="ctrl-keys">
+                    <span class="key">↑</span> Jump / Climb<br>
+                    <span class="key">↓</span> Drop<br>
+                    <span class="key">←</span><span class="key">→</span> Move
+                  </div>
+                </div>
+                <div class="ctrl-card p2-card">
+                  <div class="ctrl-title">Player 2</div>
+                  <div class="ctrl-keys">
+                    <span class="key">W</span> Jump / Climb<br>
+                    <span class="key">S</span> Drop<br>
+                    <span class="key">A</span><span class="key">D</span> Move
+                  </div>
+                </div>
               </div>
-            </div>
-          </div>
 
-          <div class="difficulty-row">
-            <label class="diff-label">Academic Track</label>
-            <div class="diff-options track-options">
-              <label class="diff-opt selected"><input type="radio" name="track" value="Mixed" checked> <span>Mixed</span><small>All subjects</small></label>
-              <label class="diff-opt"><input type="radio" name="track" value="Math"> <span>Math</span><small>Numbers</small></label>
-              <label class="diff-opt"><input type="radio" name="track" value="Language"> <span>Language</span><small>Words</small></label>
-              <label class="diff-opt"><input type="radio" name="track" value="Science"> <span>Science</span><small>Nature</small></label>
-              <label class="diff-opt"><input type="radio" name="track" value="World"> <span>World</span><small>Maps</small></label>
-            </div>
-          </div>
+              <div class="difficulty-row">
+                <label class="diff-label">Academic Track</label>
+                <div class="diff-options track-options">
+                  <label class="diff-opt selected"><input type="radio" name="track" value="Mixed" checked> <span>Mixed</span><small>All subjects</small></label>
+                  <label class="diff-opt"><input type="radio" name="track" value="Math"> <span>Math</span><small>Numbers</small></label>
+                  <label class="diff-opt"><input type="radio" name="track" value="Language"> <span>Language</span><small>Words</small></label>
+                  <label class="diff-opt"><input type="radio" name="track" value="Science"> <span>Science</span><small>Nature</small></label>
+                  <label class="diff-opt"><input type="radio" name="track" value="World"> <span>World</span><small>Maps</small></label>
+                </div>
+              </div>
 
-          <div class="difficulty-row">
-            <label class="diff-label">Academic Level</label>
-            <div class="diff-options">
-              <label class="diff-opt"><input type="radio" name="diff" value="Easy"> <span>Easy</span><small>Addition & Spelling</small></label>
-              <label class="diff-opt selected"><input type="radio" name="diff" value="Medium" checked> <span>Medium</span><small>Multiplication & Grammar</small></label>
-              <label class="diff-opt"><input type="radio" name="diff" value="Hard"> <span>Hard</span><small>Algebra & Vocabulary</small></label>
-            </div>
-          </div>
+              <div class="difficulty-row">
+                <label class="diff-label">Academic Level</label>
+                <div class="diff-options">
+                  <label class="diff-opt"><input type="radio" name="diff" value="Easy"> <span>Easy</span><small>Addition & Spelling</small></label>
+                  <label class="diff-opt selected"><input type="radio" name="diff" value="Medium" checked> <span>Medium</span><small>Multiplication & Grammar</small></label>
+                  <label class="diff-opt"><input type="radio" name="diff" value="Hard"> <span>Hard</span><small>Algebra & Vocabulary</small></label>
+                </div>
+              </div>
 
-          <div class="difficulty-row">
-            <label class="diff-label">Gameplay Difficulty</label>
-            <div class="diff-options">
-              <label class="diff-opt"><input type="radio" name="gameplay" value="Explorer"> <span>Explorer</span><small>Forgiving</small></label>
-              <label class="diff-opt selected"><input type="radio" name="gameplay" value="Adventure" checked> <span>Adventure</span><small>Balanced</small></label>
-              <label class="diff-opt"><input type="radio" name="gameplay" value="Master"> <span>Master</span><small>Sharper hazards</small></label>
-            </div>
-          </div>
+              <div class="difficulty-row">
+                <label class="diff-label">Gameplay Difficulty</label>
+                <div class="diff-options">
+                  <label class="diff-opt"><input type="radio" name="gameplay" value="Explorer"> <span>Explorer</span><small>Forgiving</small></label>
+                  <label class="diff-opt selected"><input type="radio" name="gameplay" value="Adventure" checked> <span>Adventure</span><small>Balanced</small></label>
+                  <label class="diff-opt"><input type="radio" name="gameplay" value="Master"> <span>Master</span><small>Sharper hazards</small></label>
+                </div>
+              </div>
 
-          <div class="mode-row">
-            <label class="diff-label">Players</label>
-            <div class="diff-options">
-              <label class="diff-opt selected"><input type="radio" name="mode" value="1" checked> <span>1 Player</span><small>Solo run</small></label>
-              <label class="diff-opt"><input type="radio" name="mode" value="2"> <span>2 Players</span><small>Co-op local</small></label>
+              <div class="mode-row">
+                <label class="diff-label">Players</label>
+                <div class="diff-options">
+                  <label class="diff-opt selected"><input type="radio" name="mode" value="1" checked> <span>1 Player</span><small>Solo run</small></label>
+                  <label class="diff-opt"><input type="radio" name="mode" value="2"> <span>2 Players</span><small>Co-op local</small></label>
+                </div>
+              </div>
             </div>
           </div>
 

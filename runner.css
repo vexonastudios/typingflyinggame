@@ -315,7 +315,7 @@ body.fs-mode #runnerCanvas {
   border: 1px solid var(--border-bright);
   border-radius: 24px;
   padding: 20px 30px;
-  max-width: 720px;
+  max-width: 900px;
   width: 94%;
   max-height: 90%;
   overflow-y: auto;
@@ -354,11 +354,23 @@ body.fs-mode #runnerCanvas {
 }
 .wr-modal p strong { color: var(--gold); }
 
+.modal-columns {
+  display: flex;
+  gap: 16px;
+  text-align: left;
+  margin-bottom: 12px;
+}
+.modal-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
 .mission-callout {
   display: grid;
   gap: 2px;
-  max-width: 520px;
-  margin: 0 auto 10px;
+  max-width: 100%;
+  margin: 0 0 10px;
   padding: 9px 14px;
   border: 1px solid rgba(245,158,11,0.35);
   border-radius: 10px;
@@ -379,7 +391,7 @@ body.fs-mode #runnerCanvas {
 
 .campaign-map-panel,
 .wardrobe-panel {
-  margin: 0 auto 10px;
+  margin: 0 0 10px;
   padding: 10px;
   border: 1px solid var(--border);
   border-radius: 10px;
@@ -706,4 +718,5 @@ body.fs-mode #runnerCanvas {
   .track-options { grid-template-columns: repeat(2, 1fr); }
   .campaign-map { grid-template-columns: repeat(5, 1fr); }
   .wardrobe-grid { grid-template-columns: repeat(2, 1fr); }
+  .modal-columns { flex-direction: column; }
 }
