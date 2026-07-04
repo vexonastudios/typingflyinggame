@@ -868,52 +868,26 @@ class DavidGame {
       
       if (enemy.type === 'wolf' && wolfCanvas) {
         const img = wolfCanvas;
+        
+        // Attack squash and run bob
         const isAttacking = enemy.attackCd > (cfg.atCd - 0.4);
-        const attackJawDrop = isAttacking ? 0.08 : 0;
-        // Smooth sine wave over U to prevent tearing at center
-        const swing = Math.sin(enemy.bobTime * 8) * 0.12 * Math.sin(u * Math.PI * 2);
+        const squash = isAttacking ? 0.8 : 1.0 + Math.sin(enemy.bobTime * 8) * 0.03;
+        const adjustedSprH = sprH * squash;
+        const adjustedTop = sprTop + (sprH - adjustedSprH);
 
-        // 1. Top half
-        let sliceX = Math.floor(u * img.width);
-        ctx.drawImage(img, sliceX, 0, 1, Math.floor(0.4 * img.height), col, sprTop, 1, 0.4 * sprH);
-
-        // 2. Jaw/Mouth area
-        ctx.drawImage(img, sliceX, Math.floor(0.4 * img.height), 1, Math.floor(0.25 * img.height), 
-                      col, sprTop + (0.4 + attackJawDrop) * sprH, 1, 0.25 * sprH);
-
-        if (isAttacking && u > 0.35 && u < 0.65) {
-           ctx.fillStyle = '#6b0000';
-           ctx.fillRect(col, sprTop + 0.4 * sprH, 1, attackJawDrop * sprH + 1);
-        }
-
-        // 3. Legs
-        sliceX = Math.floor(clamp(u + swing, 0.01, 0.99) * img.width);
-        ctx.drawImage(img, sliceX, Math.floor(0.65 * img.height), 1, Math.floor(0.35 * img.height), 
-                      col, sprTop + (0.65 + attackJawDrop) * sprH, 1, 0.35 * sprH);
+        const sliceX = Math.floor(u * img.width);
+        ctx.drawImage(img, sliceX, 0, 1, img.height, col, adjustedTop, 1, adjustedSprH);
 
       } else if (enemy.type === 'lion' && lionCanvas) {
         const img = lionCanvas;
+        
         const isAttacking = enemy.attackCd > (cfg.atCd - 0.4);
-        const attackJawDrop = isAttacking ? 0.10 : 0;
-        const swing = Math.sin(enemy.bobTime * 6) * 0.10 * Math.sin(u * Math.PI * 2);
+        const squash = isAttacking ? 0.85 : 1.0 + Math.sin(enemy.bobTime * 6) * 0.03;
+        const adjustedSprH = sprH * squash;
+        const adjustedTop = sprTop + (sprH - adjustedSprH);
 
-        // 1. Top half
-        let sliceX = Math.floor(u * img.width);
-        ctx.drawImage(img, sliceX, 0, 1, Math.floor(0.45 * img.height), col, sprTop, 1, 0.45 * sprH);
-
-        // 2. Jaw
-        ctx.drawImage(img, sliceX, Math.floor(0.45 * img.height), 1, Math.floor(0.25 * img.height), 
-                      col, sprTop + (0.45 + attackJawDrop) * sprH, 1, 0.25 * sprH);
-
-        if (isAttacking && u > 0.3 && u < 0.7) {
-           ctx.fillStyle = '#4a0000';
-           ctx.fillRect(col, sprTop + 0.45 * sprH, 1, attackJawDrop * sprH + 1);
-        }
-
-        // 3. Legs
-        sliceX = Math.floor(clamp(u + swing, 0.01, 0.99) * img.width);
-        ctx.drawImage(img, sliceX, Math.floor(0.70 * img.height), 1, Math.floor(0.30 * img.height), 
-                      col, sprTop + (0.70 + attackJawDrop) * sprH, 1, 0.30 * sprH);
+        const sliceX = Math.floor(u * img.width);
+        ctx.drawImage(img, sliceX, 0, 1, img.height, col, adjustedTop, 1, adjustedSprH);
 
       } else {
         if (enemy.type === 'wolf') this._wolfCol(ctx, u, 1, col, sprTop, sprH, enemy);
