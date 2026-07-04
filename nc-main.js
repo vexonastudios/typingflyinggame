@@ -371,13 +371,18 @@ class NerfOpsGame {
 
   // ─── Shoot ────────────────────────────────────────────────────────────────────
   _shoot(now) {
+    const p = this.player;
     this._lastShot = now;
-    this.player.ammo--;
+    p.ammo--;
     this.engine.triggerShoot();
     if (typeof Sfx !== 'undefined') Sfx.shoot();
 
+    // Trigger screen shake (light)
+    document.body.classList.remove('shake-light');
+    void document.body.offsetWidth; // trigger reflow
+    document.body.classList.add('shake-light');
+
     // Raycast for hit
-    const p = this.player;
     const hitEnemy = this._shootRaycast(p.x, p.y, p.angle);
 
     if (hitEnemy) {
@@ -478,6 +483,12 @@ class NerfOpsGame {
           p.health = Math.max(0, p.health - dmg);
           this.hud.showDamage(dmg);
           if (typeof Sfx !== 'undefined') Sfx.playerHit();
+          
+          // Trigger screen shake (heavy)
+          document.body.classList.remove('shake-heavy');
+          void document.body.offsetWidth; // trigger reflow
+          document.body.classList.add('shake-heavy');
+          
           if (p.health <= 0) {
             this._triggerGameOver();
             return;

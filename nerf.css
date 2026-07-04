@@ -277,3 +277,30 @@ canvas#gameCanvas {
   80%  { opacity: 1; }
   100% { transform: translate(-50%,-50%) scale(1); opacity: 0; }
 }
+
+/* ── GAME FEEL: SCREEN SHAKE ────────────────────────────── */
+.shake-light {
+  animation: shakeLight 0.2s cubic-bezier(.36,.07,.19,.97) both;
+}
+.shake-heavy {
+  animation: shakeHeavy 0.4s cubic-bezier(.36,.07,.19,.97) both;
+}
+
+@keyframes shakeLight {
+  0% { transform: translate(0, 0) rotate(0deg); }
+  20% { transform: translate(-2px, 2px) rotate(-0.5deg); }
+  40% { transform: translate(2px, -1px) rotate(0.5deg); }
+  60% { transform: translate(-1px, 2px) rotate(0deg); }
+  80% { transform: translate(1px, -2px) rotate(-0.5deg); }
+  100% { transform: translate(0, 0) rotate(0deg); }
+}
+
+@keyframes shakeHeavy {
+  0% { transform: translate(0, 0) rotate(0deg); }
+  10% { transform: translate(-6px, 4px) rotate(-1.5deg); }
+  30% { transform: translate(5px, -6px) rotate(1.5deg); }
+  50% { transform: translate(-4px, 5px) rotate(-1deg); }
+  70% { transform: translate(3px, -4px) rotate(1deg); }
+  90% { transform: translate(-2px, 2px) rotate(-0.5deg); }
+  100% { transform: translate(0, 0) rotate(0deg); }
+}
