@@ -870,9 +870,10 @@ class DavidGame {
         const img = wolfCanvas;
         const isAttacking = enemy.attackCd > (cfg.atCd - 0.4);
         const attackJawDrop = isAttacking ? 0.08 : 0;
-        const swing = Math.sin(enemy.bobTime * 6) * 0.12 * (u < 0.5 ? 1 : -1);
+        // Smooth sine wave over U to prevent tearing at center
+        const swing = Math.sin(enemy.bobTime * 8) * 0.12 * Math.sin(u * Math.PI * 2);
 
-        // 1. Top half (Ears, eyes)
+        // 1. Top half
         let sliceX = Math.floor(u * img.width);
         ctx.drawImage(img, sliceX, 0, 1, Math.floor(0.4 * img.height), col, sprTop, 1, 0.4 * sprH);
 
@@ -880,7 +881,6 @@ class DavidGame {
         ctx.drawImage(img, sliceX, Math.floor(0.4 * img.height), 1, Math.floor(0.25 * img.height), 
                       col, sprTop + (0.4 + attackJawDrop) * sprH, 1, 0.25 * sprH);
 
-        // Fill open mouth gap with red
         if (isAttacking && u > 0.35 && u < 0.65) {
            ctx.fillStyle = '#6b0000';
            ctx.fillRect(col, sprTop + 0.4 * sprH, 1, attackJawDrop * sprH + 1);
@@ -895,9 +895,9 @@ class DavidGame {
         const img = lionCanvas;
         const isAttacking = enemy.attackCd > (cfg.atCd - 0.4);
         const attackJawDrop = isAttacking ? 0.10 : 0;
-        const swing = Math.sin(enemy.bobTime * 5) * 0.10 * (u < 0.5 ? 1 : -1);
+        const swing = Math.sin(enemy.bobTime * 6) * 0.10 * Math.sin(u * Math.PI * 2);
 
-        // 1. Top half (Mane, eyes)
+        // 1. Top half
         let sliceX = Math.floor(u * img.width);
         ctx.drawImage(img, sliceX, 0, 1, Math.floor(0.45 * img.height), col, sprTop, 1, 0.45 * sprH);
 
@@ -905,7 +905,6 @@ class DavidGame {
         ctx.drawImage(img, sliceX, Math.floor(0.45 * img.height), 1, Math.floor(0.25 * img.height), 
                       col, sprTop + (0.45 + attackJawDrop) * sprH, 1, 0.25 * sprH);
 
-        // Fill open mouth gap
         if (isAttacking && u > 0.3 && u < 0.7) {
            ctx.fillStyle = '#4a0000';
            ctx.fillRect(col, sprTop + 0.45 * sprH, 1, attackJawDrop * sprH + 1);
