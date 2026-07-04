@@ -20,6 +20,34 @@ const D_MAX_HP     = 5;
 const D_INVINCIBLE = 1.6;    // post-hit grace period
 const D_MAP_SIZE   = 20;
 
+// ─── Pre-rendered 3D Sprites ─────────────────────────────────
+const wolfImg = new Image();
+wolfImg.src = 'wolf.png';
+const lionImg = new Image();
+lionImg.src = 'lion.png';
+
+let wolfCanvas = null;
+let lionCanvas = null;
+
+function processSpriteImage(img) {
+  const c = document.createElement('canvas');
+  c.width = img.width;
+  c.height = img.height;
+  const ctx = c.getContext('2d');
+  ctx.drawImage(img, 0, 0);
+  const data = ctx.getImageData(0, 0, c.width, c.height);
+  for (let i = 0; i < data.data.length; i += 4) {
+    if (data.data[i] > 200 && data.data[i+1] < 50 && data.data[i+2] > 200) {
+      data.data[i+3] = 0;
+    }
+  }
+  ctx.putImageData(data, 0, 0);
+  return c;
+}
+
+wolfImg.onload = () => { wolfCanvas = processSpriteImage(wolfImg); };
+lionImg.onload = () => { lionCanvas = processSpriteImage(lionImg); };
+
 // ─── Enemy Configs ───────────────────────────────────────────
 const ECFG = {
   wolf: { hp:1, speed:2.5, size:0.25, points:10,
@@ -825,20 +853,36 @@ class DavidGame {
     const startCol = Math.floor(sx - sprW / 2);
     const endCol   = Math.floor(sx + sprW / 2);
 
+    ctx.save();
+    ctx.filter = `brightness(${brt})`; // Apply shading based on distance
+    ctx.imageSmoothingEnabled = false; // Keep it pixelated/PS1 style
+
     for (let col = Math.max(0, startCol); col < Math.min(W, endCol); col++) {
       if (zBuf[col] <= dist) continue;
       if (hurtFlash) { // white flash when hit
-        ctx.fillStyle = `rgba(255,255,255,${brt * 0.9})`;
+        ctx.fillStyle = `rgba(255,255,255,0.9)`;
         ctx.fillRect(col, sprTop, 1, sprH);
         continue;
       }
       const u = (col - startCol) / Math.max(1, endCol - startCol);
+      
       if (enemy.type === 'wolf') {
-        this._wolfCol(ctx, u, brt, col, sprTop, sprH, enemy);
+        if (wolfCanvas) {
+          const sliceX = Math.floor(u * wolfCanvas.width);
+          ctx.drawImage(wolfCanvas, sliceX, 0, 1, wolfCanvas.height, col, sprTop, 1, sprH);
+        } else {
+          this._wolfCol(ctx, u, 1, col, sprTop, sprH, enemy);
+        }
       } else {
-        this._lionCol(ctx, u, brt, col, sprTop, sprH, enemy);
+        if (lionCanvas) {
+          const sliceX = Math.floor(u * lionCanvas.width);
+          ctx.drawImage(lionCanvas, sliceX, 0, 1, lionCanvas.height, col, sprTop, 1, sprH);
+        } else {
+          this._lionCol(ctx, u, 1, col, sprTop, sprH, enemy);
+        }
       }
     }
+    ctx.restore();
   }
 
   /* ── Wolf sprite (column renderer) ─────────────────────────
