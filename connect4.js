@@ -5,20 +5,29 @@ const EMPTY = 0;
 const RED = 1;
 const YELLOW = 2;
 
-// ElevenLabs SFX
-const sfxDrop = new Audio('/api/sfx?text=heavy%20plastic%20token%20dropping%20into%20a%20hollow%20slot%20and%20clacking&duration=1');
-const sfxWin = new Audio('/api/sfx?text=triumphant%20arcade%20level%20complete%20chime&duration=3');
-const sfxDraw = new Audio('/api/sfx?text=sad%20arcade%20game%20over%20buzzer&duration=2');
-const sfxError = new Audio('/api/sfx?text=short%20error%20buzz&duration=1');
+// ElevenLabs SFX — lazy loaded on first play to avoid API calls on every page load
+const sfxCache = {};
+const sfxUrls = {
+  drop:  '/api/sfx?text=heavy%20plastic%20token%20dropping%20into%20a%20hollow%20slot%20and%20clacking&duration=1',
+  win:   '/api/sfx?text=triumphant%20arcade%20level%20complete%20chime&duration=3',
+  draw:  '/api/sfx?text=sad%20arcade%20game%20over%20buzzer&duration=2',
+  error: '/api/sfx?text=short%20error%20buzz&duration=1',
+};
 
-sfxDrop.preload = 'auto';
-sfxWin.preload = 'auto';
-sfxDraw.preload = 'auto';
-sfxError.preload = 'auto';
-
-function playSound(audio) {
-  audio.currentTime = 0;
-  audio.play().catch(e => console.warn('SFX skipped:', e));
+async function playSound(name) {
+  if (!sfxUrls[name]) return;
+  try {
+    if (!sfxCache[name]) {
+      const res = await fetch(sfxUrls[name]);
+      if (!res.ok) return;
+      const blob = await res.blob();
+      sfxCache[name] = URL.createObjectURL(blob);
+    }
+    const audio = new Audio(sfxCache[name]);
+    audio.play().catch(e => console.warn('SFX skipped:', e));
+  } catch (e) {
+    console.warn('SFX load failed:', e);
+  }
 }
 
 let board = [];
@@ -118,7 +127,7 @@ async function handleColumnClick(colIndex) {
 async function playTurn(colIndex) {
   const rowInfo = getAvailableRow(colIndex);
   if (rowInfo === -1) {
-    playSound(sfxError);
+    playSound('error');
     return; // Column full
   }
 
@@ -133,7 +142,7 @@ async function playTurn(colIndex) {
   chip.className = `chip ${currentPlayer === RED ? 'chip-red' : 'chip-yellow'}`;
   chip.style.bottom = `${rowInfo * 114}px`; // 100px slot + 14px gap
   
-  playSound(sfxDrop);
+  playSound('drop');
   
   // We place chips inside the column. Columns are flex-direction: column-reverse, 
   // so appending a child adds it from the bottom.
@@ -239,7 +248,7 @@ function endGame(winner, winLine) {
   isAnimating = false;
   
   if (winner !== EMPTY) {
-    playSound(sfxWin);
+    playSound('win');
     const pName = winner === RED ? 'Player 1' : (gameMode === 'local' ? 'Player 2' : 'Bot');
     winnerText.textContent = `${pName} Wins!`;
     winnerText.style.color = winner === RED ? '#ff4d4d' : '#ffd060';
@@ -256,7 +265,7 @@ function endGame(winner, winLine) {
       });
     }
   } else {
-    playSound(sfxDraw);
+    playSound('draw');
     winnerText.textContent = "It's a Draw!";
     winnerText.style.color = "#fff";
   }
@@ -512,3 +521,10 @@ function minimax(boardState, depth, alpha, beta, isMaximizing, botPlayer) {
 
 // Start
 init();
+
+// Try to use active profile for Player 1
+const activeProfile = typeof ProfileManager !== 'undefined' ? ProfileManager.getActiveProfile() : null;
+if (activeProfile && activeProfile.name) {
+  const p1El = document.getElementById('player1Name');
+  if (p1El) p1El.value = activeProfile.name;
+}

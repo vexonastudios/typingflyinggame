@@ -33,6 +33,24 @@ body {
 }
 
 /* ---- Layout ---- */
+.back-to-bodee {
+  position: absolute;
+  top: 24px;
+  left: 32px;
+  color: var(--muted);
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 1.1rem;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: color 0.2s;
+  z-index: 10;
+}
+.back-to-bodee:hover {
+  color: var(--accent-blue);
+}
+
 .hub-layout {
   position: relative;
   z-index: 1;

@@ -540,11 +540,12 @@ class BrainBridge {
         this.timerActive = false;
         let finalTime = document.getElementById('gameTimerDisplay').textContent;
         
-        let best = localStorage.getItem('bb_best_' + this.mathMode) || 9999;
+        const _bbk = typeof ProfileManager !== 'undefined' ? ProfileManager.getKey('bb_best_' + this.mathMode) : 'bb_best_' + this.mathMode;
+        let best = localStorage.getItem(_bbk) || 9999;
         let isNewBest = false;
         if(this.gameTimer < best) {
            best = this.gameTimer;
-           localStorage.setItem('bb_best_' + this.mathMode, this.gameTimer);
+           localStorage.setItem(_bbk, this.gameTimer);
            isNewBest = true;
         }
         

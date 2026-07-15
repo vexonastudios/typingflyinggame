@@ -1,4 +1,5 @@
 // play-timer.js
+function typing_games_timer_key() { return typeof ProfileManager !== 'undefined' ? ProfileManager.getKey('typing_games_timer_end') : 'typing_games_timer_end'; }
 
 (function() {
   // Ensure this script only runs once per page
@@ -108,7 +109,7 @@
     
     // Reset/Unlock button on the block screen (Honor system)
     document.getElementById('timer-unlock-btn').addEventListener('click', () => {
-      localStorage.removeItem('typing_games_timer_end');
+      localStorage.removeItem(typing_games_timer_key());
       isBlocked = false;
       closeModals();
       updateSettingsUI();
@@ -124,7 +125,7 @@
 
     // Stop Timer Button
     document.getElementById('timer-stop-btn').addEventListener('click', () => {
-      localStorage.removeItem('typing_games_timer_end');
+      localStorage.removeItem(typing_games_timer_key());
       isBlocked = false;
       closeModals();
       updateSettingsUI();
@@ -134,14 +135,14 @@
 
     function setTimer(minutes) {
       const endTime = Date.now() + (minutes * 60 * 1000);
-      localStorage.setItem('typing_games_timer_end', endTime.toString());
+      localStorage.setItem(typing_games_timer_key(), endTime.toString());
       isBlocked = false;
       closeModals();
       startLoop();
     }
 
     function updateSettingsUI() {
-      const endTimeStr = localStorage.getItem('typing_games_timer_end');
+      const endTimeStr = localStorage.getItem(typing_games_timer_key());
       if (endTimeStr) {
         stopContainer.style.display = 'block';
       } else {
@@ -157,7 +158,7 @@
     }
 
     function checkTimer() {
-      const endTimeStr = localStorage.getItem('typing_games_timer_end');
+      const endTimeStr = localStorage.getItem(typing_games_timer_key());
       if (!endTimeStr) {
         if (isBlocked) {
           isBlocked = false;
@@ -193,7 +194,7 @@
 
     // Listen for storage events from other tabs
     window.addEventListener('storage', (e) => {
-      if (e.key === 'typing_games_timer_end') {
+      if (e.key === typing_games_timer_key()) {
         checkTimer();
         if (settingsModal.style.display === 'block') {
           updateSettingsUI();

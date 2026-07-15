@@ -1979,4 +1979,11 @@
     }
   });
 
+  // Try to use active profile for Player 1
+  const activeProfile = typeof ProfileManager !== 'undefined' ? ProfileManager.getActiveProfile() : null;
+  if (activeProfile && activeProfile.name) {
+    const p1El = document.getElementById('p1Name');
+    if (p1El) p1El.value = activeProfile.name;
+  }
+
 })();

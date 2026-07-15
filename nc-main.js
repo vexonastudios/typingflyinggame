@@ -81,7 +81,8 @@ class NerfOpsGame {
   // ─── Save / Load ─────────────────────────────────────────────────────────────
   _loadSave() {
     try {
-      const raw = localStorage.getItem('nerfops_save');
+      const _nk = typeof ProfileManager !== 'undefined' ? ProfileManager.getKey('nerfops_save') : 'nerfops_save';
+      const raw = localStorage.getItem(_nk);
       if (raw) {
         const data = JSON.parse(raw);
         this.currentLevelIndex = Math.min(data.level || 0, NC_LEVELS.length - 1);
@@ -92,7 +93,8 @@ class NerfOpsGame {
 
   _save() {
     try {
-      localStorage.setItem('nerfops_save', JSON.stringify({
+      const _nk = typeof ProfileManager !== 'undefined' ? ProfileManager.getKey('nerfops_save') : 'nerfops_save';
+      localStorage.setItem(_nk, JSON.stringify({
         level: this.currentLevelIndex,
         totalScore: this.totalScore,
       }));
@@ -100,7 +102,8 @@ class NerfOpsGame {
   }
 
   _clearSave() {
-    localStorage.removeItem('nerfops_save');
+    const _nk = typeof ProfileManager !== 'undefined' ? ProfileManager.getKey('nerfops_save') : 'nerfops_save';
+    localStorage.removeItem(_nk);
     this.currentLevelIndex = 0;
     this.totalScore = 0;
   }

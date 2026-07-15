@@ -875,7 +875,8 @@
   }
 
   function loadLeaderboard() {
-    const records = JSON.parse(localStorage.getItem('pool_fastest_wins') || '[]');
+    const _pk = typeof ProfileManager !== 'undefined' ? ProfileManager.getKey('pool_fastest_wins') : 'pool_fastest_wins';
+    const records = JSON.parse(localStorage.getItem(_pk) || '[]');
     const el = $('leaderboard');
     if (records.length === 0) {
       el.innerHTML = '<div class="leaderboard-empty">No records yet. Be the first!</div>';
@@ -891,11 +892,12 @@
   }
 
   function saveRecord(name, timeInSeconds) {
-    let records = JSON.parse(localStorage.getItem('pool_fastest_wins') || '[]');
+    const _pk = typeof ProfileManager !== 'undefined' ? ProfileManager.getKey('pool_fastest_wins') : 'pool_fastest_wins';
+    let records = JSON.parse(localStorage.getItem(_pk) || '[]');
     records.push({ name, time: timeInSeconds });
     records.sort((a, b) => a.time - b.time);
     records = records.slice(0, 10); // keep top 10
-    localStorage.setItem('pool_fastest_wins', JSON.stringify(records));
+    localStorage.setItem(_pk, JSON.stringify(records));
   }
 
   function updateTurnIndicator() {
@@ -1122,6 +1124,13 @@
 
   // Load leaderboard on initial load
   loadLeaderboard();
+
+  // Try to use active profile for Player 1
+  const activeProfile = typeof ProfileManager !== 'undefined' ? ProfileManager.getActiveProfile() : null;
+  if (activeProfile && activeProfile.name) {
+    const p1El = document.getElementById('p1NameInput');
+    if (p1El) p1El.value = activeProfile.name;
+  }
 
 })();
 

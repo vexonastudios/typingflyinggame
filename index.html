@@ -1,27 +1,86 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+  <!-- Google tag (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-ZTP50MJ7CX"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+
+    gtag('config', 'G-ZTP50MJ7CX');
+  </script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Vexona Family Game Hub</title>
+  <title>Bodee Books Family Game Hub</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;900&display=swap" rel="stylesheet">
-  <link rel="icon" type="image/png" href="favicon.png">
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
   <link rel="stylesheet" href="hub.css">
+  <link rel="stylesheet" href="profile-picker.css">
   <link rel="stylesheet" href="play-timer.css">
+  <script src="profile-manager.js"></script>
   <script src="play-timer.js"></script>
 </head>
 <body>
   <canvas id="starCanvas" aria-hidden="true"></canvas>
 
-  <div class="hub-layout">
+  <!-- ── Profile Gate ── -->
+  <div id="profileGate" class="hidden">
+    <div class="profile-gate-inner">
+      <button id="closeProfileGateBtn" class="profile-btn profile-btn--ghost" style="position: absolute; top: 24px; right: 24px; padding: 8px 16px;">✕ Close</button>
+      <h2>👋 Who's Playing?</h2>
+      <p class="profile-subtitle">Pick your profile to start playing</p>
+      <div id="profileCards" class="profile-cards"></div>
+    </div>
+  </div>
+
+  <!-- ── Create/Edit Profile Modal ── -->
+  <div id="profileModalOverlay" class="profile-modal-overlay">
+    <div class="profile-modal">
+      <h3 id="profileModalTitle">Create Profile</h3>
+      <label for="profileNameInput">Your Name</label>
+      <input type="text" id="profileNameInput" placeholder="e.g. James" maxlength="20" autocomplete="off">
+      <label>Pick Your Avatar</label>
+      <div id="avatarPicker" class="avatar-picker"></div>
+      <label for="profilePinInput">PIN (Optional)</label>
+      <input type="password" id="profilePinInput" class="pin-input" placeholder="····" maxlength="6" autocomplete="off">
+      <div class="profile-modal-actions">
+        <button id="profileSaveBtn" class="profile-btn profile-btn--primary">Create</button>
+        <button id="profileDeleteBtn" class="profile-btn profile-btn--danger" style="display:none;">Delete</button>
+        <button id="profileCancelBtn" class="profile-btn profile-btn--ghost">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── PIN Entry Modal ── -->
+  <div id="pinModalOverlay" class="profile-modal-overlay">
+    <div class="profile-modal">
+      <h3 id="pinModalTitle">Enter PIN</h3>
+      <p id="pinModalName" style="color:var(--muted); margin-bottom:16px;"></p>
+      <input type="password" id="pinEntryInput" class="pin-input" placeholder="····" maxlength="6" autocomplete="off">
+      <p id="pinError" style="color:#ff4d4d; font-size:0.85rem; margin-top:8px; display:none;">Wrong PIN, try again</p>
+      <div class="profile-modal-actions">
+        <button id="pinSubmitBtn" class="profile-btn profile-btn--primary">Unlock</button>
+        <button id="pinCancelBtn" class="profile-btn profile-btn--ghost">Back</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="hub-layout" id="hubLayout">
+    <a href="https://bodeebooks.com" class="back-to-bodee">← Back to Bodee Books</a>
     <header class="hub-header">
       <div class="hub-logo">
         <span class="hub-logo-icon">🎮</span>
         <div>
-          <p class="hub-eyebrow">Vexona Studios</p>
+          <p class="hub-eyebrow">Bodee Books</p>
           <h1 class="hub-title">Family Game Hub</h1>
         </div>
+      </div>
+      <div id="hubWelcome" class="hub-welcome" title="Switch Profile">
+        <span class="welcome-avatar" id="welcomeAvatar">🎮</span>
+        <span class="welcome-name" id="welcomeName">Player</span>
+        <span class="welcome-switch">▾</span>
       </div>
       <p class="hub-subtitle">Pick a game and play together</p>
     </header>
@@ -481,7 +540,7 @@
 
 
     <footer class="hub-footer">
-      <p>Vexona Studios · Family Game Hub · All games playable in browser</p>
+      <p>Bodee Books · Family Game Hub · All games playable in browser</p>
     </footer>
   </div>
 
@@ -523,6 +582,254 @@
     seedStars();
     window.addEventListener('resize', () => { resize(); seedStars(); });
     requestAnimationFrame(drawStars);
+  </script>
+  <script>
+    // ── Profile Picker Logic ─────────────────────────────────────────────
+    (function() {
+      const AVATARS = ['🦁','🐺','🦊','🐼','🐨','🦈','🐸','🦉','🐝','🦋','🐢','🐙','🦄','🐲','🦖','🐳','🐧','🦅','🎮','🚀'];
+
+      const gate = document.getElementById('profileGate');
+      const closeGateBtn = document.getElementById('closeProfileGateBtn');
+      const hubLayout = document.getElementById('hubLayout');
+      const cardsContainer = document.getElementById('profileCards');
+
+      const modalOverlay = document.getElementById('profileModalOverlay');
+      const modalTitle = document.getElementById('profileModalTitle');
+      const nameInput = document.getElementById('profileNameInput');
+      const pinInput = document.getElementById('profilePinInput');
+      const avatarPicker = document.getElementById('avatarPicker');
+      const saveBtn = document.getElementById('profileSaveBtn');
+      const deleteBtn = document.getElementById('profileDeleteBtn');
+      const cancelBtn = document.getElementById('profileCancelBtn');
+
+      const pinOverlay = document.getElementById('pinModalOverlay');
+      const pinNameEl = document.getElementById('pinModalName');
+      const pinEntryInput = document.getElementById('pinEntryInput');
+      const pinError = document.getElementById('pinError');
+      const pinSubmitBtn = document.getElementById('pinSubmitBtn');
+      const pinCancelBtn = document.getElementById('pinCancelBtn');
+
+      const welcomeEl = document.getElementById('hubWelcome');
+      const welcomeAvatar = document.getElementById('welcomeAvatar');
+      const welcomeName = document.getElementById('welcomeName');
+
+      let selectedAvatar = AVATARS[0];
+      let editingProfileId = null;
+      let pendingPinProfileId = null;
+
+      // ── Render avatar picker ──
+      function buildAvatarPicker() {
+        avatarPicker.innerHTML = '';
+        AVATARS.forEach(emoji => {
+          const btn = document.createElement('div');
+          btn.className = 'avatar-option' + (emoji === selectedAvatar ? ' selected' : '');
+          btn.textContent = emoji;
+          btn.addEventListener('click', () => {
+            selectedAvatar = emoji;
+            avatarPicker.querySelectorAll('.avatar-option').forEach(b => b.classList.remove('selected'));
+            btn.classList.add('selected');
+          });
+          avatarPicker.appendChild(btn);
+        });
+      }
+
+      // ── Render profile cards ──
+      function renderCards() {
+        const profiles = ProfileManager.getProfiles();
+        cardsContainer.innerHTML = '';
+
+        profiles.forEach(p => {
+          const card = document.createElement('div');
+          card.className = 'profile-card';
+          card.innerHTML = `
+            <div class="profile-avatar">${p.avatar}</div>
+            <div class="profile-name">${p.name}</div>
+            <div class="profile-playtime">${ProfileManager.formatPlayTime(p.totalPlayTimeMs)}</div>
+            ${p.pin ? '<div class="profile-pin-badge">🔒</div>' : ''}
+          `;
+          card.addEventListener('click', () => selectProfile(p));
+
+          // Long press / right-click to edit
+          card.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+            openEditModal(p);
+          });
+
+          cardsContainer.appendChild(card);
+        });
+
+        // Add profile card
+        const addCard = document.createElement('div');
+        addCard.className = 'profile-card profile-card--add';
+        addCard.innerHTML = `
+          <div class="profile-avatar">+</div>
+          <div class="profile-name">Add Player</div>
+        `;
+        addCard.addEventListener('click', openCreateModal);
+        cardsContainer.appendChild(addCard);
+      }
+
+      // ── Select a profile ──
+      function selectProfile(profile) {
+        if (ProfileManager.hasPin(profile.id)) {
+          // Show PIN modal
+          pendingPinProfileId = profile.id;
+          pinNameEl.textContent = `${profile.avatar} ${profile.name}`;
+          pinEntryInput.value = '';
+          pinError.style.display = 'none';
+          pinOverlay.classList.add('active');
+          setTimeout(() => pinEntryInput.focus(), 100);
+        } else {
+          activateProfile(profile.id);
+        }
+      }
+
+      function activateProfile(id) {
+        ProfileManager.setActiveProfile(id);
+
+        // Migrate legacy data on first use
+        if (ProfileManager.hasLegacyData()) {
+          ProfileManager.migrateToProfile(id);
+        }
+
+        showHub();
+      }
+
+      function showHub() {
+        const profile = ProfileManager.getActiveProfile();
+        if (profile) {
+          welcomeAvatar.textContent = profile.avatar;
+          welcomeName.textContent = profile.name;
+        } else {
+          welcomeAvatar.textContent = '👤';
+          welcomeName.textContent = 'Guest';
+        }
+
+        gate.classList.add('hidden');
+        hubLayout.style.display = '';
+      }
+
+      function showGate() {
+        gate.classList.remove('hidden');
+        hubLayout.style.display = 'none';
+        renderCards();
+      }
+
+      // ── Create modal ──
+      function openCreateModal() {
+        editingProfileId = null;
+        modalTitle.textContent = 'Create Profile';
+        nameInput.value = '';
+        pinInput.value = '';
+        selectedAvatar = AVATARS[Math.floor(Math.random() * AVATARS.length)];
+        buildAvatarPicker();
+        saveBtn.textContent = 'Create';
+        deleteBtn.style.display = 'none';
+        modalOverlay.classList.add('active');
+        setTimeout(() => nameInput.focus(), 100);
+      }
+
+      // ── Edit modal ──
+      function openEditModal(profile) {
+        editingProfileId = profile.id;
+        modalTitle.textContent = 'Edit Profile';
+        nameInput.value = profile.name;
+        pinInput.value = '';
+        selectedAvatar = profile.avatar;
+        buildAvatarPicker();
+        saveBtn.textContent = 'Save';
+        deleteBtn.style.display = '';
+        modalOverlay.classList.add('active');
+        setTimeout(() => nameInput.focus(), 100);
+      }
+
+      // ── Save / Delete ──
+      saveBtn.addEventListener('click', () => {
+        const name = nameInput.value.trim();
+        if (!name) { nameInput.focus(); return; }
+        const pin = pinInput.value.trim() || null;
+
+        if (editingProfileId) {
+          ProfileManager.updateProfile(editingProfileId, { name, avatar: selectedAvatar, pin });
+          modalOverlay.classList.remove('active');
+          renderCards();
+        } else {
+          const profile = ProfileManager.createProfile(name, selectedAvatar, pin);
+
+          // Auto-migrate legacy data to the first profile created
+          if (ProfileManager.hasLegacyData()) {
+            ProfileManager.migrateToProfile(profile.id);
+          }
+          
+          modalOverlay.classList.remove('active');
+          activateProfile(profile.id);
+        }
+      });
+
+      deleteBtn.addEventListener('click', () => {
+        if (!editingProfileId) return;
+        const profile = ProfileManager.getProfiles().find(p => p.id === editingProfileId);
+        if (profile && confirm(`Delete "${profile.name}"? All their game progress will be lost.`)) {
+          ProfileManager.deleteProfile(editingProfileId);
+          modalOverlay.classList.remove('active');
+          editingProfileId = null;
+
+          // If we deleted the active profile, go back to gate
+          if (!ProfileManager.getActiveProfile()) {
+            showGate();
+          } else {
+            renderCards();
+          }
+        }
+      });
+
+      cancelBtn.addEventListener('click', () => {
+        modalOverlay.classList.remove('active');
+      });
+
+      // ── PIN modal ──
+      pinSubmitBtn.addEventListener('click', () => {
+        if (!pendingPinProfileId) return;
+        if (ProfileManager.verifyPin(pendingPinProfileId, pinEntryInput.value)) {
+          pinOverlay.classList.remove('active');
+          activateProfile(pendingPinProfileId);
+          pendingPinProfileId = null;
+        } else {
+          pinError.style.display = 'block';
+          pinEntryInput.value = '';
+          pinEntryInput.focus();
+        }
+      });
+
+      pinEntryInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') pinSubmitBtn.click();
+      });
+
+      pinCancelBtn.addEventListener('click', () => {
+        pinOverlay.classList.remove('active');
+        pendingPinProfileId = null;
+      });
+
+      // ── Welcome badge click → switch profiles ──
+      welcomeEl.addEventListener('click', () => {
+        ProfileManager.stopPlayTime();
+        showGate();
+      });
+
+      closeGateBtn.addEventListener('click', () => {
+        showHub();
+      });
+
+      // ── Init ──
+      const active = ProfileManager.getActiveProfile();
+      if (active) {
+        showHub();
+      } else {
+        // Just show the hub as guest
+        showHub();
+      }
+
+    })();
   </script>
 </body>
 </html>

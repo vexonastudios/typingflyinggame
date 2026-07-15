@@ -1,3 +1,6 @@
+// --- Profile-scoped storage helpers ---
+function _spKey(base) { return typeof ProfileManager !== 'undefined' ? ProfileManager.getKey(base) : base; }
+
 // --- IndexedDB Audio Cache ---
 const dbName = "SpellingBeeDB";
 const storeName = "audioCache";
@@ -120,7 +123,7 @@ initDB().then(() => {
 });
 
 function renderHallOfFame() {
-  const hof = JSON.parse(localStorage.getItem('spellingHallOfFame') || '{}');
+  const hof = JSON.parse(localStorage.getItem(_spKey('spellingHallOfFame')) || '{}');
   const hofKeys = Object.keys(hof);
   const container = document.getElementById('hallOfFameContainer');
   const list = document.getElementById('hofList');
@@ -172,14 +175,14 @@ btnStart.addEventListener('click', () => {
   totalRounds = parseInt(document.getElementById('roundsSelect').value);
 
   // Initialize fresh, unrepeated word pool preventing repeats in memory
-  let history = JSON.parse(localStorage.getItem('spellingUsedWords') || '[]');
+  let history = JSON.parse(localStorage.getItem(_spKey('spellingUsedWords')) || '[]');
   remainingWords = DICTIONARY[difficultyStr].filter(ob => !history.includes(ob.word));
   
   if (remainingWords.length === 0) {
       // Emergency reset if dictionary fully exhausted
       const currentTierWords = DICTIONARY[difficultyStr].map(i => i.word);
       history = history.filter(w => !currentTierWords.includes(w));
-      localStorage.setItem('spellingUsedWords', JSON.stringify(history));
+      localStorage.setItem(_spKey('spellingUsedWords'), JSON.stringify(history));
       remainingWords = [...DICTIONARY[difficultyStr]];
   }
 
@@ -290,19 +293,19 @@ async function startTurn() {
 
   // Select random word without repeating
   if (remainingWords.length === 0) {
-      let historyObj = JSON.parse(localStorage.getItem('spellingUsedWords') || '[]');
+      let historyObj = JSON.parse(localStorage.getItem(_spKey('spellingUsedWords')) || '[]');
       const tierWds = DICTIONARY[difficultyStr].map(i => i.word);
       historyObj = historyObj.filter(w => !tierWds.includes(w));
-      localStorage.setItem('spellingUsedWords', JSON.stringify(historyObj));
+      localStorage.setItem(_spKey('spellingUsedWords'), JSON.stringify(historyObj));
       remainingWords = [...DICTIONARY[difficultyStr]]; // Refill if exhausted
   }
   const ranIndex = Math.floor(Math.random() * remainingWords.length);
   currentWordObj = remainingWords.splice(ranIndex, 1)[0];
 
-  let currentHistory = JSON.parse(localStorage.getItem('spellingUsedWords') || '[]');
+  let currentHistory = JSON.parse(localStorage.getItem(_spKey('spellingUsedWords')) || '[]');
   if (!currentHistory.includes(currentWordObj.word)) {
       currentHistory.push(currentWordObj.word);
-      localStorage.setItem('spellingUsedWords', JSON.stringify(currentHistory));
+      localStorage.setItem(_spKey('spellingUsedWords'), JSON.stringify(currentHistory));
   }
 
   // Formatting strings
@@ -424,13 +427,13 @@ async function advanceState() {
          else if (difficultyStr === 'Medium') difficultyStr = 'Hard';
          else if (difficultyStr === 'Hard') difficultyStr = 'SpellingBee';
          
-         let hist = JSON.parse(localStorage.getItem('spellingUsedWords') || '[]');
+         let hist = JSON.parse(localStorage.getItem(_spKey('spellingUsedWords')) || '[]');
          remainingWords = DICTIONARY[difficultyStr].filter(ob => !hist.includes(ob.word));
          
          if (remainingWords.length === 0) {
              const sdTierWords = DICTIONARY[difficultyStr].map(i => i.word);
              hist = hist.filter(w => !sdTierWords.includes(w));
-             localStorage.setItem('spellingUsedWords', JSON.stringify(hist));
+             localStorage.setItem(_spKey('spellingUsedWords'), JSON.stringify(hist));
              remainingWords = [...DICTIONARY[difficultyStr]];
          }
          document.getElementById('diffText').innerText = difficultyStr + " Difficulty";
@@ -456,7 +459,7 @@ function showWinScreen() {
   const sorted = [...players].sort((a,b) => b.score - a.score);
   
   // Save to Hall of Fame
-  const hof = JSON.parse(localStorage.getItem('spellingHallOfFame') || '{}');
+  const hof = JSON.parse(localStorage.getItem(_spKey('spellingHallOfFame')) || '{}');
   const topScore = sorted[0].score;
   const winners = sorted.filter(p => p.score === topScore);
   
@@ -469,7 +472,7 @@ function showWinScreen() {
   winners.forEach(w => {
     hof[w.name].wins += 1;
   });
-  localStorage.setItem('spellingHallOfFame', JSON.stringify(hof));
+  localStorage.setItem(_spKey('spellingHallOfFame'), JSON.stringify(hof));
   
   let html = `<h2 class="win-title">Championship Over!</h2>
               <div class="final-results">`;

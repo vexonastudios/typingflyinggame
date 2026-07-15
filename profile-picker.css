@@ -1,0 +1,366 @@
+/* ============================================================
+   BODEE BOOKS FAMILY GAME HUB — profile-picker.css
+   ============================================================ */
+
+/* ---- Profile Gate Overlay ---- */
+#profileGate {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: var(--bg, #060c1a);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.4s, visibility 0.4s;
+}
+
+#profileGate.hidden {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.profile-gate-inner {
+  width: 100%;
+  max-width: 720px;
+  padding: 48px 32px;
+  text-align: center;
+}
+
+.profile-gate-inner h2 {
+  font-family: var(--font, 'Outfit', sans-serif);
+  font-size: 2.2rem;
+  font-weight: 900;
+  color: var(--text, #e8eef8);
+  margin-bottom: 8px;
+}
+
+.profile-gate-inner .profile-subtitle {
+  color: var(--muted, rgba(200,215,240,0.55));
+  font-size: 1.1rem;
+  margin-bottom: 40px;
+}
+
+/* ---- Profile Cards Grid ---- */
+.profile-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 16px;
+  margin-bottom: 32px;
+}
+
+.profile-card {
+  background: var(--surface, rgba(255,255,255,0.045));
+  border: 1px solid var(--border, rgba(255,255,255,0.1));
+  border-radius: 20px;
+  padding: 24px 16px;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  position: relative;
+  backdrop-filter: blur(12px);
+}
+
+.profile-card:hover {
+  border-color: var(--accent-blue, #3b9eff);
+  transform: translateY(-4px);
+  box-shadow: 0 8px 32px rgba(59, 158, 255, 0.2);
+}
+
+.profile-card .profile-avatar {
+  font-size: 2.8rem;
+  line-height: 1;
+  filter: drop-shadow(0 2px 8px rgba(0,0,0,0.3));
+}
+
+.profile-card .profile-name {
+  font-weight: 700;
+  font-size: 1.05rem;
+  color: var(--text, #e8eef8);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+
+.profile-card .profile-playtime {
+  font-size: 0.78rem;
+  color: var(--muted, rgba(200,215,240,0.55));
+}
+
+.profile-card .profile-pin-badge {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  font-size: 0.75rem;
+  opacity: 0.5;
+}
+
+/* ---- Add Profile Card ---- */
+.profile-card--add {
+  border-style: dashed;
+  opacity: 0.7;
+}
+
+.profile-card--add:hover {
+  opacity: 1;
+  border-color: var(--accent-gold, #ffd060);
+  box-shadow: 0 8px 32px rgba(255, 208, 96, 0.15);
+}
+
+.profile-card--add .profile-avatar {
+  font-size: 2rem;
+  opacity: 0.6;
+}
+
+.profile-card--add .profile-name {
+  color: var(--muted, rgba(200,215,240,0.55));
+  font-weight: 600;
+}
+
+/* ---- Create / Edit Profile Modal ---- */
+.profile-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1100;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.3s, visibility 0.3s;
+}
+
+.profile-modal-overlay.active {
+  opacity: 1;
+  visibility: visible;
+}
+
+.profile-modal {
+  background: #0d1529;
+  border: 1px solid var(--border, rgba(255,255,255,0.1));
+  border-radius: 24px;
+  padding: 40px 32px;
+  width: 90%;
+  max-width: 420px;
+  text-align: center;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.5);
+}
+
+.profile-modal h3 {
+  font-family: var(--font, 'Outfit', sans-serif);
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--text, #e8eef8);
+  margin-bottom: 24px;
+}
+
+.profile-modal label {
+  display: block;
+  text-align: left;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--muted, rgba(200,215,240,0.55));
+  margin-bottom: 6px;
+  margin-top: 16px;
+}
+
+.profile-modal input[type="text"],
+.profile-modal input[type="password"] {
+  width: 100%;
+  padding: 12px 16px;
+  border-radius: 12px;
+  border: 1px solid var(--border, rgba(255,255,255,0.1));
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text, #e8eef8);
+  font-family: var(--font, 'Outfit', sans-serif);
+  font-size: 1rem;
+  outline: none;
+  transition: border-color 0.2s;
+  box-sizing: border-box;
+}
+
+.profile-modal input[type="text"]:focus,
+.profile-modal input[type="password"]:focus {
+  border-color: var(--accent-blue, #3b9eff);
+}
+
+/* Avatar picker grid */
+.avatar-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+  margin-top: 8px;
+}
+
+.avatar-option {
+  width: 48px;
+  height: 48px;
+  font-size: 1.6rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  border: 2px solid transparent;
+  background: rgba(255, 255, 255, 0.04);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.avatar-option:hover {
+  background: rgba(255, 255, 255, 0.1);
+  transform: scale(1.15);
+}
+
+.avatar-option.selected {
+  border-color: var(--accent-blue, #3b9eff);
+  background: rgba(59, 158, 255, 0.15);
+  transform: scale(1.1);
+}
+
+/* Buttons */
+.profile-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 28px;
+  border-radius: 12px;
+  border: none;
+  font-family: var(--font, 'Outfit', sans-serif);
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-top: 8px;
+}
+
+.profile-btn--primary {
+  background: linear-gradient(135deg, #3b9eff, #2570cc);
+  color: #fff;
+  box-shadow: 0 4px 16px rgba(59, 158, 255, 0.3);
+}
+
+.profile-btn--primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 24px rgba(59, 158, 255, 0.45);
+}
+
+.profile-btn--danger {
+  background: rgba(255, 77, 77, 0.15);
+  color: #ff4d4d;
+  border: 1px solid rgba(255, 77, 77, 0.3);
+}
+
+.profile-btn--danger:hover {
+  background: rgba(255, 77, 77, 0.25);
+}
+
+.profile-btn--ghost {
+  background: transparent;
+  color: var(--muted, rgba(200,215,240,0.55));
+  border: 1px solid var(--border, rgba(255,255,255,0.1));
+}
+
+.profile-btn--ghost:hover {
+  color: var(--text, #e8eef8);
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
+.profile-modal-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  margin-top: 24px;
+  flex-wrap: wrap;
+}
+
+/* ---- PIN Entry Modal ---- */
+.pin-input {
+  letter-spacing: 8px;
+  text-align: center;
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+/* ---- Welcome Badge in Hub Header ---- */
+.hub-welcome {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--surface, rgba(255,255,255,0.045));
+  border: 1px solid var(--border, rgba(255,255,255,0.1));
+  border-radius: 999px;
+  padding: 6px 18px 6px 10px;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: var(--font, 'Outfit', sans-serif);
+}
+
+.hub-welcome:hover {
+  border-color: var(--accent-blue, #3b9eff);
+  background: rgba(59, 158, 255, 0.08);
+}
+
+.hub-welcome .welcome-avatar {
+  font-size: 1.4rem;
+}
+
+.hub-welcome .welcome-name {
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--text, #e8eef8);
+}
+
+.hub-welcome .welcome-switch {
+  font-size: 0.75rem;
+  color: var(--muted, rgba(200,215,240,0.55));
+  margin-left: 4px;
+}
+
+/* ---- Manage Profiles Footer Link ---- */
+.manage-profiles-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted, rgba(200,215,240,0.55));
+  text-decoration: none;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: color 0.2s;
+  margin-top: 8px;
+}
+
+.manage-profiles-link:hover {
+  color: var(--text, #e8eef8);
+}
+
+/* ---- Responsive ---- */
+@media (max-width: 480px) {
+  .profile-gate-inner {
+    padding: 32px 16px;
+  }
+  .profile-gate-inner h2 {
+    font-size: 1.6rem;
+  }
+  .profile-cards {
+    grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+    gap: 12px;
+  }
+  .profile-card {
+    padding: 18px 12px;
+  }
+  .profile-card .profile-avatar {
+    font-size: 2.2rem;
+  }
+  .profile-modal {
+    padding: 28px 20px;
+  }
+}

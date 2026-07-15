@@ -289,7 +289,8 @@ const CAMPAIGN_LEVELS = [
 
 const MAX_LEVEL = CAMPAIGN_LEVELS.length;
 
-const PROGRESS_STORAGE_KEY = 'harvestDashProgressV1';
+const PROGRESS_STORAGE_KEY_BASE = 'harvestDashProgressV1';
+function _getProgressKey() { return typeof ProfileManager !== 'undefined' ? ProfileManager.getKey(PROGRESS_STORAGE_KEY_BASE) : PROGRESS_STORAGE_KEY_BASE; }
 const COSMETIC_LOOKS = [
   {
     id: 'classic',
@@ -662,7 +663,7 @@ class WordRunner {
 
   _loadProgress() {
     try {
-      const raw = localStorage.getItem(PROGRESS_STORAGE_KEY);
+      const raw = localStorage.getItem(_getProgressKey());
       if (!raw) return { maxLevelCleared: 0, selectedCosmeticId: 'classic', clearedLevels: {} };
       const parsed = JSON.parse(raw);
       return {
@@ -677,7 +678,7 @@ class WordRunner {
 
   _saveProgress() {
     try {
-      localStorage.setItem(PROGRESS_STORAGE_KEY, JSON.stringify(this.progress));
+      localStorage.setItem(_getProgressKey(), JSON.stringify(this.progress));
     } catch {
       // Progress is a bonus; keep the game playable if storage is blocked.
     }

@@ -1901,11 +1901,12 @@ function waveConfig(waveNum, difficulty) {
 }
 
 // â”€â”€ Persistent Settings & Name Memory â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-const LS_NAMES_KEY  = 'duckHunt_savedNames';   // JSON array of unique name strings
-const LS_VOICE_KEY  = 'duckHunt_voiceEnabled'; // '0' or '1'
+const LS_NAMES_KEY_BASE  = 'duckHunt_savedNames';
+const LS_VOICE_KEY_BASE  = 'duckHunt_voiceEnabled';
+function _duelKey(base) { return typeof ProfileManager !== 'undefined' ? ProfileManager.getKey(base) : base; }
 
 function _savedNames() {
-  try { return JSON.parse(localStorage.getItem(LS_NAMES_KEY) || '[]'); } catch(e) { return []; }
+  try { return JSON.parse(localStorage.getItem(_duelKey(LS_NAMES_KEY_BASE)) || '[]'); } catch(e) { return []; }
 }
 
 function _addSavedName(name) {
@@ -1913,7 +1914,7 @@ function _addSavedName(name) {
   const list = _savedNames().filter(n => n !== name); // dedupe
   list.unshift(name); // most-recent first
   const capped = list.slice(0, 20); // keep max 20
-  localStorage.setItem(LS_NAMES_KEY, JSON.stringify(capped));
+  localStorage.setItem(_duelKey(LS_NAMES_KEY_BASE), JSON.stringify(capped));
 }
 
 function _refreshDatalist() {
@@ -1927,21 +1928,33 @@ window.addEventListener('DOMContentLoaded', () => {
 
   // â”€â”€ Restore saved names â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const saved = _savedNames();
-  // Pre-fill inputs with the three most recent names
-  ['p1Name','p2Name','p3Name'].forEach((id, i) => {
+  
+  // Try to use active profile for Player 1
+  const activeProfile = typeof ProfileManager !== 'undefined' ? ProfileManager.getActiveProfile() : null;
+  const p1El = document.getElementById('p1Name');
+  if (p1El) {
+    if (activeProfile && activeProfile.name) {
+      p1El.value = activeProfile.name;
+    } else if (saved[0]) {
+      p1El.value = saved[0];
+    }
+  }
+
+  // Pre-fill inputs with the most recent names for P2 and P3
+  ['p2Name','p3Name'].forEach((id, i) => {
     const el = document.getElementById(id);
-    if (el && saved[i]) el.value = saved[i];
+    if (el && saved[i+1]) el.value = saved[i+1];
   });
   _refreshDatalist();
 
   // â”€â”€ Restore voice toggle â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const voiceToggle = document.getElementById('voiceToggle');
   if (voiceToggle) {
-    const stored = localStorage.getItem(LS_VOICE_KEY);
+    const stored = localStorage.getItem(_duelKey(LS_VOICE_KEY_BASE));
     // Default is ON (checked). Only turn off if explicitly saved as '0'.
     voiceToggle.checked = stored !== '0';
     voiceToggle.addEventListener('change', () => {
-      localStorage.setItem(LS_VOICE_KEY, voiceToggle.checked ? '1' : '0');
+      localStorage.setItem(_duelKey(LS_VOICE_KEY_BASE), voiceToggle.checked ? '1' : '0');
     });
   }
 

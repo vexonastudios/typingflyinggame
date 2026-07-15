@@ -5,7 +5,8 @@ const PLAYER_MIN_X = 88;
 const PLAYER_MAX_X = 366;
 const PLAYER_MIN_Y = 94;
 const PLAYER_MAX_Y = 646;
-const HIGH_SCORE_STORAGE_KEY = "sky-typer-squadron-high-scores";
+const HIGH_SCORE_STORAGE_KEY_BASE = "sky-typer-squadron-high-scores";
+function _getHighScoreKey() { return typeof ProfileManager !== 'undefined' ? ProfileManager.getKey(HIGH_SCORE_STORAGE_KEY_BASE) : HIGH_SCORE_STORAGE_KEY_BASE; }
 const REPAIR_WORD_BANK = ["heal", "heart", "patch", "mend", "boost", "repair", "shield", "medic"];
 const TURRET_WORD_BANK = ["aim", "arc", "ash", "bam", "bolt", "burst", "flak", "lock", "ping", "shot", "zap"];
 
@@ -341,7 +342,7 @@ class SkyTyperGame {
 
   loadHighScores() {
     try {
-      const raw = window.localStorage.getItem(HIGH_SCORE_STORAGE_KEY);
+      const raw = window.localStorage.getItem(_getHighScoreKey());
       if (!raw) {
         return [];
       }
@@ -361,7 +362,7 @@ class SkyTyperGame {
 
   saveHighScores() {
     try {
-      window.localStorage.setItem(HIGH_SCORE_STORAGE_KEY, JSON.stringify(this.highScores.slice(0, 5)));
+      window.localStorage.setItem(_getHighScoreKey(), JSON.stringify(this.highScores.slice(0, 5)));
     } catch {
       // Ignore storage write issues and keep the run going.
     }
