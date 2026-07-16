@@ -632,7 +632,68 @@ class WordRunner {
       ro.observe(setupOverlay);
     }
 
+    // ── Mobile Touch Controller ──────────────────────────────────
+    // Detect touch devices and wire virtual gamepad buttons to the
+    // same this.keys map that the keyboard handler writes to.
+    // Zero changes to game logic required — the physics loop just
+    // reads this.keys[p.up/down/left/right] regardless of source.
+    const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+    if (isTouchDevice) {
+      document.body.classList.add('mobile-mode');
+
+      // Mapping of button-id → key string used by the physics loop
+      const MGP_MAP = {
+        mgpLeft:  'ArrowLeft',
+        mgpRight: 'ArrowRight',
+        mgpJump:  'ArrowUp',
+        mgpDown:  'ArrowDown',
+      };
+
+      // Track active touch IDs per button to handle multi-touch correctly
+      const activeTouches = {}; // buttonId → Set of touch identifiers
+
+      const pressBtn = (btnId) => {
+        this.keys[MGP_MAP[btnId]] = true;
+        const el = document.getElementById(btnId);
+        if (el) el.classList.add('mgp-pressed');
+      };
+
+      const releaseBtn = (btnId) => {
+        this.keys[MGP_MAP[btnId]] = false;
+        const el = document.getElementById(btnId);
+        if (el) el.classList.remove('mgp-pressed');
+      };
+
+      for (const [btnId] of Object.entries(MGP_MAP)) {
+        activeTouches[btnId] = new Set();
+        const el = document.getElementById(btnId);
+        if (!el) continue;
+
+        el.addEventListener('touchstart', (e) => {
+          e.preventDefault();
+          for (const t of e.changedTouches) activeTouches[btnId].add(t.identifier);
+          pressBtn(btnId);
+        }, { passive: false });
+
+        const endHandler = (e) => {
+          e.preventDefault();
+          for (const t of e.changedTouches) activeTouches[btnId].delete(t.identifier);
+          if (activeTouches[btnId].size === 0) releaseBtn(btnId);
+        };
+
+        el.addEventListener('touchend',    endHandler, { passive: false });
+        el.addEventListener('touchcancel', endHandler, { passive: false });
+      }
+
+      // Release all virtual keys when the window loses focus (e.g. notification pull-down)
+      window.addEventListener('blur', () => {
+        for (const btnId of Object.keys(MGP_MAP)) releaseBtn(btnId);
+      });
+    }
+    // ────────────────────────────────────────────────────────────
+
     this.state = 'setup';
+
     this.currentLevel = 1;
     this.gameIsOver = false;
     this.currentDifficulty = 'Medium';

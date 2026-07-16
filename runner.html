@@ -11,14 +11,18 @@
     gtag('config', 'G-ZTP50MJ7CX');
   </script>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="mobile-web-app-capable" content="yes">
   <title>Harvest Dash - Bodee Books</title>
   <meta name="description" content="Harvest Dash - a co-op farm platformer where you clear fields, jump on answer blocks, and defeat enemies!">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;900&display=swap" rel="stylesheet">
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
   <link rel="stylesheet" href="runner.css?v=campaign17">
   <link rel="stylesheet" href="play-timer.css">
-    <script src="profile-manager.js"></script>
+  <script src="profile-manager.js"></script>
   <script src="play-timer.js"></script>
 </head>
 <body>
@@ -128,9 +132,9 @@
               <div class="difficulty-row">
                 <label class="diff-label">Academic Level</label>
                 <div class="diff-options">
-                  <label class="diff-opt"><input type="radio" name="diff" value="Easy"> <span>Easy</span><small>Addition & Spelling</small></label>
-                  <label class="diff-opt selected"><input type="radio" name="diff" value="Medium" checked> <span>Medium</span><small>Multiplication & Grammar</small></label>
-                  <label class="diff-opt"><input type="radio" name="diff" value="Hard"> <span>Hard</span><small>Algebra & Vocabulary</small></label>
+                  <label class="diff-opt"><input type="radio" name="diff" value="Easy"> <span>Easy</span><small>Addition &amp; Spelling</small></label>
+                  <label class="diff-opt selected"><input type="radio" name="diff" value="Medium" checked> <span>Medium</span><small>Multiplication &amp; Grammar</small></label>
+                  <label class="diff-opt"><input type="radio" name="diff" value="Hard"> <span>Hard</span><small>Algebra &amp; Vocabulary</small></label>
                 </div>
               </div>
 
@@ -147,7 +151,7 @@
                 <label class="diff-label">Players</label>
                 <div class="diff-options">
                   <label class="diff-opt selected"><input type="radio" name="mode" value="1" checked> <span>1 Player</span><small>Solo run</small></label>
-                  <label class="diff-opt"><input type="radio" name="mode" value="2"> <span>2 Players</span><small>Co-op local</small></label>
+                  <label class="diff-opt mobile-hide"><input type="radio" name="mode" value="2"> <span>2 Players</span><small>Co-op local</small></label>
                 </div>
               </div>
             </div>
@@ -174,6 +178,18 @@
           <div class="end-stats" id="endStats"></div>
           <button id="playAgainBtn" class="start-btn" style="margin-top:24px">Next Level →</button>
           <button id="retryBtn" class="secondary-btn">↺ Retry Level</button>
+        </div>
+      </div>
+
+      <!-- Virtual Mobile Gamepad (shown only on touch devices via JS) -->
+      <div id="mobileGamepad" aria-hidden="true">
+        <div class="mgp-left">
+          <button id="mgpLeft"  class="mgp-btn mgp-left-btn"  aria-label="Move left">◀</button>
+          <button id="mgpRight" class="mgp-btn mgp-right-btn" aria-label="Move right">▶</button>
+        </div>
+        <div class="mgp-right">
+          <button id="mgpJump" class="mgp-btn mgp-jump-btn" aria-label="Jump">⬆</button>
+          <button id="mgpDown" class="mgp-btn mgp-drop-btn" aria-label="Drop">▼</button>
         </div>
       </div>
     </div>

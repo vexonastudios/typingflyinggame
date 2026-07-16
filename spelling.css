@@ -276,3 +276,212 @@ body {
 .hof-item { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px dashed rgba(255,255,255,0.1); padding-bottom: 4px; }
 .hof-name { font-weight: 700; color: white; }
 .hof-stats { color: var(--accent-orange); font-size: 0.9rem; font-weight: 600; }
+
+/* ═══════════════════════════════════════════════════════════════
+   MOBILE RESPONSIVE  (≤ 768px)
+   ═══════════════════════════════════════════════════════════════ */
+
+@media (max-width: 768px) {
+
+  /* ── Body: allow scroll so on-screen keyboard doesn't hide input ── */
+  body {
+    overflow: auto;
+    height: auto;
+    min-height: 100vh;
+    min-height: 100dvh;
+    padding: 0;
+    padding-bottom: env(safe-area-inset-bottom);
+    overscroll-behavior: none;
+  }
+
+  /* ── Screens: relative instead of absolute ── */
+  .screen {
+    position: relative;
+    min-height: 100vh;
+    min-height: 100dvh;
+  }
+
+  /* ── Stage background: simplify decorations ── */
+  .stage-curtains {
+    border-left-width: 12px;
+    border-right-width: 12px;
+  }
+  .spotlight { width: 160px; filter: blur(30px); }
+  .spotlight-left { left: -2%; }
+  .spotlight-right { right: -2%; }
+
+  /* ── Lobby card ── */
+  .lobby-card {
+    width: 96%;
+    max-width: none;
+    padding: 24px 18px;
+    gap: 14px;
+  }
+  .lobby-card h1 {
+    font-size: 2.2rem;
+  }
+  .lobby-card p {
+    font-size: 0.9rem;
+    line-height: 1.4;
+  }
+  .settings-row {
+    flex-direction: column;
+    gap: 10px;
+  }
+  .player-inputs {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+  .players-setup {
+    padding: 14px;
+    margin: 6px 0;
+  }
+  .btn-start {
+    font-size: 1rem;
+    padding: 14px 28px;
+  }
+
+  /* ── Scoreboard: inline instead of absolute ── */
+  .scoreboard {
+    position: relative;
+    top: auto;
+    right: auto;
+    width: 92%;
+    margin: 12px auto;
+    min-width: auto;
+    z-index: 20;
+  }
+  .scoreboard h3 {
+    font-size: 0.85rem;
+    margin-bottom: 8px;
+  }
+  .scoreboard li {
+    font-size: 0.9rem;
+  }
+
+  /* ── Game screen layout ── */
+  #gameScreen {
+    padding: 16px 0 0 0;
+    gap: 12px;
+  }
+
+  /* Round indicator: inline instead of absolute */
+  .round-indicator {
+    position: relative;
+    top: auto;
+    left: auto;
+    font-size: 1rem;
+    padding: 0 16px;
+    width: 100%;
+    flex-direction: row !important;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px !important;
+  }
+
+  /* ── Announcer panel ── */
+  .announcer-panel {
+    width: 92%;
+    max-width: none;
+    padding: 14px 16px;
+    font-size: 1.1rem;
+    gap: 12px;
+    margin-top: 10px;
+    border-left-width: 4px;
+  }
+  .narrator-icon {
+    font-size: 1.8rem;
+  }
+
+  /* ── Podium ── */
+  .podium-area {
+    width: 100%;
+    padding: 0 8px;
+  }
+  .active-player-text {
+    font-size: 2rem;
+    margin-bottom: 10px;
+    letter-spacing: 2px;
+  }
+  .podium-desk {
+    width: 100%;
+    max-width: 100%;
+    padding: 24px 16px 32px;
+    gap: 16px;
+    border-radius: 16px 16px 0 0;
+  }
+  .mic-stand {
+    display: none; /* Hidden on mobile — saves vertical space */
+  }
+
+  /* ── Hint buttons: wrap ── */
+  .hint-buttons {
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: center;
+    margin-top: 0;
+  }
+  .btn-hint {
+    padding: 8px 12px;
+    font-size: 0.85rem;
+  }
+
+  /* ── Spelling input + submit: stack vertically ── */
+  #spellingForm {
+    flex-direction: column;
+    gap: 10px;
+  }
+  .spelling-input {
+    font-size: 1.6rem;
+    letter-spacing: 3px;
+    padding: 12px 14px;
+    border-width: 2px;
+    border-bottom-width: 4px;
+  }
+  .btn-submit-spell {
+    width: 100%;
+    font-size: 1.1rem;
+    padding: 14px;
+    justify-content: center;
+  }
+
+  /* ── Timer ── */
+  .timer-container {
+    height: 14px;
+    margin-top: 12px;
+  }
+
+  /* ── Win screen ── */
+  .win-card {
+    width: 94%;
+    padding: 28px 18px;
+  }
+  .win-title {
+    font-size: 2.4rem !important;
+    margin-bottom: 18px !important;
+  }
+  .result-item {
+    font-size: 1.2rem !important;
+    padding: 12px 16px !important;
+  }
+  .result-item.first-place {
+    font-size: 1.4rem !important;
+    transform: none !important;
+  }
+
+  /* ── Navigation buttons ── */
+  .btn-back-float {
+    padding: 8px 14px;
+    font-size: 0.75rem;
+  }
+}
+
+/* Extra-small phones (≤ 380px) */
+@media (max-width: 380px) {
+  .lobby-card h1 { font-size: 1.8rem; }
+  .active-player-text { font-size: 1.6rem; }
+  .spelling-input { font-size: 1.3rem; letter-spacing: 2px; }
+  .announcer-panel { font-size: 0.95rem; }
+  .hint-buttons { gap: 6px; }
+  .btn-hint { padding: 6px 10px; font-size: 0.78rem; }
+}

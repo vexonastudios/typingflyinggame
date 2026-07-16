@@ -227,7 +227,11 @@ function enableInputs() {
   btnSaySent.disabled = false;
   spellingInput.disabled = false;
   btnSubmitSpell.disabled = false;
-  setTimeout(() => spellingInput.focus(), 100);
+  setTimeout(() => {
+    spellingInput.focus();
+    // On mobile, scroll the input into view above the on-screen keyboard
+    setTimeout(() => spellingInput.scrollIntoView({ behavior: 'smooth', block: 'center' }), 300);
+  }, 100);
 
   if (timerEnabled && turnTimer === null) {
     document.getElementById('timerContainer').classList.add('active');

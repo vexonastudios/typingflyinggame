@@ -11,15 +11,37 @@
     gtag('config', 'G-ZTP50MJ7CX');
   </script>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Spelling Bee Championship</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="mobile-web-app-capable" content="yes">
+  
+  <!-- SEO Meta Tags -->
+  <title>Spelling Bee Championship - Interactive Spelling Game | Bodee Books</title>
+  <meta name="description" content="Step up to the microphone in our Spelling Bee Championship! Compete with friends in a multi-round educational spelling game narrated by an AI judge. Great for kids and adults.">
+  <meta name="keywords" content="spelling bee, educational game, spelling game for kids, multiplayer spelling game, learn to spell, bodee books games">
+  <meta name="author" content="Bodee Books">
+  <link rel="canonical" href="https://games.bodeebooks.com/spelling">
+
+  <!-- Open Graph / Facebook -->
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://games.bodeebooks.com/spelling">
+  <meta property="og:title" content="Spelling Bee Championship | Bodee Books">
+  <meta property="og:description" content="Step up to the microphone! Compete with friends in a multi-round educational spelling game narrated by an AI judge.">
+
+  <!-- Twitter -->
+  <meta property="twitter:card" content="summary">
+  <meta property="twitter:url" content="https://games.bodeebooks.com/spelling">
+  <meta property="twitter:title" content="Spelling Bee Championship | Bodee Books">
+  <meta property="twitter:description" content="Step up to the microphone! Compete with friends in a multi-round educational spelling game narrated by an AI judge.">
+
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
   <link rel="stylesheet" href="spelling.css">
   <link rel="stylesheet" href="play-timer.css">
-    <script src="profile-manager.js"></script>
+  <script src="profile-manager.js"></script>
   <script src="play-timer.js"></script>
 </head>
 <body>
@@ -128,7 +150,7 @@
         </div>
         
         <form id="spellingForm" autocomplete="off">
-          <input type="text" id="spellingInput" class="spelling-input" placeholder="Type word here..." disabled autocomplete="off" spellcheck="false" autocorrect="off">
+          <input type="text" id="spellingInput" class="spelling-input" placeholder="Type word here..." disabled autocomplete="off" spellcheck="false" autocorrect="off" autocapitalize="off">
           <button type="submit" id="btnSubmitSpell" class="btn-submit-spell" disabled><i class="fa-solid fa-paper-plane"></i> Submit</button>
         </form>
       </div>
