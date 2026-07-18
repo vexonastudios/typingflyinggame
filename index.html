@@ -16,6 +16,13 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;900&display=swap" rel="stylesheet">
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  </script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bodee Books Family Game Hub</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;900&display=swap" rel="stylesheet">
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
   <link rel="stylesheet" href="hub.css">
   <link rel="stylesheet" href="profile-picker.css">
   <link rel="stylesheet" href="play-timer.css">
@@ -23,6 +30,9 @@
   <script src="play-timer.js"></script>
 </head>
 <body>
+  <button id="openFeedbackBtn" style="position:fixed; bottom: 24px; right: 24px; z-index: 1000; padding: 12px 20px; border-radius: 30px; background: #6366f1; color: white; border: none; font-weight: 600; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.3); font-size: 1rem; display: flex; align-items: center; gap: 8px;">
+    <span>💬</span> Feedback
+  </button>
   <canvas id="starCanvas" aria-hidden="true"></canvas>
 
   <!-- ── Profile Gate ── -->
@@ -64,6 +74,35 @@
         <button id="pinSubmitBtn" class="profile-btn profile-btn--primary">Unlock</button>
         <button id="pinCancelBtn" class="profile-btn profile-btn--ghost">Back</button>
       </div>
+    </div>
+  </div>
+
+  <!-- ── Feedback Modal ── -->
+  <div id="feedbackModalOverlay" class="profile-modal-overlay">
+    <div class="profile-modal">
+      <h3 style="margin-bottom: 8px;">💬 Send Feedback</h3>
+      <p style="color:var(--muted); margin-bottom: 20px; font-size: 0.9rem;">Spotted a bug? Have a suggestion? We want to hear from you!</p>
+      <form id="feedback-form">
+        <label for="feedback-type">Type</label>
+        <select id="feedback-type" required style="width:100%; padding: 10px; margin-bottom: 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); background: rgba(0,0,0,0.2); color: white;">
+          <option value="Bug Report">Bug Report</option>
+          <option value="Feature Request">Feature Request</option>
+          <option value="General Feedback">General Feedback</option>
+        </select>
+        
+        <label for="feedback-message">Message *</label>
+        <textarea id="feedback-message" required rows="4" style="width:100%; padding: 10px; margin-bottom: 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); background: rgba(0,0,0,0.2); color: white;" placeholder="Describe the issue or idea..."></textarea>
+        
+        <label for="feedback-email">Email (optional)</label>
+        <input type="email" id="feedback-email" placeholder="you@example.com" style="width:100%; padding: 10px; margin-bottom: 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); background: rgba(0,0,0,0.2); color: white;">
+        
+        <div id="feedback-status" style="margin-bottom: 12px; font-size: 0.9rem; font-weight: 500; display: none;"></div>
+        
+        <div class="profile-modal-actions">
+          <button type="submit" id="feedbackSubmitBtn" class="profile-btn profile-btn--primary">Send</button>
+          <button type="button" id="feedbackCancelBtn" class="profile-btn profile-btn--ghost">Cancel</button>
+        </div>
+      </form>
     </div>
   </div>
 
@@ -828,6 +867,74 @@
         // Just show the hub as guest
         showHub();
       }
+
+      // ── Feedback ──
+      const feedbackBtn = document.getElementById('openFeedbackBtn');
+      const feedbackOverlay = document.getElementById('feedbackModalOverlay');
+      const feedbackCancelBtn = document.getElementById('feedbackCancelBtn');
+      const feedbackForm = document.getElementById('feedback-form');
+      const feedbackStatus = document.getElementById('feedback-status');
+      const feedbackSubmitBtn = document.getElementById('feedbackSubmitBtn');
+
+      feedbackBtn.addEventListener('click', () => {
+        feedbackOverlay.classList.add('active');
+        feedbackStatus.style.display = 'none';
+        feedbackForm.reset();
+      });
+
+      feedbackCancelBtn.addEventListener('click', () => {
+        feedbackOverlay.classList.remove('active');
+      });
+
+      feedbackForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const type = document.getElementById('feedback-type').value;
+        const message = document.getElementById('feedback-message').value.trim();
+        const email = document.getElementById('feedback-email').value.trim();
+        const name = ProfileManager.getActiveProfile()?.name || "Guest";
+
+        feedbackSubmitBtn.disabled = true;
+        feedbackSubmitBtn.textContent = 'Sending...';
+        feedbackStatus.style.display = 'block';
+        feedbackStatus.style.color = '#94a3b8';
+        feedbackStatus.textContent = 'Sending...';
+
+        try {
+          const payload = {
+            source: 'Games Hub',
+            type,
+            name,
+            email,
+            message,
+            url: window.location.href,
+            userAgent: navigator.userAgent.slice(0, 200)
+          };
+
+          const res = await fetch("https://www.bodeebooks.com/api/feedback/", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
+          });
+
+          if (!res.ok) throw new Error("Server error");
+          
+          feedbackStatus.style.color = '#4ade80';
+          feedbackStatus.textContent = '✅ Feedback sent successfully!';
+          feedbackForm.reset();
+          
+          setTimeout(() => {
+            feedbackOverlay.classList.remove('active');
+          }, 2000);
+          
+        } catch (err) {
+          feedbackStatus.style.color = '#ef4444';
+          feedbackStatus.textContent = '❌ Failed to connect to server. Please try again later.';
+        } finally {
+          feedbackSubmitBtn.disabled = false;
+          feedbackSubmitBtn.textContent = 'Send';
+        }
+      });
 
     })();
   </script>
