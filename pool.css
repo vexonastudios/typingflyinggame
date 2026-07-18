@@ -10,7 +10,7 @@
 body {
   min-height: 100vh;
   display: flex; flex-direction: column; align-items: center; justify-content: center;
-  background: #0d0e12;
+  background: linear-gradient(rgba(13, 14, 18, 0.75), rgba(13, 14, 18, 0.95)), url('images/pool_bg.png') center/cover no-repeat;
   font-family: 'Outfit', sans-serif;
   color: #e0e0e0;
   overflow: hidden;
@@ -25,13 +25,16 @@ body {
 }
 
 .overlay-card {
-  background: rgba(20, 22, 30, 0.95);
-  border: 1px solid rgba(255,255,255,0.08);
-  border-radius: 20px;
+  background: rgba(20, 22, 30, 0.65);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-top: 1px solid rgba(255,255,255,0.25);
+  border-radius: 24px;
   padding: 36px 44px;
   max-width: 520px; width: 90%;
   text-align: center;
-  box-shadow: 0 24px 80px rgba(0,0,0,0.6);
+  box-shadow: 0 32px 80px rgba(0,0,0,0.8), inset 0 0 20px rgba(255,255,255,0.02);
 }
 
 /* ── Player name inputs ── */
