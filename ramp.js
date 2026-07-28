@@ -1432,11 +1432,34 @@ class RampRacer {
     ctx.restore();
   }
 
-  _lighten(hex, amt) {
-    const r = parseInt(hex.slice(1,3),16);
-    const g = parseInt(hex.slice(3,5),16);
-    const b = parseInt(hex.slice(5,7),16);
-    return `rgb(${Math.min(255,r+amt)},${Math.min(255,g+amt)},${Math.min(255,b+amt)})`;
+  _lighten(colorStr, amt) {
+    if (!colorStr) return 'rgb(128,128,128)';
+    let r = 0, g = 0, b = 0;
+    if (colorStr.startsWith('#')) {
+      const hex = colorStr.slice(1);
+      if (hex.length === 3) {
+        r = parseInt(hex[0]+hex[0], 16);
+        g = parseInt(hex[1]+hex[1], 16);
+        b = parseInt(hex[2]+hex[2], 16);
+      } else {
+        r = parseInt(hex.slice(0,2), 16) || 0;
+        g = parseInt(hex.slice(2,4), 16) || 0;
+        b = parseInt(hex.slice(4,6), 16) || 0;
+      }
+    } else if (colorStr.startsWith('rgb')) {
+      const match = colorStr.match(/\d+/g);
+      if (match && match.length >= 3) {
+        r = parseInt(match[0], 10);
+        g = parseInt(match[1], 10);
+        b = parseInt(match[2], 10);
+      }
+    } else {
+      return colorStr;
+    }
+    r = Math.max(0, Math.min(255, r + amt));
+    g = Math.max(0, Math.min(255, g + amt));
+    b = Math.max(0, Math.min(255, b + amt));
+    return `rgb(${r},${g},${b})`;
   }
 }
 
