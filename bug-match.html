@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <!-- Google tag (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-ZTP50MJ7CX"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-ZTP50MJ7CX');
+  </script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bug Match - Memory Game | Bodee Books</title>
+  <meta name="description" content="A fun bug-themed memory matching game for kids! Flip over leaves to find matching bugs. Train your brain and improve your memory!">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;900&display=swap" rel="stylesheet">
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="bug-match.css">
+  <link rel="stylesheet" href="play-timer.css">
+  <script src="profile-manager.js"></script>
+  <script src="play-timer.js"></script>
+  <script defer src="https://www.bodeebooks.com/bodee-analytics.js"></script>
+</head>
+<body>
+
+  <!-- Ambient bug particles (rendered by JS) -->
+  <div id="ambientBugs" aria-hidden="true"></div>
+
+  <!-- Header -->
+  <header class="game-header bm-header">
+    <div style="display:flex; align-items:center; gap:8px;">
+      <a href="index.html" class="hub-back-btn">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+        Back to Hub
+      </a>
+      <button id="soundToggleBtn" class="bm-sound-btn" title="Toggle Sound">🔊</button>
+    </div>
+    <div class="bm-header-center">
+      <span class="bm-header-icon">🐞</span>
+      <h1 class="bm-header-title">Bug Match</h1>
+    </div>
+    <div class="bm-header-stats" id="stats1P">
+      <div class="bm-stat" id="statMoves">
+        <span class="bm-stat-label">Moves</span>
+        <span class="bm-stat-value" id="movesCount">0</span>
+      </div>
+      <div class="bm-stat" id="statMatches">
+        <span class="bm-stat-label">Matches</span>
+        <span class="bm-stat-value" id="matchesCount">0</span>
+      </div>
+      <div class="bm-stat" id="statTimer">
+        <span class="bm-stat-label">Time</span>
+        <span class="bm-stat-value" id="timerDisplay">0:00</span>
+      </div>
+    </div>
+    
+    <div class="bm-header-stats hidden" id="stats2P">
+      <div class="bm-player-panel active-turn" id="panelP1">
+        <div class="bm-player-avatar">P1</div>
+        <div class="bm-player-info">
+          <span class="bm-player-name">Player 1</span>
+          <span class="bm-player-score" id="scoreP1">0</span>
+        </div>
+      </div>
+      <div class="bm-player-panel" id="panelP2">
+        <div class="bm-player-avatar">P2</div>
+        <div class="bm-player-info">
+          <span class="bm-player-name">Player 2</span>
+          <span class="bm-player-score" id="scoreP2">0</span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Menu Screen -->
+  <div class="bm-screen active" id="menuScreen">
+    <div class="bm-menu">
+      <div class="bm-menu-bugs" aria-hidden="true">
+        <span class="bm-menu-bug bm-menu-bug--1">🐞</span>
+        <span class="bm-menu-bug bm-menu-bug--2">🦋</span>
+        <span class="bm-menu-bug bm-menu-bug--3">🐛</span>
+        <span class="bm-menu-bug bm-menu-bug--4">🐝</span>
+        <span class="bm-menu-bug bm-menu-bug--5">🐜</span>
+        <span class="bm-menu-bug bm-menu-bug--6">🦗</span>
+      </div>
+      <h2 class="bm-menu-title">Bug Match!</h2>
+      <p class="bm-menu-subtitle">Flip the leaves and find matching bugs!</p>
+
+      <div class="bm-difficulty-chooser" style="margin-bottom: 20px;">
+        <p class="bm-difficulty-label">Players:</p>
+        <div class="bm-mode-grid">
+          <button class="bm-diff-btn bm-diff-btn--selected" id="mode1P" data-mode="1">
+            <span class="bm-diff-icon">👤</span>
+            <span class="bm-diff-name">1 Player</span>
+          </button>
+          <button class="bm-diff-btn" id="mode2P" data-mode="2">
+            <span class="bm-diff-icon">👥</span>
+            <span class="bm-diff-name">2 Players</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="bm-difficulty-chooser">
+        <p class="bm-difficulty-label">Choose your grid size:</p>
+        <div class="bm-diff-grid">
+          <button class="bm-diff-btn" id="diffEasy" data-size="4">
+            <span class="bm-diff-icon">🌱</span>
+            <span class="bm-diff-name">Easy</span>
+            <span class="bm-diff-sub">4×4 · 8 pairs</span>
+          </button>
+          <button class="bm-diff-btn bm-diff-btn--selected" id="diffMedium" data-size="5">
+            <span class="bm-diff-icon">🌿</span>
+            <span class="bm-diff-name">Medium</span>
+            <span class="bm-diff-sub">4×5 · 10 pairs</span>
+          </button>
+          <button class="bm-diff-btn" id="diffHard" data-size="6">
+            <span class="bm-diff-icon">🌳</span>
+            <span class="bm-diff-name">Hard</span>
+            <span class="bm-diff-sub">6×6 · 18 pairs</span>
+          </button>
+        </div>
+      </div>
+
+      <button class="bm-start-btn" id="startBtn">
+        <span>🍃 Start Game!</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Game Screen -->
+  <div class="bm-screen" id="gameScreen">
+    <div class="bm-game-area">
+      <div class="bm-board" id="gameBoard" role="grid" aria-label="Memory game board"></div>
+    </div>
+    <div class="bm-game-bottom">
+      <button class="bm-action-btn" id="restartBtn" title="Restart this game">
+        🔄 Restart
+      </button>
+      <button class="bm-action-btn bm-action-btn--menu" id="menuBtn" title="Back to menu">
+        🏠 Menu
+      </button>
+    </div>
+  </div>
+
+  <!-- Win Screen Overlay -->
+  <div class="bm-overlay hidden" id="winOverlay">
+    <div class="bm-overlay-content">
+      <div class="bm-win-bugs" aria-hidden="true">
+        <span>🎉</span><span>🐞</span><span>🎉</span>
+        <span>🦋</span><span>🏆</span><span>🦋</span>
+        <span>🎉</span><span>🐝</span><span>🎉</span>
+      </div>
+      <h2 class="bm-win-title" id="winTitleText">You Did It! 🎊</h2>
+      <p class="bm-win-sub" id="winSubText">You matched all the bugs!</p>
+      
+      <div class="bm-win-stats" id="winStats1P">
+        <div class="bm-win-stat">
+          <span class="bm-win-stat-icon">👣</span>
+          <span class="bm-win-stat-val" id="winMoves">—</span>
+          <span class="bm-win-stat-lbl">Moves</span>
+        </div>
+        <div class="bm-win-stat">
+          <span class="bm-win-stat-icon">⏱️</span>
+          <span class="bm-win-stat-val" id="winTime">—</span>
+          <span class="bm-win-stat-lbl">Time</span>
+        </div>
+        <div class="bm-win-stat">
+          <span class="bm-win-stat-icon">⭐</span>
+          <span class="bm-win-stat-val" id="winStars">—</span>
+          <span class="bm-win-stat-lbl">Stars</span>
+        </div>
+      </div>
+      
+      <div class="bm-win-stats hidden" id="winStats2P">
+        <div class="bm-win-stat" id="winStatP1">
+          <span class="bm-win-stat-lbl" style="font-size:0.9rem;">Player 1</span>
+          <span class="bm-win-stat-val" id="winScoreP1">—</span>
+          <span class="bm-win-stat-lbl">Matches</span>
+        </div>
+        <div class="bm-win-stat" id="winStatP2">
+          <span class="bm-win-stat-lbl" style="font-size:0.9rem;">Player 2</span>
+          <span class="bm-win-stat-val" id="winScoreP2">—</span>
+          <span class="bm-win-stat-lbl">Matches</span>
+        </div>
+      </div>
+      <div class="bm-win-actions">
+        <button class="bm-start-btn" id="playAgainBtn">🔄 Play Again</button>
+        <button class="bm-action-btn bm-action-btn--menu" id="winMenuBtn">🏠 Menu</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="bug-match.js"></script>
+</body>
+</html>

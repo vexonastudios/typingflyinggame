@@ -1417,3 +1417,80 @@ body {
 .hub-wip[open] {
   padding-bottom: 32px;
 }
+
+/* ============================================================
+   BUG MATCH — Hub Card Styles
+   ============================================================ */
+
+/* Glow */
+.card-glow--bugmatch {
+  background: radial-gradient(circle at 50% 50%, rgba(74, 173, 74, 0.6), transparent 70%);
+  box-shadow: 0 0 50px rgba(74, 173, 74, 0.35);
+}
+
+/* Badge */
+.badge--bugmatch {
+  background: linear-gradient(135deg, #2d7a2d, #4aad4a);
+  color: #d4ffd4;
+  font-weight: 700;
+}
+
+/* Play button accent */
+.card-play-btn--bugmatch {
+  color: #6fce6f;
+}
+
+/* Card art */
+.card-art--bugmatch {
+  background: linear-gradient(180deg, #0d2b0d 0%, #1b4a1b 60%, #2a6e2a 100%);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Grass strip at the bottom */
+.art-bugmatch-grass {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 28%;
+  background: linear-gradient(180deg, #2a6e2a, #1b4a1b);
+  border-radius: 0 0 12px 12px;
+}
+
+/* Leaves (card backs) */
+.art-bugmatch-leaf {
+  position: absolute;
+  font-size: 1.5rem;
+  line-height: 1;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));
+  animation: hubLeafSway 3s ease-in-out infinite;
+}
+
+.art-bugmatch-leaf--1 { bottom: 26%; left: 10%; animation-delay: 0s;    animation-duration: 3.2s; transform: rotate(-15deg); }
+.art-bugmatch-leaf--2 { bottom: 26%; left: 38%; animation-delay: 0.4s;  animation-duration: 2.8s; transform: rotate(5deg); }
+.art-bugmatch-leaf--3 { bottom: 26%; right: 20%; animation-delay: 0.8s; animation-duration: 3.5s; transform: rotate(-8deg); }
+.art-bugmatch-leaf--4 { bottom: 18%; left: 60%; animation-delay: 0.2s; animation-duration: 3.0s; transform: rotate(20deg); }
+
+@keyframes hubLeafSway {
+  0%, 100% { transform: rotate(var(--r, -10deg)) translateY(0); }
+  50%       { transform: rotate(calc(var(--r, -10deg) + 8deg)) translateY(-3px); }
+}
+
+/* Bugs floating up from leaves */
+.art-bugmatch-bug {
+  position: absolute;
+  font-size: 1.4rem;
+  animation: hubBugFloat 2.5s ease-in-out infinite;
+  filter: drop-shadow(0 3px 6px rgba(0,0,0,0.4));
+}
+
+.art-bugmatch-bug--1 { bottom: 52%; left: 14%;  animation-delay: 0s;   animation-duration: 2.2s; }
+.art-bugmatch-bug--2 { bottom: 55%; left: 42%;  animation-delay: 0.6s; animation-duration: 2.8s; }
+.art-bugmatch-bug--3 { bottom: 50%; right: 16%; animation-delay: 1.1s; animation-duration: 2.5s; }
+
+@keyframes hubBugFloat {
+  0%, 100% { transform: translateY(0) rotate(0deg); opacity: 0.9; }
+  50%       { transform: translateY(-8px) rotate(10deg); opacity: 1; }
+}
+
