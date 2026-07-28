@@ -41,37 +41,6 @@
       <span class="bm-header-icon">🐞</span>
       <h1 class="bm-header-title">Bug Match</h1>
     </div>
-    <div class="bm-header-stats" id="stats1P">
-      <div class="bm-stat" id="statMoves">
-        <span class="bm-stat-label">Moves</span>
-        <span class="bm-stat-value" id="movesCount">0</span>
-      </div>
-      <div class="bm-stat" id="statMatches">
-        <span class="bm-stat-label">Matches</span>
-        <span class="bm-stat-value" id="matchesCount">0</span>
-      </div>
-      <div class="bm-stat" id="statTimer">
-        <span class="bm-stat-label">Time</span>
-        <span class="bm-stat-value" id="timerDisplay">0:00</span>
-      </div>
-    </div>
-    
-    <div class="bm-header-stats hidden" id="stats2P">
-      <div class="bm-player-panel active-turn" id="panelP1">
-        <div class="bm-player-avatar">P1</div>
-        <div class="bm-player-info">
-          <span class="bm-player-name">Player 1</span>
-          <span class="bm-player-score" id="scoreP1">0</span>
-        </div>
-      </div>
-      <div class="bm-player-panel" id="panelP2">
-        <div class="bm-player-avatar">P2</div>
-        <div class="bm-player-info">
-          <span class="bm-player-name">Player 2</span>
-          <span class="bm-player-score" id="scoreP2">0</span>
-        </div>
-      </div>
-    </div>
   </header>
 
   <!-- Menu Screen -->
@@ -131,6 +100,41 @@
 
   <!-- Game Screen -->
   <div class="bm-screen" id="gameScreen">
+    
+    <div class="bm-scoreboard-container">
+      <div class="bm-scoreboard" id="stats1P">
+        <div class="bm-stat" id="statMoves">
+          <span class="bm-stat-label">Moves</span>
+          <span class="bm-stat-value" id="movesCount">0</span>
+        </div>
+        <div class="bm-stat" id="statMatches">
+          <span class="bm-stat-label">Matches</span>
+          <span class="bm-stat-value" id="matchesCount">0</span>
+        </div>
+        <div class="bm-stat" id="statTimer">
+          <span class="bm-stat-label">Time</span>
+          <span class="bm-stat-value" id="timerDisplay">0:00</span>
+        </div>
+      </div>
+      
+      <div class="bm-scoreboard hidden" id="stats2P">
+        <div class="bm-player-panel active-turn" id="panelP1">
+          <div class="bm-player-avatar">P1</div>
+          <div class="bm-player-info">
+            <span class="bm-player-name">Player 1</span>
+            <span class="bm-player-score" id="scoreP1">0</span>
+          </div>
+        </div>
+        <div class="bm-player-panel" id="panelP2">
+          <div class="bm-player-avatar">P2</div>
+          <div class="bm-player-info">
+            <span class="bm-player-name">Player 2</span>
+            <span class="bm-player-score" id="scoreP2">0</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <div class="bm-game-area">
       <div class="bm-board" id="gameBoard" role="grid" aria-label="Memory game board"></div>
     </div>
