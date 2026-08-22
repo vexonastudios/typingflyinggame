@@ -1257,92 +1257,10 @@ body {
 
 /* ---- Tiny Turbo Racers card art ---- */
 .card-art--turboracer {
-  background: linear-gradient(180deg, #0d1117 0%, #1a1a2e 40%, #16213e 100%);
-  position: relative;
-  overflow: hidden;
-}
-
-/* Animated asphalt road */
-.art-tr-road {
-  position: absolute;
-  bottom: 0; left: 0; right: 0; height: 55%;
-  background: linear-gradient(180deg, #1c1c1c 0%, #2a2a2a 100%);
-  border-top: 3px solid #555;
-}
-
-/* Center dashed lane stripes */
-.art-tr-stripe {
-  position: absolute;
-  bottom: 22%;
-  height: 6px;
-  width: 50px;
-  background: #ffd700;
-  border-radius: 3px;
-  animation: stripeScroll 0.7s linear infinite;
-}
-.art-tr-stripe--1 { left: 5%;  animation-delay: 0s; }
-.art-tr-stripe--2 { left: 38%; animation-delay: -0.23s; }
-.art-tr-stripe--3 { left: 70%; animation-delay: -0.46s; }
-
-@keyframes stripeScroll {
-  from { transform: translateX(0); }
-  to   { transform: translateX(-80px); }
-}
-
-/* Racing cars */
-.art-tr-car {
-  position: absolute;
-  font-size: 34px;
-  bottom: 30%;
-  filter: drop-shadow(0 4px 8px rgba(0,0,0,0.6));
-}
-.art-tr-car--1 {
-  left: 15%;
-  animation: carRace1 2.4s ease-in-out infinite alternate;
-}
-.art-tr-car--2 {
-  left: 50%;
-  font-size: 28px;
-  animation: carRace2 2.4s ease-in-out infinite alternate 0.8s;
-}
-
-@keyframes carRace1 {
-  from { left: 12%; transform: translateY(0) rotate(-1deg); }
-  to   { left: 30%; transform: translateY(-3px) rotate(1deg); }
-}
-@keyframes carRace2 {
-  from { left: 48%; transform: translateY(0); }
-  to   { left: 60%; transform: translateY(-2px); }
-}
-
-/* Speed lines */
-.art-tr-speed {
-  position: absolute;
-  height: 2px;
-  border-radius: 2px;
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent);
-  animation: speedLine 0.5s linear infinite;
-}
-.art-tr-speed--1 { top: 35%; left: 0; width: 60%; animation-delay: 0s; }
-.art-tr-speed--2 { top: 55%; left: 10%; width: 45%; animation-delay: -0.25s; }
-@keyframes speedLine {
-  from { transform: translateX(-100%); opacity: 0; }
-  50%  { opacity: 1; }
-  to   { transform: translateX(200%); opacity: 0; }
-}
-
-/* Checkered flag */
-.art-tr-flag {
-  position: absolute;
-  top: 10%;
-  right: 10%;
-  font-size: 42px;
-  animation: flagWave 1.5s ease-in-out infinite alternate;
-  filter: drop-shadow(0 0 12px rgba(255,220,50,0.5));
-}
-@keyframes flagWave {
-  from { transform: rotate(-8deg) scale(1); }
-  to   { transform: rotate(8deg) scale(1.05); }
+  background-color: #276e9a;
+  background-image: linear-gradient(0deg, rgba(11, 24, 38, 0.3), transparent 44%), url("images/tiny-turbo-racers-card.png");
+  background-position: center 56%;
+  background-size: cover;
 }
 
 /* Featured card — spans full width on large screens */
