@@ -29,6 +29,8 @@ const RELOAD_TIME  = 1.5;
 const HIT_DIST     = 0.5;
 const WALL_MARGIN  = 0.28;
 const INVINCIBLE_T = 1.2;
+const PLAYER_GAP   = 0.78;
+const FIXED_STEP   = 1 / 120;
 
 // ─── Palette ─────────────────────────────────────────────────
 const WALL_PALETTES = [
@@ -389,6 +391,8 @@ class Player {
     this.gunSwayY   = 0;
     this._stepTimer = 0;
     this.hitPop     = 0;
+    this.walkBlend  = 0;
+    this.cameraBob  = 0;
 
     // Speed boost (improvement 1)
     this.speedBoost = 0;  // remaining seconds
@@ -565,6 +569,7 @@ class NerfArena {
     this.state  = 'setup';
     this.lastTs = 0;
     this.time   = 0;
+    this._accumulator = 0;
     this.textures = [];
     this.mode     = 'solo';
     this.theme    = ARENA_THEMES[0];
@@ -703,6 +708,7 @@ class NerfArena {
   _startGame() {
     Sfx._r();
     clearTimeout(this._resultTimer);
+    this._accumulator = 0;
     Object.keys(this.touch).forEach(key => { this.touch[key] = false; });
     document.querySelectorAll('[data-touch]').forEach(button => button.classList.remove('active'));
     this.mode       = document.querySelector('input[name="gamemode"]:checked')?.value || 'solo';
@@ -931,7 +937,11 @@ class NerfArena {
     const dt = clamp((ts - this.lastTs) / 1000, 0, 0.05);
     this.lastTs = ts;
     this.time  += dt;
-    this._update(dt);
+    this._accumulator = Math.min(0.08, this._accumulator + dt);
+    while (this._accumulator >= FIXED_STEP) {
+      this._update(FIXED_STEP);
+      this._accumulator -= FIXED_STEP;
+    }
     this._draw();
     requestAnimationFrame(ts2 => this._loop(ts2));
   }
@@ -1077,14 +1087,17 @@ class NerfArena {
 
     const cosA = Math.cos(p.angle), sinA = Math.sin(p.angle);
     const strafeSpeed = input.strafe * MOVE_SPD * 0.78 * speedMult;
-    const nx = p.x + (cosA * p.velFwd - sinA * strafeSpeed) * dt;
-    const ny = p.y + (sinA * p.velFwd + cosA * strafeSpeed) * dt;
-    const m  = WALL_MARGIN;
+    const moveX = (cosA * p.velFwd - sinA * strafeSpeed) * dt;
+    const moveY = (sinA * p.velFwd + cosA * strafeSpeed) * dt;
+    const oldDist = Math.hypot(p.x - opp.x, p.y - opp.y);
+    const nx = p.x + moveX;
+    const nextXDist = Math.hypot(nx - opp.x, p.y - opp.y);
+    if (this._canOccupy(nx, p.y) && (nextXDist >= PLAYER_GAP || nextXDist > oldDist)) p.x = nx;
 
-    if (!this._wallAt(nx + m*Math.sign(cosA), p.y) &&
-        !this._wallAt(nx - m*Math.sign(cosA), p.y)) p.x = nx;
-    if (!this._wallAt(p.x, ny + m*Math.sign(sinA)) &&
-        !this._wallAt(p.x, ny - m*Math.sign(sinA))) p.y = ny;
+    const ny = p.y + moveY;
+    const currentDist = Math.hypot(p.x - opp.x, p.y - opp.y);
+    const nextYDist = Math.hypot(p.x - opp.x, ny - opp.y);
+    if (this._canOccupy(p.x, ny) && (nextYDist >= PLAYER_GAP || nextYDist > currentDist)) p.y = ny;
 
     // Pickup collection (Improvement #1)
     this.pickups = this.pickups.filter(pk => {
@@ -1108,18 +1121,20 @@ class NerfArena {
 
     // Gun bob
     const moving = Math.abs(p.velFwd) > 0.15 || Math.abs(input.strafe) > 0.1;
+    p.walkBlend += ((moving ? 1 : 0) - p.walkBlend) * Math.min(1, 8 * dt);
     if (moving) {
       p.bobTimer  += dt * 7;
-      p.gunSwayX   = Math.sin(p.bobTimer) * (p.ads ? 1.5 : 5);
-      p.gunSwayY   = Math.abs(Math.sin(p.bobTimer)) * (p.ads ? 1 : 4);
       p._stepTimer -= dt;
       if (p._stepTimer <= 0) { Sfx.step(); p._stepTimer = 0.32; }
     } else {
       p.bobTimer  += dt * 1.2;
-      p.gunSwayX   = Math.sin(p.bobTimer) * (p.ads ? 0.3 : 0.9);
-      p.gunSwayY   = 0;
       p._stepTimer = 0;
     }
+    const swayX = Math.sin(p.bobTimer) * (p.ads ? 1.4 : 4.5) * p.walkBlend;
+    const swayY = Math.abs(Math.sin(p.bobTimer)) * (p.ads ? 0.8 : 3.5) * p.walkBlend;
+    p.gunSwayX += (swayX - p.gunSwayX) * Math.min(1, 14 * dt);
+    p.gunSwayY += (swayY - p.gunSwayY) * Math.min(1, 14 * dt);
+    p.cameraBob = Math.sin(p.bobTimer * 2) * (p.ads ? 0.8 : 2.6) * p.walkBlend;
 
     // ── Dart physics ──
     p.darts = p.darts.filter(dart => {
@@ -1277,6 +1292,8 @@ class NerfArena {
     p.angle = Math.atan2(attacker.y - p.y, attacker.x - p.x);
     p.velFwd = 0;
     p.velTurn = 0;
+    p.walkBlend = 0;
+    p.cameraBob = 0;
     p.ammo = MAX_AMMO;
     p.reloading = false;
     p.reloadTimer = 0;
@@ -1290,6 +1307,12 @@ class NerfArena {
   _wallAt(mx, my) {
     if (my < 0 || my >= this.map.length || mx < 0 || mx >= this.map[0].length) return true;
     return this.map[Math.floor(my)][Math.floor(mx)] > 0;
+  }
+
+  _canOccupy(x, y) {
+    const m = WALL_MARGIN;
+    return !this._wallAt(x - m, y - m) && !this._wallAt(x + m, y - m) &&
+           !this._wallAt(x - m, y + m) && !this._wallAt(x + m, y + m);
   }
 
   // ─── Results Screen (Improvement #4: accuracy + confetti) ──
@@ -1382,26 +1405,28 @@ class NerfArena {
 
   _drawView(ctx, p, opp, ox, oy, vpW, vpH) {
     const halfH = vpH / 2;
+    const cameraBob = p.cameraBob || 0;
+    const horizon = halfH + cameraBob;
     const theme = this.theme || ARENA_THEMES[0];
 
     // ADS vignette darkens the edges
     const adsAlpha = p.ads ? (1 - (p.fov - FOV_ADS) / (FOV_NORMAL - FOV_ADS)) * 0.55 : 0;
 
     // ── Ceiling ──
-    const ceilG = ctx.createLinearGradient(0, oy, 0, oy + halfH);
+    const ceilG = ctx.createLinearGradient(0, oy, 0, oy + horizon);
     ceilG.addColorStop(0, theme.skyTop);
     ceilG.addColorStop(1, theme.skyBottom);
     ctx.fillStyle = ceilG;
-    ctx.fillRect(ox, oy, vpW, halfH);
+    ctx.fillRect(ox, oy, vpW, horizon);
 
     // ── Floor ──
-    const floorG = ctx.createLinearGradient(0, oy + halfH, 0, oy + vpH);
+    const floorG = ctx.createLinearGradient(0, oy + horizon, 0, oy + vpH);
     floorG.addColorStop(0, theme.floorTop);
     floorG.addColorStop(1, theme.floorBottom);
     ctx.fillStyle = floorG;
-    ctx.fillRect(ox, oy + halfH, vpW, halfH);
+    ctx.fillRect(ox, oy + horizon, vpW, vpH - horizon);
 
-    this._drawArenaAtmosphere(ctx, ox, oy, vpW, vpH, halfH, theme);
+    this._drawArenaAtmosphere(ctx, ox, oy, vpW, vpH, horizon, theme);
 
     // ── Perspective floor markings ──
     ctx.save();
@@ -1409,7 +1434,7 @@ class NerfArena {
     ctx.lineWidth = 1;
     for (let i = 1; i < 18; i++) {
       const t = Math.pow(i / 18, 1.8);
-      const y = oy + halfH + t * halfH;
+      const y = oy + horizon + t * (vpH - horizon);
       if (y > oy + vpH) break;
       ctx.beginPath(); ctx.moveTo(ox, y); ctx.lineTo(ox + vpW, y); ctx.stroke();
     }
@@ -1417,7 +1442,7 @@ class NerfArena {
     for (let j = -6; j <= 6; j++) {
       const px2 = ox + vpW/2 + j * vpW * 0.16;
       ctx.beginPath();
-      ctx.moveTo(ox + vpW/2, oy + halfH);
+      ctx.moveTo(ox + vpW/2, oy + horizon);
       ctx.lineTo(px2, oy + vpH);
       ctx.stroke();
     }
@@ -1426,18 +1451,19 @@ class NerfArena {
     // ── Textured Walls ──
     const zBuf = new Float32Array(vpW);
     const halfFov = p.fov / 2;  // use player's current (lerped) FOV
+    const rayStep = this.W >= 1000 ? 2 : 1;
 
-    for (let col = 0; col < vpW; col++) {
+    for (let col = 0; col < vpW; col += rayStep) {
       const rayAngle = p.angle - halfFov + (col / vpW) * p.fov;
       const { dist, wallType, side, wallX } = castRay(this.map, p.x, p.y, rayAngle);
 
       const cDist = Math.max(0.04, dist * Math.cos(rayAngle - p.angle));
-      zBuf[col] = cDist;
+      for (let z = col; z < Math.min(vpW, col + rayStep); z++) zBuf[z] = cDist;
 
       if (wallType === 0) continue;
 
       const wallH = Math.min(vpH * 4, vpH / cDist);
-      const wallY = (vpH - wallH) / 2;
+      const wallY = (vpH - wallH) / 2 + cameraBob;
 
       const tex = this.textures[wallType] || this.textures[1];
       const TW = tex.width, TH = tex.height;
@@ -1446,36 +1472,37 @@ class NerfArena {
       if (side === 1 && Math.sin(rayAngle) < 0) texX = TW - texX - 1;
       texX = clamp(texX, 0, TW-1);
 
-      ctx.drawImage(tex, texX, 0, 1, TH, ox+col, oy+wallY, 1, wallH);
+      const drawW = Math.min(rayStep + 0.25, vpW - col);
+      ctx.drawImage(tex, texX, 0, 1, TH, ox+col, oy+wallY, drawW, wallH);
 
       let fog = clamp(cDist / 17, 0, 1) * 0.78;
       if (side === 1) fog = clamp(fog + 0.12, 0, 0.9);
 
       if (fog > 0.01) {
         ctx.fillStyle = theme.fog.replace(/[\d.]+\)$/, `${fog.toFixed(2)})`);
-        ctx.fillRect(ox+col, oy+wallY, 1, wallH);
+        ctx.fillRect(ox+col, oy+wallY, drawW, wallH);
       }
 
       const aoY = oy + wallY + wallH;
-      if (aoY > oy + halfH && aoY < oy + vpH) {
+      if (aoY > oy + horizon && aoY < oy + vpH) {
         const aoH = Math.min(wallH * 0.18, 55);
         ctx.fillStyle = `rgba(0,0,0,0.5)`;
-        ctx.fillRect(ox+col, aoY - aoH, 1, aoH);
+        ctx.fillRect(ox+col, aoY - aoH, drawW, aoH);
       }
     }
 
     // ── Pickup billboards (Improvement #1) ──
     this.pickups.forEach(pk => {
-      this._drawPickup(ctx, p, pk, ox, oy, vpW, vpH, zBuf);
+      this._drawPickup(ctx, p, pk, ox, oy, vpW, vpH, zBuf, cameraBob);
     });
 
     // ── Opponent sprite ──
-    this._drawSprite(ctx, p, opp, ox, oy, vpW, vpH, zBuf);
+    this._drawSprite(ctx, p, opp, ox, oy, vpW, vpH, zBuf, cameraBob);
 
     // ── Dart projectiles ──
     this.players.forEach(shooter => {
       shooter.darts.forEach(dart => {
-        this._drawDart(ctx, p, dart, shooter.color, ox, oy, vpW, vpH, zBuf);
+        this._drawDart(ctx, p, dart, shooter.color, ox, oy, vpW, vpH, zBuf, cameraBob);
       });
     });
 
@@ -1571,7 +1598,7 @@ class NerfArena {
   }
 
   // ─── Pickup Billboard (Improvement #1) ─────────────────────
-  _drawPickup(ctx, viewer, pk, ox, oy, vpW, vpH, zBuf) {
+  _drawPickup(ctx, viewer, pk, ox, oy, vpW, vpH, zBuf, cameraBob = 0) {
     const dx = pk.x - viewer.x, dy = pk.y - viewer.y;
     const dist = Math.sqrt(dx*dx + dy*dy);
     if (dist < 0.3 || dist > 14) return;
@@ -1585,7 +1612,7 @@ class NerfArena {
     const sH  = clamp(vpH / dist, 20, vpH * 0.7);
     const sW  = sH;
     const bob = Math.sin(pk.bob) * 5;
-    const sY  = (vpH - sH) / 2 + bob;
+    const sY  = (vpH - sH) / 2 + bob + cameraBob;
 
     const sC = Math.floor(sx - sW/2), eC = Math.floor(sx + sW/2);
     const info = PICKUP_TYPES[pk.type];
@@ -1626,7 +1653,7 @@ class NerfArena {
   }
 
   // ─── Opponent Sprite ────────────────────────────────────────
-  _drawSprite(ctx, viewer, sprite, ox, oy, vpW, vpH, zBuf) {
+  _drawSprite(ctx, viewer, sprite, ox, oy, vpW, vpH, zBuf, cameraBob = 0) {
     const dx = sprite.x - viewer.x, dy = sprite.y - viewer.y;
     const dist = Math.sqrt(dx*dx + dy*dy);
     if (dist < 0.25) return;
@@ -1638,9 +1665,9 @@ class NerfArena {
 
     const depth = Math.max(0.05, dist * Math.cos(normAngle));
     const screenX  = (normAngle / viewer.fov + 0.5) * vpW;
-    const spriteH  = Math.min(vpH * 1.75, vpH / depth);
-    const spriteW  = spriteH * 0.67;
-    const spriteTop = (vpH - spriteH) / 2;
+    const spriteH  = Math.min(vpH * 1.15, (vpH / depth) * 0.78);
+    const spriteW  = spriteH * 0.64;
+    const spriteTop = (vpH - spriteH) / 2 + cameraBob;
     const brt      = Math.max(0.35, 1 - dist / 11);
 
     const startCol = Math.floor(screenX - spriteW/2);
@@ -1651,19 +1678,50 @@ class NerfArena {
 
     const spriteImg = this.playerSprites[sprite.id];
     if (spriteImg?.complete && spriteImg.naturalWidth > 0) {
+      const centerCol = clamp(Math.floor(screenX), 0, vpW - 1);
+      const centerVisible = zBuf[centerCol] > depth;
+      const walk = sprite.walkBlend || 0;
+      const gait = Math.sin(sprite.bobTimer * 2);
+      const bodyLift = -Math.abs(gait) * spriteH * 0.006 * walk;
+      const hipRatio = 0.61;
+      const hipSource = Math.floor(spriteImg.naturalHeight * hipRatio);
+      const hipDest = spriteH * hipRatio;
+      const groundY = oy + spriteTop + spriteH;
+      const columnStep = this.W >= 1000 ? 2 : 1;
+
+      if (centerVisible) {
+        ctx.save();
+        ctx.globalAlpha = Math.max(0.09, 0.24 - dist * 0.012);
+        ctx.fillStyle = '#07100d';
+        ctx.beginPath();
+        ctx.ellipse(ox + screenX, groundY - 2, spriteW * 0.23, Math.max(2, spriteH * 0.025), 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+
       ctx.save();
       ctx.imageSmoothingEnabled = true;
       ctx.globalAlpha = Math.max(0.58, 1 - dist / 24);
-      for (let col = Math.max(0, startCol); col < Math.min(vpW, endCol); col++) {
+      for (let col = Math.max(0, startCol); col < Math.min(vpW, endCol); col += columnStep) {
         if (zBuf[col] <= depth) continue;
         const u = clamp((col - startCol) / Math.max(1, endCol - startCol), 0, 0.999);
         const sourceX = Math.floor(u * spriteImg.naturalWidth);
-        ctx.drawImage(spriteImg, sourceX, 0, 1, spriteImg.naturalHeight, ox + col, oy + spriteTop, 1.15, spriteH);
+        const sourceW = Math.min(spriteImg.naturalWidth - sourceX,
+          Math.max(1, Math.ceil(columnStep * spriteImg.naturalWidth / Math.max(1, spriteW))));
+        const drawW = Math.min(columnStep + 0.35, vpW - col);
+        const legPhase = u < 0.5 ? gait : -gait;
+        const legLift = Math.max(0, legPhase) * spriteH * 0.065 * walk;
+        const legSwing = legPhase * spriteW * 0.022 * walk;
+
+        ctx.drawImage(spriteImg, sourceX, 0, sourceW, hipSource,
+          ox + col, oy + spriteTop + bodyLift, drawW, hipDest);
+        ctx.drawImage(spriteImg, sourceX, hipSource, sourceW, spriteImg.naturalHeight - hipSource,
+          ox + col + legSwing, oy + spriteTop + hipDest + bodyLift - legLift,
+          drawW, spriteH - hipDest);
       }
       ctx.restore();
 
-      const centerCol = clamp(Math.floor(screenX), 0, vpW - 1);
-      if (dist < 7 && zBuf[centerCol] > depth) {
+      if (dist < 7 && centerVisible) {
         ctx.save();
         ctx.font = '800 11px Outfit';
         ctx.textAlign = 'center';
@@ -1755,7 +1813,7 @@ class NerfArena {
   }
 
   // ─── Dart Projectile ────────────────────────────────────────
-  _drawDart(ctx, viewer, dart, color, ox, oy, vpW, vpH, zBuf) {
+  _drawDart(ctx, viewer, dart, color, ox, oy, vpW, vpH, zBuf, cameraBob = 0) {
     const dx = dart.x - viewer.x, dy = dart.y - viewer.y;
     const dist = Math.sqrt(dx*dx + dy*dy);
     if (dist < 0.18 || dist > 20) return;
@@ -1768,7 +1826,7 @@ class NerfArena {
     const sx = (na / viewer.fov + 0.5) * vpW;
     const dH = clamp(7 / dist * 5, 3, vpH * 0.4);
     const dW = dH * 2.8;
-    const dY = vpH / 2 - dH / 2;
+    const dY = vpH / 2 - dH / 2 + cameraBob;
 
     const sC = Math.floor(sx - dW/2), eC = Math.floor(sx + dW/2);
     for (let col = Math.max(0, sC); col < Math.min(vpW, eC); col++) {
