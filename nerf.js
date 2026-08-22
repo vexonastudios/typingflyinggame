@@ -33,7 +33,7 @@ const INVINCIBLE_T = 1.2;
 // ─── Palette ─────────────────────────────────────────────────
 const WALL_PALETTES = [
   // 0: Classic — burnt orange + slate + forest
-  [ null, '#c44a0a', '#1565c0', '#2e7d32', '#7b1fa2', '#b71c1c', '#e65100', '#00838f' ],
+  [ null, '#d85720', '#176db0', '#31845a', '#e4a71c', '#b8352c', '#dd6b20', '#16858f' ],
   // 1: Maze — deep navy labyrinth
   [ null, '#0d47a1', '#01579b', '#004d40', '#311b92', '#6a1b4d', '#1b5e20', '#bf360c' ],
   // 2: Fortress — stone brown + earth
@@ -48,6 +48,17 @@ const WALL_PALETTES = [
   [ null, '#1a237e', '#0097a7', '#283593', '#0288d1', '#006064', '#01579b', '#004d40' ],
   // 7: Catacombs — charcoal stone + bone
   [ null, '#37474f', '#4e342e', '#263238', '#4a4a2a', '#455a64', '#4a148c', '#212121' ],
+];
+
+const ARENA_THEMES = [
+  { name:'Training Yard', skyTop:'#78c8e9', skyBottom:'#d9eef2', floorTop:'#718c4b', floorBottom:'#34442c', grid:'rgba(248,238,183,0.15)', fog:'rgba(189,214,203,0.76)', light:'#ffd75b' },
+  { name:'Neon Maze', skyTop:'#183d62', skyBottom:'#3d7190', floorTop:'#23343d', floorBottom:'#11191e', grid:'rgba(67,214,224,0.18)', fog:'rgba(18,42,57,0.82)', light:'#4fe0e4' },
+  { name:'Twin Fortress', skyTop:'#82a4b3', skyBottom:'#d5c7aa', floorTop:'#7f735c', floorBottom:'#3e3a31', grid:'rgba(244,213,151,0.12)', fog:'rgba(143,132,111,0.78)', light:'#ffc66d' },
+  { name:'Loading Dock', skyTop:'#526a74', skyBottom:'#9eafb1', floorTop:'#4f5b5d', floorBottom:'#242b2d', grid:'rgba(255,180,70,0.15)', fog:'rgba(77,91,94,0.82)', light:'#ff9a3d' },
+  { name:'Reactor Core', skyTop:'#143f3e', skyBottom:'#527f68', floorTop:'#354c3f', floorBottom:'#14241d', grid:'rgba(190,235,77,0.2)', fog:'rgba(26,68,52,0.82)', light:'#b9ef4c' },
+  { name:'Dusty Frontier', skyTop:'#66a7ca', skyBottom:'#efc28d', floorTop:'#b56e45', floorBottom:'#5a3829', grid:'rgba(255,231,169,0.13)', fog:'rgba(192,138,91,0.76)', light:'#ffd270' },
+  { name:'Orbital Hub', skyTop:'#171b3a', skyBottom:'#394b73', floorTop:'#273345', floorBottom:'#101724', grid:'rgba(73,211,232,0.2)', fog:'rgba(24,34,57,0.84)', light:'#56e2f0' },
+  { name:'Old Tunnels', skyTop:'#3c3a35', skyBottom:'#716b59', floorTop:'#514c40', floorBottom:'#24221e', grid:'rgba(222,190,131,0.1)', fog:'rgba(59,55,47,0.86)', light:'#e6bd72' },
 ];
 
 // ─── Arena Maps ─────────────────────────────────────────────
@@ -342,8 +353,13 @@ class Player {
     this.x          = startPos.x;
     this.y          = startPos.y;
     this.angle      = startPos.a;
+    this.spawn      = { x:startPos.x, y:startPos.y, a:startPos.a };
     this.velFwd     = 0;
     this.velTurn    = 0;
+    this.isBot      = false;
+    this.botThink   = 0;
+    this.botPath    = [];
+    this.gamepadIdx = id;
 
     // Combat
     this.ammo       = MAX_AMMO;
@@ -436,10 +452,14 @@ class Pickup {
 class KillFeed {
   constructor() { this.entries = []; }
 
+  _colorFor(name) {
+    return /Bot|Blue|Player 2/.test(name) ? P_COLORS[1] : P_COLORS[0];
+  }
+
   add(attacker, victim, isKill) {
     this.entries.unshift({
       text:    isKill ? `${attacker} eliminated ${victim}!` : `${attacker} hit ${victim}`,
-      color:   P_COLORS[P_NAMES.indexOf(attacker)],
+      color:   this._colorFor(attacker),
       ttl:     isKill ? 4.5 : 2.8,
       maxTtl:  isKill ? 4.5 : 2.8,
       isKill,
@@ -448,7 +468,7 @@ class KillFeed {
   }
 
   addPickup(playerName, label) {
-    const pColor = P_COLORS[P_NAMES.indexOf(playerName)];
+    const pColor = this._colorFor(playerName);
     this.entries.unshift({
       text:   `${playerName} picked up ${label}!`,
       color:  pColor,
@@ -546,6 +566,18 @@ class NerfArena {
     this.lastTs = 0;
     this.time   = 0;
     this.textures = [];
+    this.mode     = 'solo';
+    this.theme    = ARENA_THEMES[0];
+    this.pausedFrom = 'playing';
+    this.mouse = { shoot:false, ads:false };
+    this.touch = { fwd:false, back:false, left:false, right:false, shoot:false, ads:false, reload:false };
+    this._resultTimer = null;
+
+    this.playerSprites = ['images/foam-arena-player-orange.png', 'images/foam-arena-player-blue.png'].map(src => {
+      const img = new Image();
+      img.src = src;
+      return img;
+    });
 
     this.players    = [];
     this.map        = null;
@@ -570,12 +602,48 @@ class NerfArena {
 
     const BLOCKED = ['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space',
                      'KeyW','KeyS','KeyA','KeyD','KeyR','Enter','Slash',
-                     'KeyQ','Numpad0'];  // ADS keys also blocked
+                     'KeyQ','Numpad0'];
     window.addEventListener('keydown', e => {
       this.keys[e.code] = true;
       if (BLOCKED.includes(e.code)) e.preventDefault();
+      if (e.repeat) return;
+      if (e.code === 'KeyF') this._toggleFullscreen();
+      if (e.code === 'Escape' && !document.pointerLockElement) this._togglePause();
     });
     window.addEventListener('keyup', e => { this.keys[e.code] = false; });
+
+    document.addEventListener('mousemove', e => {
+      if (this.mode === 'solo' && this.state === 'playing' && document.pointerLockElement === this.canvas && this.players[0]) {
+        this.players[0].angle += e.movementX * 0.00235;
+      }
+    });
+    this.canvas.addEventListener('mousedown', e => {
+      if (this.mode !== 'solo' || this.state !== 'playing') return;
+      if (document.pointerLockElement !== this.canvas) this._requestPointerLock();
+      if (e.button === 0) this.mouse.shoot = true;
+      if (e.button === 2) this.mouse.ads = true;
+    });
+    document.addEventListener('mouseup', e => {
+      if (e.button === 0) this.mouse.shoot = false;
+      if (e.button === 2) this.mouse.ads = false;
+    });
+    this.canvas.addEventListener('contextmenu', e => e.preventDefault());
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden && this.state === 'playing') this._pauseGame();
+    });
+    document.addEventListener('fullscreenchange', () => {
+      const button = document.getElementById('fullscreenBtn');
+      const active = Boolean(document.fullscreenElement);
+      button.setAttribute('aria-label', active ? 'Exit fullscreen' : 'Enter fullscreen');
+      button.title = active ? 'Exit fullscreen (F)' : 'Fullscreen (F)';
+      button.innerHTML = `<i data-lucide="${active ? 'minimize' : 'maximize'}"></i>`;
+      if (window.lucide) window.lucide.createIcons();
+    });
+    document.addEventListener('pointerlockchange', () => {
+      if (this.mode === 'solo' && this.state === 'playing' && document.pointerLockElement !== this.canvas) this._pauseGame();
+    });
+
+    if (window.lucide) window.lucide.createIcons();
 
     requestAnimationFrame(ts => this._loop(ts));
   }
@@ -590,78 +658,68 @@ class NerfArena {
 
   // ─── UI Binding ────────────────────────────────────────────
   _bindUI() {
-    document.querySelectorAll('.diff-opt').forEach(el => {
+    document.querySelectorAll('.select-option, .arena-option').forEach(el => {
       el.addEventListener('click', () => {
-        const grp = el.closest('.option-group');
-        grp.querySelectorAll('.diff-opt').forEach(e => e.classList.remove('selected'));
-        el.classList.add('selected');
         const input = el.querySelector('input');
+        document.querySelectorAll(`input[name="${input.name}"]`).forEach(radio => {
+          radio.closest('label')?.classList.remove('selected');
+        });
+        el.classList.add('selected');
         input.checked = true;
         Sfx.click();
 
         if (input.name === 'gamemode') {
-          const isCampaign = input.value === 'campaign';
-          const isDavid    = input.value === 'david';
-          const isAlt = isCampaign || isDavid;
-          document.getElementById('duelSettings').style.display = isAlt ? 'none' : 'block';
-          document.getElementById('ctrlDivider').style.display = isAlt ? 'none' : 'block';
-          document.getElementById('player2Controls').style.display = isAlt ? 'none' : 'block';
-
-          const p1Controls = document.getElementById('player1Controls');
-          if (isDavid) {
-            p1Controls.innerHTML = `
-              <h4><span class="player-color-1">David</span></h4>
-              <p><b>W / S</b> — Move forward / back</p>
-              <p><b>A / D</b> — Turn left / right</p>
-              <p><b>Hold Space</b> — Charge sling, release to fire</p>
-              <p><b>R</b> — Gather more stones</p>
-            `;
-          } else if (isCampaign) {
-            p1Controls.innerHTML = `
-              <h4><span class="player-color-1">Single Player</span></h4>
-              <p><b>↑ / ↓</b> — Move forward / back</p>
-              <p><b>← / →</b> — Turn left / right</p>
-              <p><b>LClick / Space</b> — Shoot</p>
-              <p><b>R</b> — Reload</p>
-            `;
-          } else {
-            p1Controls.innerHTML = `
-              <h4><span class="player-color-1">Player 1</span></h4>
-              <p><b>W / S</b> — Move forward / back</p>
-              <p><b>A / D</b> — Turn left / right</p>
-              <p><b>Space</b> — Shoot &nbsp;<b>Q</b> — Aim</p>
-              <p><b>R</b> — Reload</p>
-            `;
-          }
+          const duel = input.value === 'duel';
+          document.getElementById('player2Controls').hidden = !duel;
+          document.getElementById('player1Controls').innerHTML = duel
+            ? '<strong id="player1Label">Orange Team</strong><span><kbd>W / S</kbd> Move</span><span><kbd>A / D</kbd> Turn</span><span><kbd>Space</kbd> Fire</span><span><kbd>Q</kbd> Aim</span><span><kbd>R</kbd> Reload</span>'
+            : '<strong id="player1Label">You</strong><span><kbd>WASD</kbd> Move</span><span><kbd>Mouse</kbd> Aim</span><span><kbd>Click</kbd> Fire</span><span><kbd>R</kbd> Reload</span>';
         }
       });
     });
 
-    document.getElementById('startBtn').addEventListener('click', () => {
-      const mode = document.querySelector('input[name="gamemode"]:checked')?.value || 'duel';
-      if (mode === 'campaign') {
-        window.location.href = 'nerf-campaign.html';
-      } else if (mode === 'david') {
-        window.location.href = 'david.html';
-      } else {
-        this._startGame();
-      }
-    });
-
+    document.getElementById('startBtn').addEventListener('click', () => this._startGame());
     document.getElementById('restartBtn').addEventListener('click', () => this._goSetup());
+    document.getElementById('rematchBtn').addEventListener('click', () => this._startGame());
+    document.getElementById('pauseBtn').addEventListener('click', () => this._togglePause());
+    document.getElementById('resumeBtn').addEventListener('click', () => this._resumeGame());
+    document.getElementById('restartMatchBtn').addEventListener('click', () => this._startGame());
+    document.getElementById('setupBtn').addEventListener('click', () => this._goSetup());
+    document.getElementById('menuBtn').addEventListener('click', () => this._goSetup());
+    document.getElementById('fullscreenBtn').addEventListener('click', () => this._toggleFullscreen());
+    document.querySelectorAll('[data-touch]').forEach(button => {
+      const action = button.dataset.touch;
+      const set = (pressed, e) => {
+        e.preventDefault();
+        this.touch[action] = pressed;
+        button.classList.toggle('active', pressed);
+        if (pressed) button.setPointerCapture?.(e.pointerId);
+      };
+      button.addEventListener('pointerdown', e => set(true, e));
+      ['pointerup','pointercancel','lostpointercapture'].forEach(type => button.addEventListener(type, e => set(false, e)));
+    });
   }
 
   _startGame() {
     Sfx._r();
+    clearTimeout(this._resultTimer);
+    Object.keys(this.touch).forEach(key => { this.touch[key] = false; });
+    document.querySelectorAll('[data-touch]').forEach(button => button.classList.remove('active'));
+    this.mode       = document.querySelector('input[name="gamemode"]:checked')?.value || 'solo';
     this.targetHits = parseInt(document.querySelector('input[name="target"]:checked')?.value || '5');
     this.arenaIdx   = parseInt(document.querySelector('input[name="arena"]:checked')?.value  || '0');
     this.map        = MAPS[this.arenaIdx];
     this.palette    = WALL_PALETTES[this.arenaIdx];
+    this.theme      = ARENA_THEMES[this.arenaIdx];
     this._generateTextures();
     this._floorCeilCache = null;
 
     document.getElementById('gameSetup').style.display   = 'none';
     document.getElementById('gameResults').style.display = 'none';
+    document.getElementById('pauseOverlay').style.display = 'none';
+    document.getElementById('gameTools').hidden = false;
+    document.body.classList.remove('solo-mode', 'duel-mode');
+    document.body.classList.add('playing', `${this.mode}-mode`);
 
     // P1: WASD + Space fire + Q for ADS
     // P2: Arrows + Enter fire + Numpad0 for ADS
@@ -673,7 +731,15 @@ class NerfArena {
       new Player(0, C1, starts[0]),
       new Player(1, C2, starts[1]),
     ];
-
+    if (this.mode === 'solo') {
+      this.players[0].name = 'You';
+      this.players[1].name = 'Arena Bot';
+      this.players[1].isBot = true;
+      this.players[1].gamepadIdx = -1;
+    } else {
+      this.players[0].name = 'Orange Team';
+      this.players[1].name = 'Blue Team';
+    }
     // Reset systems
     this.pickups       = [];
     this._pickupTimer  = 5;  // first pickup spawns in 5s
@@ -684,14 +750,57 @@ class NerfArena {
     this._cdTimer = 0.9;
     this.state = 'countdown';
     Sfx.countdown();
-    this._showBanner('NERF ARENA!');
+    if (this.mode === 'solo') this._requestPointerLock();
   }
 
   _goSetup() {
+    clearTimeout(this._resultTimer);
     document.getElementById('gameSetup').style.display   = '';
     document.getElementById('gameResults').style.display = 'none';
+    document.getElementById('pauseOverlay').style.display = 'none';
+    document.getElementById('gameTools').hidden = true;
+    document.body.classList.remove('playing', 'solo-mode', 'duel-mode');
+    document.exitPointerLock?.();
     this.state = 'setup';
     this.confetti = null;
+    this.mouse.shoot = false;
+    this.mouse.ads = false;
+    Object.keys(this.touch).forEach(key => { this.touch[key] = false; });
+  }
+
+  _togglePause() {
+    if (this.state === 'paused') this._resumeGame();
+    else if (this.state === 'playing' || this.state === 'countdown') this._pauseGame();
+  }
+
+  _pauseGame() {
+    this.pausedFrom = this.state;
+    this.state = 'paused';
+    this.mouse.shoot = false;
+    this.mouse.ads = false;
+    document.getElementById('pauseOverlay').style.display = 'flex';
+    document.exitPointerLock?.();
+  }
+
+  _resumeGame() {
+    if (this.state !== 'paused') return;
+    document.getElementById('pauseOverlay').style.display = 'none';
+    this.state = this.pausedFrom === 'countdown' ? 'countdown' : 'playing';
+    if (this.mode === 'solo') this._requestPointerLock();
+  }
+
+  _requestPointerLock() {
+    try {
+      const request = this.canvas.requestPointerLock?.();
+      request?.catch?.(() => {});
+    } catch (_) {
+      // Pointer lock is optional; keyboard, touch, and controller aiming remain available.
+    }
+  }
+
+  _toggleFullscreen() {
+    const action = document.fullscreenElement ? document.exitFullscreen?.() : document.documentElement.requestFullscreen?.();
+    action?.catch?.(() => {});
   }
 
   _showBanner(text) {
@@ -783,15 +892,27 @@ class NerfArena {
         });
       }
       else if (i === 5) {
-        g.fillStyle = '#111'; g.fillRect(0, 0, S, S);
-        for (let cx = 6; cx < S-6; cx += 22) {
-          g.fillStyle = '#2a2a2a'; g.fillRect(cx, 4, 16, S-8);
-          g.fillStyle = '#1a1a1a'; g.fillRect(cx, 4, 1, S-8); g.fillRect(cx+15, 4, 1, S-8);
-          for (let cy = 10; cy < S-10; cy += 10) {
-            if (Math.random() > 0.28) {
-              const colors = ['#ff2020','#20ff40','#2090ff','#ffaa00'];
-              g.fillStyle = colors[Math.floor(Math.random()*colors.length)];
-              g.fillRect(cx+4, cy, 8, 4);
+        if (this.arenaIdx === 0) {
+          g.fillStyle = '#244f3f'; g.fillRect(0, 0, S, S);
+          g.fillStyle = 'rgba(255,255,255,.11)';
+          for (let y = 12; y < S; y += 24) g.fillRect(0, y, S, 2);
+          [[32,35],[96,35],[32,93],[96,93]].forEach(([tx,ty]) => {
+            ['#f5f1df','#ef4d23','#ffc928','#173a4b'].forEach((color, ring) => {
+              g.fillStyle = color;
+              g.beginPath(); g.arc(tx, ty, 17 - ring * 4, 0, Math.PI * 2); g.fill();
+            });
+          });
+        } else {
+          g.fillStyle = '#111'; g.fillRect(0, 0, S, S);
+          for (let cx = 6; cx < S-6; cx += 22) {
+            g.fillStyle = '#2a2a2a'; g.fillRect(cx, 4, 16, S-8);
+            g.fillStyle = '#1a1a1a'; g.fillRect(cx, 4, 1, S-8); g.fillRect(cx+15, 4, 1, S-8);
+            for (let cy = 10; cy < S-10; cy += 10) {
+              if (Math.random() > 0.28) {
+                const colors = ['#ff2020','#20ff40','#2090ff','#ffaa00'];
+                g.fillStyle = colors[Math.floor(Math.random()*colors.length)];
+                g.fillRect(cx+4, cy, 8, 4);
+              }
             }
           }
         }
@@ -822,7 +943,7 @@ class NerfArena {
     // Confetti runs even on results screen
     if (this.confetti) this.confetti.update(dt);
 
-    if (this.state === 'results') return;
+    if (this.state === 'results' || this.state === 'paused') return;
 
     if (this.state === 'countdown') {
       this._cdTimer -= dt;
@@ -861,7 +982,7 @@ class NerfArena {
         this.state = 'done';
         Sfx.win();
         this.confetti = new Confetti(this.W, this.H);
-        setTimeout(() => this._showResults(winner), 1800);
+        this._resultTimer = setTimeout(() => this._showResults(winner), 1200);
       }
     }
   }
@@ -883,7 +1004,7 @@ class NerfArena {
   }
 
   _updatePlayer(p, opp, dt) {
-    const k = this.keys;
+    const input = this._readInput(p, opp, dt);
 
     // Timers
     p.hitFlash    = Math.max(0, p.hitFlash    - dt);
@@ -896,7 +1017,7 @@ class NerfArena {
     p._adsSfxCd   = Math.max(0, p._adsSfxCd   - dt);
 
     // ── ADS (Improvement #3) ──
-    const wantsAds = k[p.ctrl.ads] || false;
+    const wantsAds = input.ads;
     if (wantsAds !== p.ads) {
       p.ads = wantsAds;
       if (p._adsSfxCd <= 0) { Sfx.ads(); p._adsSfxCd = 0.15; }
@@ -910,21 +1031,22 @@ class NerfArena {
       p.reloadTimer -= dt;
       if (p.reloadTimer <= 0) { p.ammo = MAX_AMMO; p.reloading = false; }
     }
-    if (!p.reloading && k[p.ctrl.reload] && p.ammo < MAX_AMMO) {
+    if (!p.reloading && input.reload && p.ammo < MAX_AMMO) {
       p.reloading = true; p.reloadTimer = RELOAD_TIME; Sfx.reload();
     }
 
     // ── Shoot (only when playing, FIX: was missing state check) ──
-    if (this.state === 'playing' && k[p.ctrl.shoot] && !p.reloading && p._shootCd <= 0) {
+    if (this.state === 'playing' && input.shoot && !p.reloading && p._shootCd <= 0) {
       if (p.ammo > 0) {
         p.ammo--;
         p.shotsFired++;
-        p._shootCd    = p.ads ? 0.22 : 0.18;  // slight penalty while ADS
+        p._shootCd    = p.isBot ? 0.42 : (p.ads ? 0.22 : 0.18);
         p.muzzleFlash = 0.10;
         p.gunRecoil   = 0.4;
         Sfx.shoot();
         // ADS = tighter spread
-        const spread = (Math.random() - 0.5) * (p.ads ? 0.008 : 0.03);
+        const spreadBase = p.isBot ? (p.ads ? 0.05 : 0.075) : (p.ads ? 0.008 : 0.03);
+        const spread = (Math.random() - 0.5) * spreadBase;
         p.darts.push({
           x: p.x, y: p.y,
           vx: Math.cos(p.angle + spread) * DART_SPD,
@@ -945,8 +1067,8 @@ class NerfArena {
     if (this.state !== 'playing') return;
 
     const speedMult  = p.speedBoost > 0 ? 1.6 : 1.0;
-    const targetFwd  = k[p.ctrl.fwd]   ? MOVE_SPD * speedMult : k[p.ctrl.back] ? -MOVE_SPD * 0.6 * speedMult : 0;
-    const targetTurn = k[p.ctrl.turnL] ? -TURN_SPD * p.adsMult : k[p.ctrl.turnR] ? TURN_SPD * p.adsMult : 0;
+    const targetFwd  = input.fwd * MOVE_SPD * speedMult * (input.fwd < 0 ? 0.6 : 1);
+    const targetTurn = input.turn * TURN_SPD * p.adsMult;
 
     p.velFwd  += (targetFwd  - p.velFwd)  * Math.min(1, MOVE_ACCEL  * dt);
     p.velTurn += (targetTurn - p.velTurn) * Math.min(1, TURN_ACCEL  * dt);
@@ -954,8 +1076,9 @@ class NerfArena {
     p.angle += p.velTurn * dt;
 
     const cosA = Math.cos(p.angle), sinA = Math.sin(p.angle);
-    const nx = p.x + cosA * p.velFwd * dt;
-    const ny = p.y + sinA * p.velFwd * dt;
+    const strafeSpeed = input.strafe * MOVE_SPD * 0.78 * speedMult;
+    const nx = p.x + (cosA * p.velFwd - sinA * strafeSpeed) * dt;
+    const ny = p.y + (sinA * p.velFwd + cosA * strafeSpeed) * dt;
     const m  = WALL_MARGIN;
 
     if (!this._wallAt(nx + m*Math.sign(cosA), p.y) &&
@@ -984,7 +1107,7 @@ class NerfArena {
     });
 
     // Gun bob
-    const moving = Math.abs(p.velFwd) > 0.15;
+    const moving = Math.abs(p.velFwd) > 0.15 || Math.abs(input.strafe) > 0.1;
     if (moving) {
       p.bobTimer  += dt * 7;
       p.gunSwayX   = Math.sin(p.bobTimer) * (p.ads ? 1.5 : 5);
@@ -1020,14 +1143,148 @@ class NerfArena {
           const isWin = p.hits >= this.targetHits;
           this.killFeed.add(p.name, opp.name, isWin);
           const msg = isWin
-            ? `🏆 ${p.name} WINS!`
-            : `🎯 ${p.name} hits! ${p.hits}/${this.targetHits}`;
+            ? `${p.name} wins the match!`
+            : `${p.name} scores - ${p.hits}/${this.targetHits}`;
           this._showBanner(msg);
+          if (!isWin) this._respawnPlayer(opp, p);
           return false;
         }
       }
       return dart.life > 0;
     });
+  }
+
+  _readInput(p, opp, dt) {
+    if (p.isBot) return this._readBotInput(p, opp, dt);
+
+    const k = this.keys;
+    const pad = navigator.getGamepads?.()[p.gamepadIdx];
+    const deadzone = v => Math.abs(v || 0) > 0.16 ? v : 0;
+    const padMove = pad ? -deadzone(pad.axes[1]) : 0;
+    const padTurn = pad ? deadzone(pad.axes[2] ?? pad.axes[0]) : 0;
+    const soloPointer = this.mode === 'solo' && p.id === 0 && document.pointerLockElement === this.canvas;
+
+    const touch = p.id === 0 ? this.touch : {};
+    let fwd = ((k[p.ctrl.fwd] || touch.fwd) ? 1 : 0) - ((k[p.ctrl.back] || touch.back) ? 1 : 0);
+    let turn = ((k[p.ctrl.turnR] || touch.right) ? 1 : 0) - ((k[p.ctrl.turnL] || touch.left) ? 1 : 0);
+    let strafe = 0;
+    if (soloPointer) {
+      strafe = turn;
+      turn = 0;
+    }
+
+    return {
+      fwd: Math.abs(padMove) > Math.abs(fwd) ? padMove : fwd,
+      turn: Math.abs(padTurn) > Math.abs(turn) ? padTurn : turn,
+      strafe,
+      shoot: Boolean(k[p.ctrl.shoot] || touch.shoot || (p.id === 0 && this.mouse.shoot) || pad?.buttons[7]?.pressed || pad?.buttons[0]?.pressed),
+      ads: Boolean(k[p.ctrl.ads] || touch.ads || (p.id === 0 && this.mouse.ads) || pad?.buttons[6]?.pressed),
+      reload: Boolean(k[p.ctrl.reload] || touch.reload || pad?.buttons[2]?.pressed),
+    };
+  }
+
+  _readBotInput(bot, target, dt) {
+    const dx = target.x - bot.x;
+    const dy = target.y - bot.y;
+    const dist = Math.hypot(dx, dy);
+    const directAngle = Math.atan2(dy, dx);
+    const wallDist = castRay(this.map, bot.x, bot.y, directAngle).dist;
+    const hasSight = wallDist >= dist - 0.35;
+
+    bot.botThink -= dt;
+    if (bot.botThink <= 0) {
+      bot.botThink = 0.38 + Math.random() * 0.18;
+      bot.botPath = hasSight ? [] : this._findPath(bot.x, bot.y, target.x, target.y);
+    }
+
+    let aimAngle = directAngle;
+    let move = dist > 4.2 ? 1 : 0;
+    let strafe = 0;
+    if (!hasSight && bot.botPath.length) {
+      const waypoint = bot.botPath[0];
+      if (Math.hypot(waypoint.x - bot.x, waypoint.y - bot.y) < 0.36) bot.botPath.shift();
+      const next = bot.botPath[0];
+      if (next) aimAngle = Math.atan2(next.y - bot.y, next.x - bot.x);
+      move = 1;
+    } else if (hasSight && dist < 8) {
+      strafe = Math.sin(this.time * 1.7 + bot.id * 2.4) > 0 ? 0.52 : -0.52;
+    }
+
+    const angleDiff = Math.atan2(Math.sin(aimAngle - bot.angle), Math.cos(aimAngle - bot.angle));
+    const targetDiff = Math.atan2(Math.sin(directAngle - bot.angle), Math.cos(directAngle - bot.angle));
+    return {
+      fwd: Math.abs(angleDiff) < 0.9 ? move : 0,
+      turn: clamp(angleDiff * 2.1, -1, 1),
+      strafe: hasSight ? strafe : 0,
+      shoot: hasSight && Math.abs(targetDiff) < 0.095 && dist < 14,
+      ads: hasSight && dist > 5,
+      reload: bot.ammo <= 2,
+    };
+  }
+
+  _findPath(fromX, fromY, toX, toY) {
+    const sx = Math.floor(fromX), sy = Math.floor(fromY);
+    const tx = Math.floor(toX), ty = Math.floor(toY);
+    const key = (x, y) => `${x},${y}`;
+    const queue = [[sx, sy]];
+    const previous = new Map([[key(sx, sy), null]]);
+    const dirs = [[1,0],[-1,0],[0,1],[0,-1]];
+
+    for (let head = 0; head < queue.length; head++) {
+      const [x, y] = queue[head];
+      if (x === tx && y === ty) break;
+      for (const [dx, dy] of dirs) {
+        const nx = x + dx, ny = y + dy, nk = key(nx, ny);
+        if (!previous.has(nk) && !this._wallAt(nx, ny)) {
+          previous.set(nk, [x, y]);
+          queue.push([nx, ny]);
+        }
+      }
+    }
+
+    if (!previous.has(key(tx, ty))) return [];
+    const path = [];
+    let current = [tx, ty];
+    while (current && !(current[0] === sx && current[1] === sy)) {
+      path.push({ x:current[0] + 0.5, y:current[1] + 0.5 });
+      current = previous.get(key(current[0], current[1]));
+    }
+    path.reverse();
+    return path.slice(0, 12);
+  }
+
+  _respawnPlayer(p, attacker) {
+    let best = { x:p.spawn.x, y:p.spawn.y, score:-Infinity };
+    for (let y = 1; y < this.map.length - 1; y++) {
+      for (let x = 1; x < this.map[0].length - 1; x++) {
+        if (this.map[y][x] !== 0) continue;
+        const cx = x + 0.5, cy = y + 0.5;
+        if (this._wallAt(cx - WALL_MARGIN, cy - WALL_MARGIN) ||
+            this._wallAt(cx + WALL_MARGIN, cy - WALL_MARGIN) ||
+            this._wallAt(cx - WALL_MARGIN, cy + WALL_MARGIN) ||
+            this._wallAt(cx + WALL_MARGIN, cy + WALL_MARGIN)) continue;
+        const dist = Math.hypot(cx - attacker.x, cy - attacker.y);
+        if (dist < 6) continue;
+        const angle = Math.atan2(cy - attacker.y, cx - attacker.x);
+        const blocked = castRay(this.map, attacker.x, attacker.y, angle).dist < dist - 0.4;
+        const score = dist + (blocked ? 9 : 0) + Math.random() * 2;
+        if (score > best.score) best = { x:cx, y:cy, score };
+      }
+    }
+
+    p.x = best.x;
+    p.y = best.y;
+    p.angle = Math.atan2(attacker.y - p.y, attacker.x - p.x);
+    p.velFwd = 0;
+    p.velTurn = 0;
+    p.ammo = MAX_AMMO;
+    p.reloading = false;
+    p.reloadTimer = 0;
+    p.darts = [];
+    p.invincible = 2.2;
+    p.hitFlash = 0.55;
+    p.botPath = [];
+    p.botThink = 0;
   }
 
   _wallAt(mx, my) {
@@ -1038,18 +1295,19 @@ class NerfArena {
   // ─── Results Screen (Improvement #4: accuracy + confetti) ──
   _showResults(winner) {
     this.state = 'results';
+    document.exitPointerLock?.();
     document.getElementById('gameResults').style.display = 'flex';
     const list = document.getElementById('resultsList');
     list.innerHTML = '';
-    document.getElementById('resultsIcon').textContent  = '🏆';
-    document.getElementById('resultsTitle').textContent = `${winner.name} Wins!`;
+    document.getElementById('resultsIcon').innerHTML = '<i data-lucide="trophy"></i>';
+    document.getElementById('resultsTitle').textContent = winner.name === 'You' ? 'Victory!' : `${winner.name} Wins`;
 
     [...this.players].sort((a,b) => b.hits - a.hits).forEach((p, i) => {
       const acc = p.shotsFired > 0 ? Math.round((p.shotsHit / p.shotsFired) * 100) : 0;
       const e = document.createElement('div');
       e.className = 'result-entry';
       e.innerHTML = `
-        <span class="result-pos">${i===0?'🥇 1st':'🥈 2nd'}</span>
+        <span class="result-pos">${i===0?'1st':'2nd'}</span>
         <span class="result-swatch" style="background:${p.color}"></span>
         <span class="result-name">${p.name}</span>
         <span class="result-stats">
@@ -1059,6 +1317,7 @@ class NerfArena {
         </span>`;
       list.appendChild(e);
     });
+    if (window.lucide) window.lucide.createIcons();
 
     // Render confetti behind the overlay in the game loop
     if (!this.confetti) this.confetti = new Confetti(this.W, this.H);
@@ -1086,44 +1345,35 @@ class NerfArena {
       return;
     }
 
-    // Draw confetti under results overlay
-    if (this.state === 'results' || this.state === 'done') {
-      ctx.fillStyle = '#060c1a';
-      ctx.fillRect(0, 0, this.W, this.H);
-      if (this.confetti) this.confetti.draw(ctx);
+    const vpH = this.H;
+    if (this.mode === 'solo') {
+      ctx.save();
+      ctx.beginPath(); ctx.rect(0, 0, this.W, vpH); ctx.clip();
+      this._drawView(ctx, this.players[0], this.players[1], 0, 0, this.W, vpH);
+      this._drawMinimap(ctx, this.players[0], 0, this.W, vpH);
       ctx.restore();
-      return;
+    } else {
+      const vpW = Math.floor(this.W / 2);
+      ctx.save();
+      ctx.beginPath(); ctx.rect(0, 0, vpW, vpH); ctx.clip();
+      this._drawView(ctx, this.players[0], this.players[1], 0, 0, vpW, vpH);
+      this._drawMinimap(ctx, this.players[0], 0, vpW, vpH);
+      ctx.restore();
+
+      ctx.save();
+      ctx.beginPath(); ctx.rect(vpW, 0, vpW, vpH); ctx.clip();
+      this._drawView(ctx, this.players[1], this.players[0], vpW, 0, vpW, vpH);
+      this._drawMinimap(ctx, this.players[1], vpW, vpW, vpH);
+      ctx.restore();
+
+      ctx.fillStyle = 'rgba(5,10,12,.82)';
+      ctx.fillRect(vpW-2, 0, 4, vpH);
+      ctx.fillStyle = 'rgba(255,255,255,.2)';
+      ctx.fillRect(vpW, 0, 1, vpH);
     }
 
-    const vpW = Math.floor(this.W / 2);
-    const vpH = this.H;
-
-    // P1 — left half
-    ctx.save();
-    ctx.beginPath(); ctx.rect(0, 0, vpW, vpH); ctx.clip();
-    this._drawView(ctx, this.players[0], this.players[1], 0, 0, vpW, vpH);
-    this._drawMinimap(ctx, this.players[0], 0, vpW, vpH);
-    ctx.restore();
-
-    // P2 — right half
-    ctx.save();
-    ctx.beginPath(); ctx.rect(vpW, 0, vpW, vpH); ctx.clip();
-    this._drawView(ctx, this.players[1], this.players[0], vpW, 0, vpW, vpH);
-    this._drawMinimap(ctx, this.players[1], vpW, vpW, vpH);
-    ctx.restore();
-
-    // Kill feed (Improvement #2) — drawn in center above the divider
-    this.killFeed.draw(ctx, this.W - 14, 22);
-
-    // Divider — glowing seam
-    ctx.fillStyle = '#000';
-    ctx.fillRect(vpW-2, 0, 4, vpH);
-    const divGrad = ctx.createLinearGradient(vpW-2, 0, vpW+2, 0);
-    divGrad.addColorStop(0, 'rgba(255,255,255,0)');
-    divGrad.addColorStop(0.5, 'rgba(255,255,255,0.15)');
-    divGrad.addColorStop(1, 'rgba(255,255,255,0)');
-    ctx.fillStyle = divGrad;
-    ctx.fillRect(vpW-2, 0, 4, vpH);
+    this.killFeed.draw(ctx, this.W - 18, 118);
+    if (this.confetti) this.confetti.draw(ctx);
 
     if (this.state === 'countdown') this._drawCountdown(ctx);
 
@@ -1132,28 +1382,30 @@ class NerfArena {
 
   _drawView(ctx, p, opp, ox, oy, vpW, vpH) {
     const halfH = vpH / 2;
+    const theme = this.theme || ARENA_THEMES[0];
 
     // ADS vignette darkens the edges
     const adsAlpha = p.ads ? (1 - (p.fov - FOV_ADS) / (FOV_NORMAL - FOV_ADS)) * 0.55 : 0;
 
     // ── Ceiling ──
     const ceilG = ctx.createLinearGradient(0, oy, 0, oy + halfH);
-    ceilG.addColorStop(0, '#060609');
-    ceilG.addColorStop(1, '#141420');
+    ceilG.addColorStop(0, theme.skyTop);
+    ceilG.addColorStop(1, theme.skyBottom);
     ctx.fillStyle = ceilG;
     ctx.fillRect(ox, oy, vpW, halfH);
 
     // ── Floor ──
     const floorG = ctx.createLinearGradient(0, oy + halfH, 0, oy + vpH);
-    floorG.addColorStop(0, '#030303');
-    floorG.addColorStop(0.45, '#0d0d12');
-    floorG.addColorStop(1, '#191926');
+    floorG.addColorStop(0, theme.floorTop);
+    floorG.addColorStop(1, theme.floorBottom);
     ctx.fillStyle = floorG;
     ctx.fillRect(ox, oy + halfH, vpW, halfH);
 
-    // ── Neon floor grid ──
+    this._drawArenaAtmosphere(ctx, ox, oy, vpW, vpH, halfH, theme);
+
+    // ── Perspective floor markings ──
     ctx.save();
-    ctx.strokeStyle = 'rgba(0, 210, 255, 0.1)';
+    ctx.strokeStyle = theme.grid;
     ctx.lineWidth = 1;
     for (let i = 1; i < 18; i++) {
       const t = Math.pow(i / 18, 1.8);
@@ -1161,7 +1413,7 @@ class NerfArena {
       if (y > oy + vpH) break;
       ctx.beginPath(); ctx.moveTo(ox, y); ctx.lineTo(ox + vpW, y); ctx.stroke();
     }
-    ctx.strokeStyle = 'rgba(0, 210, 255, 0.07)';
+    ctx.globalAlpha = 0.72;
     for (let j = -6; j <= 6; j++) {
       const px2 = ox + vpW/2 + j * vpW * 0.16;
       ctx.beginPath();
@@ -1196,11 +1448,11 @@ class NerfArena {
 
       ctx.drawImage(tex, texX, 0, 1, TH, ox+col, oy+wallY, 1, wallH);
 
-      let fog = clamp(cDist / 14, 0, 1) * 0.92;
-      if (side === 1) fog = clamp(fog + 0.22, 0, 1);
+      let fog = clamp(cDist / 17, 0, 1) * 0.78;
+      if (side === 1) fog = clamp(fog + 0.12, 0, 0.9);
 
       if (fog > 0.01) {
-        ctx.fillStyle = `rgba(0,0,0,${fog.toFixed(2)})`;
+        ctx.fillStyle = theme.fog.replace(/[\d.]+\)$/, `${fog.toFixed(2)})`);
         ctx.fillRect(ox+col, oy+wallY, 1, wallH);
       }
 
@@ -1285,6 +1537,39 @@ class NerfArena {
     this._drawHUD(ctx, p, ox, oy, vpW, vpH);
   }
 
+  _drawArenaAtmosphere(ctx, ox, oy, vpW, vpH, halfH, theme) {
+    ctx.save();
+    if (this.arenaIdx === 0 || this.arenaIdx === 5) {
+      const sx = ox + vpW * (this.arenaIdx === 0 ? 0.76 : 0.22);
+      const sy = oy + halfH * 0.28;
+      const glow = ctx.createRadialGradient(sx, sy, 2, sx, sy, vpH * 0.18);
+      glow.addColorStop(0, 'rgba(255,248,190,.95)');
+      glow.addColorStop(.2, 'rgba(255,205,92,.55)');
+      glow.addColorStop(1, 'rgba(255,205,92,0)');
+      ctx.fillStyle = glow;
+      ctx.beginPath(); ctx.arc(sx, sy, vpH * 0.18, 0, Math.PI * 2); ctx.fill();
+    }
+    if (this.arenaIdx === 6) {
+      ctx.fillStyle = 'rgba(255,255,255,.6)';
+      for (let i = 0; i < 34; i++) {
+        const x = ox + ((i * 83 + 41) % Math.max(1, vpW));
+        const y = oy + ((i * 47 + 17) % Math.max(1, halfH * .82));
+        const s = i % 7 === 0 ? 2 : 1;
+        ctx.fillRect(x, y, s, s);
+      }
+    }
+    if (this.arenaIdx === 3 || this.arenaIdx === 4 || this.arenaIdx === 6) {
+      ctx.strokeStyle = theme.light;
+      ctx.globalAlpha = .2;
+      ctx.lineWidth = 3;
+      for (let i = 1; i < 6; i++) {
+        const x = ox + vpW * i / 6;
+        ctx.beginPath(); ctx.moveTo(x, oy); ctx.lineTo(x, oy + halfH * .44); ctx.stroke();
+      }
+    }
+    ctx.restore();
+  }
+
   // ─── Pickup Billboard (Improvement #1) ─────────────────────
   _drawPickup(ctx, viewer, pk, ox, oy, vpW, vpH, zBuf) {
     const dx = pk.x - viewer.x, dy = pk.y - viewer.y;
@@ -1351,9 +1636,10 @@ class NerfArena {
     const halfFov = viewer.fov / 2;
     if (Math.abs(normAngle) > halfFov + 0.25) return;
 
+    const depth = Math.max(0.05, dist * Math.cos(normAngle));
     const screenX  = (normAngle / viewer.fov + 0.5) * vpW;
-    const spriteH  = Math.min(vpH * 1.9, vpH / dist);
-    const spriteW  = spriteH * 0.62;
+    const spriteH  = Math.min(vpH * 1.75, vpH / depth);
+    const spriteW  = spriteH * 0.67;
     const spriteTop = (vpH - spriteH) / 2;
     const brt      = Math.max(0.35, 1 - dist / 11);
 
@@ -1363,9 +1649,36 @@ class NerfArena {
     const flickOff = sprite.invincible > 0 && Math.floor(this.time * 12) % 2 === 0;
     if (flickOff) return;
 
+    const spriteImg = this.playerSprites[sprite.id];
+    if (spriteImg?.complete && spriteImg.naturalWidth > 0) {
+      ctx.save();
+      ctx.imageSmoothingEnabled = true;
+      ctx.globalAlpha = Math.max(0.58, 1 - dist / 24);
+      for (let col = Math.max(0, startCol); col < Math.min(vpW, endCol); col++) {
+        if (zBuf[col] <= depth) continue;
+        const u = clamp((col - startCol) / Math.max(1, endCol - startCol), 0, 0.999);
+        const sourceX = Math.floor(u * spriteImg.naturalWidth);
+        ctx.drawImage(spriteImg, sourceX, 0, 1, spriteImg.naturalHeight, ox + col, oy + spriteTop, 1.15, spriteH);
+      }
+      ctx.restore();
+
+      const centerCol = clamp(Math.floor(screenX), 0, vpW - 1);
+      if (dist < 7 && zBuf[centerCol] > depth) {
+        ctx.save();
+        ctx.font = '800 11px Outfit';
+        ctx.textAlign = 'center';
+        ctx.fillStyle = '#fff';
+        ctx.shadowColor = 'rgba(0,0,0,.9)';
+        ctx.shadowBlur = 5;
+        ctx.fillText(sprite.name, ox + screenX, oy + Math.max(18, spriteTop - 5));
+        ctx.restore();
+      }
+      return;
+    }
+
     for (let col = Math.max(0, startCol); col < Math.min(vpW, endCol); col++) {
       // FIX: use <= for correct z-comparison
-      if (zBuf[col] <= dist) continue;
+      if (zBuf[col] <= depth) continue;
 
       const u = (col - startCol) / Math.max(1, endCol - startCol);
 
@@ -1643,26 +1956,34 @@ class NerfArena {
   _drawHUD(ctx, p, ox, oy, vpW, vpH) {
     ctx.save();
     const px2 = ox + 14;
+    const opp = this.players.find(pl => pl.id !== p.id);
 
     // Player tag
-    ctx.font = 'bold 13px Outfit';
+    ctx.font = '800 13px Outfit';
+    ctx.fillStyle = 'rgba(8,15,18,.62)';
+    ctx.beginPath(); ctx.roundRect(px2 - 6, oy + 9, Math.max(94, ctx.measureText(p.name).width + 30), 27, 5); ctx.fill();
     ctx.fillStyle = p.color;
     ctx.textAlign = 'left';
-    ctx.fillText(p.name, px2, oy + 24);
+    ctx.fillText(p.name, px2, oy + 27);
 
     // ADS mode indicator
     if (p.ads) {
       ctx.font = 'bold 10px Outfit';
       ctx.fillStyle = 'rgba(0,220,255,0.85)';
-      ctx.fillText('◉ ADS', px2, oy + 38);
+      ctx.fillText('ADS', px2, oy + 49);
     }
 
     // Speed boost indicator
     if (p.speedBoost > 0) {
-      const bPct = p.speedBoost / PICKUP_TYPES.speed.duration;
       ctx.font = 'bold 10px Outfit';
       ctx.fillStyle = `rgba(0,220,255,${0.7 + Math.sin(this.time*8)*0.3})`;
-      ctx.fillText(`⚡ BOOST ${p.speedBoost.toFixed(1)}s`, px2, oy + (p.ads ? 52 : 38));
+      ctx.fillText(`BOOST ${p.speedBoost.toFixed(1)}s`, px2, oy + (p.ads ? 62 : 49));
+    }
+
+    if (p.invincible > 0) {
+      ctx.font = '800 10px Outfit';
+      ctx.fillStyle = 'rgba(255,235,120,.9)';
+      ctx.fillText(`SPAWN SHIELD ${p.invincible.toFixed(1)}s`, px2, oy + 64);
     }
 
     // Score
@@ -1670,25 +1991,29 @@ class NerfArena {
     ctx.save();
     ctx.translate(ox + vpW/2, oy + 46);
     ctx.scale(scorePop, scorePop);
-    ctx.font = 'bold 30px Outfit';
+    ctx.font = '900 30px Outfit';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'alphabetic';
     ctx.strokeStyle = 'rgba(0,0,0,0.8)';
     ctx.lineWidth = 4;
-    ctx.strokeText(`${p.hits}`, 0, 0);
-    ctx.fillStyle = p.color;
-    ctx.fillText(`${p.hits}`, 0, 0);
+    const scoreText = this.mode === 'solo' && opp ? `${p.hits}  -  ${opp.hits}` : `${p.hits}`;
+    ctx.strokeText(scoreText, 0, 0);
+    ctx.fillStyle = '#fff';
+    ctx.fillText(scoreText, 0, 0);
     ctx.restore();
 
     ctx.font = '11px Outfit';
     ctx.fillStyle = 'rgba(255,255,255,0.45)';
     ctx.textAlign = 'center';
-    ctx.fillText(`/ ${this.targetHits} to win`, ox + vpW/2, oy + 62);
+    ctx.fillText(`${this.theme.name} | First to ${this.targetHits}`, ox + vpW/2, oy + 62);
 
     // Ammo bar
-    const aX = ox + 14, aY = oy + vpH - 68;
-    ctx.font = '10px Outfit';
-    ctx.fillStyle = 'rgba(255,255,255,0.35)';
+    const portraitView = vpW < 500 && vpH > vpW;
+    const aX = ox + 14, aY = portraitView ? oy + 154 : oy + vpH - 68;
+    ctx.fillStyle = 'rgba(8,15,18,.62)';
+    ctx.beginPath(); ctx.roundRect(aX - 7, aY - 21, 126, 39, 5); ctx.fill();
+    ctx.font = '800 10px Outfit';
+    ctx.fillStyle = 'rgba(255,255,255,0.7)';
     ctx.textAlign = 'left';
     ctx.fillText('AMMO', aX, aY - 5);
 
@@ -1706,23 +2031,15 @@ class NerfArena {
       }
     }
 
-    // Controls reminder
-    ctx.font = '9px Outfit';
-    ctx.fillStyle = 'rgba(255,255,255,0.2)';
-    ctx.textAlign = 'right';
-    const ctrlStr = p.id === 0
-      ? 'WASD·Move | SPC·Fire | Q·ADS | R·Reload'
-      : '↑↓←→·Move | ENT·Fire | 0·ADS | /·Reload';
-    ctx.fillText(ctrlStr, ox+vpW-10, oy+vpH-10);
-
     ctx.restore();
   }
 
   // ─── Minimap (shows opponent direction too) ──────────────────
   _drawMinimap(ctx, p, ox, vpW, vpH) {
+    if (vpW < 500 && vpH > vpW) return;
     const map  = this.map;
     const ROWS = map.length, COLS = map[0].length;
-    const S    = 4.5;
+    const S    = this.mode === 'solo' ? 5 : (vpW < 420 ? 3.7 : 4.5);
     const mW   = COLS * S, mH = ROWS * S;
     const mx   = ox + vpW - mW - 12;
     const my   = vpH - mH - 12;

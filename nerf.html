@@ -1,168 +1,154 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <!-- Google tag (gtag.js) -->
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-ZTP50MJ7CX"></script>
   <script>
     window.dataLayer = window.dataLayer || [];
     function gtag(){dataLayer.push(arguments);}
     gtag('js', new Date());
-
     gtag('config', 'G-ZTP50MJ7CX');
   </script>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Nerf Arena — Bodee Books</title>
-  <meta name="description" content="2-player split-screen Nerf gun duel! Load up, aim, and fire foam darts at your opponent in a colorful first-person arena.">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Foam Strike Arena | Bodee Books</title>
+  <meta name="description" content="Dash through colorful arenas, collect power-ups, and land the winning foam-dart hit in solo or local two-player matches.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;900&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800;900&display=swap" rel="stylesheet">
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
-  <link rel="stylesheet" href="nerf.css">
+  <link rel="stylesheet" href="nerf.css?v=5.0">
   <link rel="stylesheet" href="play-timer.css">
-    <script src="profile-manager.js"></script>
+  <script src="profile-manager.js"></script>
   <script src="play-timer.js"></script>
   <script defer src="https://www.bodeebooks.com/bodee-analytics.js"></script>
 </head>
 <body>
+  <canvas id="gameCanvas" aria-label="Foam Strike Arena game"></canvas>
+  <div id="levelBanner" aria-live="polite"></div>
 
-  <canvas id="gameCanvas" aria-label="Nerf Arena game"></canvas>
-  <div id="levelBanner"></div>
+  <nav id="gameTools" class="game-tools" aria-label="Game controls" hidden>
+    <button id="menuBtn" class="icon-btn" type="button" aria-label="Return to game setup" title="Game setup"><i data-lucide="house"></i></button>
+    <button id="pauseBtn" class="icon-btn" type="button" aria-label="Pause game" title="Pause (Esc)"><i data-lucide="pause"></i></button>
+    <button id="fullscreenBtn" class="icon-btn" type="button" aria-label="Enter fullscreen" title="Fullscreen (F)"><i data-lucide="maximize"></i></button>
+  </nav>
 
-  <!-- ── Setup Screen ──────────────────────────────────── -->
-  <div id="gameSetup" class="overlay">
-    <div class="setup-panel">
-      <a href="index.html" class="back-link">← Back to Hub</a>
-      <h1>🔫 Nerf Arena</h1>
-      <p class="subtitle">2-player split-screen foam dart duel!</p>
-
-      <!-- Game Mode -->
-      <div class="option-group">
-        <h3>Game Mode</h3>
-        <div class="option-row">
-          <label class="diff-opt selected" id="opt-mode-duel">
-            <input type="radio" name="gamemode" value="duel" checked>
-            <span class="opt-label">Split-Screen Duel</span>
-            <span class="opt-desc">2-player local match</span>
-          </label>
-          <label class="diff-opt" id="opt-mode-campaign">
-            <input type="radio" name="gamemode" value="campaign">
-            <span class="opt-label">Rogue Protocol</span>
-            <span class="opt-desc">1-player story campaign</span>
-          </label>
-          <label class="diff-opt" id="opt-mode-david">
-            <input type="radio" name="gamemode" value="david">
-            <span class="opt-label">⚔️ David's Challenge</span>
-            <span class="opt-desc">Biblical slingshot survival</span>
-          </label>
-        </div>
+  <main id="gameSetup" class="overlay setup-overlay">
+    <section class="setup-panel" aria-labelledby="gameTitle">
+      <div class="setup-topbar">
+        <a href="index.html" class="back-link"><i data-lucide="arrow-left"></i><span>Game Hub</span></a>
+        <span class="game-badge"><i data-lucide="crosshair"></i> Arena FPS</span>
       </div>
+      <header class="setup-header">
+        <img class="hero-player hero-player-orange" src="images/foam-arena-player-orange.png" alt="Orange foam arena competitor">
+        <div class="title-lockup">
+          <p class="eyebrow">Lock, load, and move</p>
+          <h1 id="gameTitle">Foam Strike Arena</h1>
+          <p>Outmaneuver your rival, grab field upgrades, and score the final hit.</p>
+        </div>
+        <img class="hero-player hero-player-blue" src="images/foam-arena-player-blue.png" alt="Blue foam arena competitor">
+      </header>
 
-      <div id="duelSettings">
-        <!-- Difficulty -->
-        <div class="option-group">
-          <h3>Match Length</h3>
-          <div class="option-row">
-            <label class="diff-opt selected" id="opt-short">
-              <input type="radio" name="target" value="3" checked>
-              <span class="opt-label">Quick</span>
-              <span class="opt-desc">First to 3 hits</span>
+      <div class="setup-content">
+        <fieldset class="option-group mode-group">
+          <legend>Match Mode</legend>
+          <div class="segmented mode-options">
+            <label class="select-option selected">
+              <input type="radio" name="gamemode" value="solo" checked>
+              <i data-lucide="bot"></i><span><strong>Solo vs Bot</strong><small>Full-screen challenge</small></span>
             </label>
-            <label class="diff-opt" id="opt-medium">
-              <input type="radio" name="target" value="5">
-              <span class="opt-label">Standard</span>
-              <span class="opt-desc">First to 5 hits</span>
-            </label>
-            <label class="diff-opt" id="opt-long">
-              <input type="radio" name="target" value="10">
-              <span class="opt-label">Marathon</span>
-              <span class="opt-desc">First to 10 hits</span>
+            <label class="select-option">
+              <input type="radio" name="gamemode" value="duel">
+              <i data-lucide="users"></i><span><strong>Local Duel</strong><small>Split-screen for two</small></span>
             </label>
           </div>
-        </div>
+        </fieldset>
 
-        <!-- Arena -->
-        <div class="option-group">
-          <h3>Arena</h3>
-          <div class="option-row arena-row">
-            <label class="diff-opt selected" id="opt-arena1">
-              <input type="radio" name="arena" value="0" checked>
-              <span class="opt-label">🏢 Classic</span>
-              <span class="opt-desc">Open arena</span>
-            </label>
-            <label class="diff-opt" id="opt-arena2">
-              <input type="radio" name="arena" value="1">
-              <span class="opt-label">🌀 Maze</span>
-              <span class="opt-desc">Lots of cover</span>
-            </label>
-            <label class="diff-opt" id="opt-arena3">
-              <input type="radio" name="arena" value="2">
-              <span class="opt-label">🏰 Fortress</span>
-              <span class="opt-desc">Two bases</span>
-            </label>
-            <label class="diff-opt" id="opt-arena4">
-              <input type="radio" name="arena" value="3">
-              <span class="opt-label">🏥 Warehouse</span>
-              <span class="opt-desc">Crate aisles</span>
-            </label>
-            <label class="diff-opt" id="opt-arena5">
-              <input type="radio" name="arena" value="4">
-              <span class="opt-label">☢️ Reactor</span>
-              <span class="opt-desc">Nuclear core</span>
-            </label>
-            <label class="diff-opt" id="opt-arena6">
-              <input type="radio" name="arena" value="5">
-              <span class="opt-label">🤠 Frontier</span>
-              <span class="opt-desc">Western town</span>
-            </label>
-            <label class="diff-opt" id="opt-arena7">
-              <input type="radio" name="arena" value="6">
-              <span class="opt-label">🛸 Space Hub</span>
-              <span class="opt-desc">Zero-G station</span>
-            </label>
-            <label class="diff-opt" id="opt-arena8">
-              <input type="radio" name="arena" value="7">
-              <span class="opt-label">💀 Catacombs</span>
-              <span class="opt-desc">Ancient tunnels</span>
-            </label>
+        <fieldset class="option-group length-group">
+          <legend>First To</legend>
+          <div class="segmented compact-options">
+            <label class="select-option"><input type="radio" name="target" value="3"><span><strong>3</strong><small>Quick</small></span></label>
+            <label class="select-option selected"><input type="radio" name="target" value="5" checked><span><strong>5</strong><small>Standard</small></span></label>
+            <label class="select-option"><input type="radio" name="target" value="10"><span><strong>10</strong><small>Long</small></span></label>
           </div>
-        </div>
-      </div>
+        </fieldset>
 
-      <!-- Controls -->
-      <div class="controls-display">
-        <div class="ctrl-col" id="player1Controls">
-          <h4><span class="player-color-1">Player 1</span></h4>
-          <p><b>W / S</b> — Move forward / back</p>
-          <p><b>A / D</b> — Turn left / right</p>
-          <p><b>Space</b> — Shoot &nbsp;<b>Q</b> — Aim (ADS)</p>
-          <p><b>R</b> — Reload</p>
-        </div>
-        <div class="ctrl-divider" id="ctrlDivider"></div>
-        <div class="ctrl-col" id="player2Controls">
-          <h4><span class="player-color-2">Player 2</span></h4>
-          <p><b>↑ / ↓</b> — Move forward / back</p>
-          <p><b>← / →</b> — Turn left / right</p>
-          <p><b>Enter</b> — Shoot &nbsp;<b>Num 0</b> — Aim</p>
-          <p><b>/ (slash)</b> — Reload</p>
-        </div>
-      </div>
+        <fieldset class="option-group arena-group">
+          <legend>Choose Arena</legend>
+          <div class="arena-options">
+            <label class="arena-option selected theme-yard"><input type="radio" name="arena" value="0" checked><span class="arena-preview"><i data-lucide="sun"></i></span><strong>Training Yard</strong><small>Open lanes</small></label>
+            <label class="arena-option theme-maze"><input type="radio" name="arena" value="1"><span class="arena-preview"><i data-lucide="route"></i></span><strong>Neon Maze</strong><small>Tight cover</small></label>
+            <label class="arena-option theme-fortress"><input type="radio" name="arena" value="2"><span class="arena-preview"><i data-lucide="castle"></i></span><strong>Twin Fortress</strong><small>Base assault</small></label>
+            <label class="arena-option theme-warehouse"><input type="radio" name="arena" value="3"><span class="arena-preview"><i data-lucide="container"></i></span><strong>Loading Dock</strong><small>Crate lanes</small></label>
+            <label class="arena-option theme-reactor"><input type="radio" name="arena" value="4"><span class="arena-preview"><i data-lucide="atom"></i></span><strong>Reactor Core</strong><small>Hazard ring</small></label>
+            <label class="arena-option theme-frontier"><input type="radio" name="arena" value="5"><span class="arena-preview"><i data-lucide="sunset"></i></span><strong>Dusty Frontier</strong><small>Long streets</small></label>
+            <label class="arena-option theme-space"><input type="radio" name="arena" value="6"><span class="arena-preview"><i data-lucide="orbit"></i></span><strong>Orbital Hub</strong><small>Fast flanks</small></label>
+            <label class="arena-option theme-catacombs"><input type="radio" name="arena" value="7"><span class="arena-preview"><i data-lucide="landmark"></i></span><strong>Old Tunnels</strong><small>Close combat</small></label>
+          </div>
+        </fieldset>
 
-      <button id="startBtn" class="start-btn">🎯 Load Up & Play!</button>
+        <div id="controlsDisplay" class="controls-display">
+          <div id="player1Controls" class="control-set player-one-controls">
+            <strong id="player1Label">You</strong>
+            <span><kbd>WASD</kbd> Move</span><span><kbd>Mouse</kbd> Aim</span><span><kbd>Click</kbd> Fire</span><span><kbd>R</kbd> Reload</span>
+          </div>
+          <div id="player2Controls" class="control-set player-two-controls" hidden>
+            <strong>Blue Team</strong>
+            <span><kbd>Arrows</kbd> Move</span><span><kbd>Enter</kbd> Fire</span><span><kbd>Num 0</kbd> Aim</span><span><kbd>/</kbd> Reload</span>
+          </div>
+          <span class="controller-note"><i data-lucide="gamepad-2"></i> Controllers supported</span>
+        </div>
+
+        <button id="startBtn" class="primary-btn" type="button"><i data-lucide="play"></i><span>Start Match</span></button>
+        <nav class="more-modes" aria-label="More foam dart games">
+          <span>More missions</span>
+          <a href="nerf-campaign.html"><i data-lucide="shield"></i> Rogue Protocol</a>
+          <a href="david.html"><i data-lucide="target"></i> David's Challenge</a>
+        </nav>
+      </div>
+    </section>
+  </main>
+
+  <section id="pauseOverlay" class="overlay modal-overlay" style="display:none" aria-labelledby="pauseTitle">
+    <div class="modal-panel pause-panel">
+      <span class="modal-icon"><i data-lucide="pause"></i></span>
+      <p class="eyebrow">Match paused</p>
+      <h2 id="pauseTitle">Take a breather</h2>
+      <div class="modal-actions">
+        <button id="resumeBtn" class="primary-btn" type="button"><i data-lucide="play"></i><span>Resume</span></button>
+        <button id="restartMatchBtn" class="secondary-btn" type="button"><i data-lucide="rotate-ccw"></i><span>Restart</span></button>
+        <button id="setupBtn" class="secondary-btn" type="button"><i data-lucide="sliders-horizontal"></i><span>Setup</span></button>
+      </div>
     </div>
-  </div>
+  </section>
 
-  <!-- ── Results Screen ───────────────────────────────── -->
-  <div id="gameResults" class="overlay" style="display:none">
-    <div class="results-panel">
-      <span id="resultsIcon" class="results-icon">🏆</span>
+  <section id="gameResults" class="overlay modal-overlay" style="display:none" aria-labelledby="resultsTitle">
+    <div class="modal-panel results-panel">
+      <span id="resultsIcon" class="modal-icon"><i data-lucide="trophy"></i></span>
+      <p class="eyebrow">Match complete</p>
       <h2 id="resultsTitle">Results</h2>
       <div id="resultsList"></div>
-      <button id="restartBtn" class="start-btn">🔄 Play Again</button>
-      <br>
-      <a href="index.html" class="hub-link">← Back to Hub</a>
+      <div class="modal-actions">
+        <button id="rematchBtn" class="primary-btn" type="button"><i data-lucide="rotate-ccw"></i><span>Rematch</span></button>
+        <button id="restartBtn" class="secondary-btn" type="button"><i data-lucide="sliders-horizontal"></i><span>Change Setup</span></button>
+        <a href="index.html" class="secondary-btn"><i data-lucide="house"></i><span>Game Hub</span></a>
+      </div>
+    </div>
+  </section>
+
+  <div id="rotateNotice" class="rotate-notice" aria-hidden="true"><i data-lucide="rotate-cw"></i><span>Rotate for a wider arena view</span></div>
+  <div id="touchControls" class="touch-controls" aria-label="Touch game controls">
+    <div class="touch-pad">
+      <button class="touch-btn touch-up" type="button" data-touch="fwd" aria-label="Move forward"><i data-lucide="chevron-up"></i></button>
+      <button class="touch-btn touch-left" type="button" data-touch="left" aria-label="Turn left"><i data-lucide="chevron-left"></i></button>
+      <button class="touch-btn touch-down" type="button" data-touch="back" aria-label="Move backward"><i data-lucide="chevron-down"></i></button>
+      <button class="touch-btn touch-right" type="button" data-touch="right" aria-label="Turn right"><i data-lucide="chevron-right"></i></button>
+    </div>
+    <div class="touch-actions">
+      <button class="touch-btn touch-aim" type="button" data-touch="ads" aria-label="Aim"><i data-lucide="scan"></i></button>
+      <button class="touch-btn touch-reload" type="button" data-touch="reload" aria-label="Reload"><i data-lucide="refresh-cw"></i></button>
+      <button class="touch-btn touch-fire" type="button" data-touch="shoot" aria-label="Fire"><i data-lucide="crosshair"></i></button>
     </div>
   </div>
-
-  <script src="nerf.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/lucide@0.468.0/dist/umd/lucide.min.js"></script>
+  <script src="nerf.js?v=5.0"></script>
 </body>
 </html>
