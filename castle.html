@@ -1,93 +1,194 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <!-- Google tag (gtag.js) -->
-  <script async src="https://www.googletagmanager.com/gtag/js?id=G-ZTP50MJ7CX"></script>
-  <script>
-    window.dataLayer = window.dataLayer || [];
-    function gtag(){dataLayer.push(arguments);}
-    gtag('js', new Date());
-
-    gtag('config', 'G-ZTP50MJ7CX');
-  </script>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Castle Duel — Math Siege</title>
-  <meta name="description" content="Do the math, load the catapult, destroy the enemy castle."/>
-  <link rel="preconnect" href="https://fonts.googleapis.com"/>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;900&display=swap"/>
-  <link rel="stylesheet" href="castle.css"/>
-  <link rel="stylesheet" href="play-timer.css">
-    <script src="profile-manager.js"></script>
-  <script src="play-timer.js"></script>
-  <script defer src="https://www.bodeebooks.com/bodee-analytics.js"></script>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#77c7e9">
+  <title>Catapult Clash | Bodee's Games</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/shared/play-timer.css">
+  <link rel="stylesheet" href="castle.css">
 </head>
 <body>
-  <!-- Split-screen divider -->
-  <div class="split-divider">VS</div>
+  <main id="game-shell" aria-label="Catapult Clash game">
+    <canvas id="castleCanvas" aria-label="Catapult Clash battlefield"></canvas>
 
-  <canvas id="castleCanvas"></canvas>
-
-  <!-- ── SETUP OVERLAY ── -->
-  <div id="setupOverlay" class="overlay">
-    <div class="overlay-card setup-card">
-      <div class="game-logo">
-        <span class="logo-castle">CASTLE</span><span class="logo-duel">DUEL</span>
+    <section id="match-hud" class="match-hud" aria-label="Match status" hidden>
+      <div class="player-status player-status--red">
+        <div class="player-status__heading">
+          <span id="p1-name">Red Keep</span>
+          <span id="p1-wins" class="round-pips" aria-label="Red Keep round wins"></span>
+        </div>
+        <div class="meter-row">
+          <span>KEEP</span>
+          <div class="integrity-track"><span id="p1-integrity"></span></div>
+          <strong id="p1-integrity-text">100%</strong>
+        </div>
+        <div class="supply-row"><i data-lucide="package"></i><span id="p1-supplies">3</span> supplies</div>
       </div>
-      <p class="game-tagline">Calculate the math. Aim the catapult. Destroy the castle.</p>
 
-      <div class="settings-col settings-col-diff">
-        <div class="settings-label">Math Difficulty</div>
-        <div class="diff-grid">
-          <label class="diff-opt" id="diffEasy">
-            <input type="radio" name="diff" value="easy"/>
-            <span class="diff-name">Easy (Add/Sub)</span>
-          </label>
-          <label class="diff-opt selected" id="diffMedium">
-            <input type="radio" name="diff" value="medium" checked/>
-            <span class="diff-name">Med (Mult)</span>
-          </label>
-          <label class="diff-opt" id="diffHard">
-            <input type="radio" name="diff" value="hard"/>
-            <span class="diff-name">Hard (All)</span>
-          </label>
+      <div class="turn-status">
+        <span id="round-label" class="round-label">ROUND 1</span>
+        <strong id="turn-label">RED KEEP'S TURN</strong>
+        <div class="wind-readout" aria-label="Wind">
+          <i data-lucide="wind"></i>
+          <span id="wind-label">CALM</span>
         </div>
       </div>
 
-      <!-- Controls display -->
-      <div class="controls-strip" id="controlsStrip">
-        <div class="ctrl-panel">
-          <div class="ctrl-player" style="color:#ff4466">Player 1 (Left)</div>
-          <div class="ctrl-key-row">Math: <kbd>F</kbd> <kbd>G</kbd> <kbd>H</kbd></div>
-          <div class="ctrl-key-row">Aim: <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> &nbsp; Fire: <kbd>Space</kbd></div>
+      <div class="player-status player-status--blue">
+        <div class="player-status__heading">
+          <span id="p2-name">Blue Keep</span>
+          <span id="p2-wins" class="round-pips" aria-label="Blue Keep round wins"></span>
         </div>
-        <div class="ctrl-divider">⚙️</div>
-        <div class="ctrl-panel" id="p2ctrl">
-          <div class="ctrl-player" style="color:#00ccff">Player 2 (Right)</div>
-          <div class="ctrl-key-row">Math: <kbd>J</kbd> <kbd>K</kbd> <kbd>L</kbd></div>
-          <div class="ctrl-key-row">Aim: <kbd>▲</kbd><kbd>◀</kbd><kbd>▼</kbd><kbd>▶</kbd> &nbsp; Fire: <kbd>Enter</kbd></div>
+        <div class="meter-row">
+          <span>KEEP</span>
+          <div class="integrity-track"><span id="p2-integrity"></span></div>
+          <strong id="p2-integrity-text">100%</strong>
+        </div>
+        <div class="supply-row"><i data-lucide="package"></i><span id="p2-supplies">3</span> supplies</div>
+      </div>
+    </section>
+
+    <nav id="game-tools" class="game-tools" aria-label="Game controls" hidden>
+      <button id="menu-button" class="icon-button" type="button" aria-label="Return to game menu" title="Game menu">
+        <i data-lucide="house"></i>
+      </button>
+      <button id="pause-button" class="icon-button" type="button" aria-label="Pause game" title="Pause">
+        <i data-lucide="pause"></i>
+      </button>
+      <button id="fullscreen-button" class="icon-button" type="button" aria-label="Toggle fullscreen" title="Fullscreen (F)">
+        <i data-lucide="maximize"></i>
+      </button>
+    </nav>
+
+    <section id="command-band" class="command-band" aria-live="polite" hidden>
+      <div id="supply-panel" class="phase-panel supply-panel" hidden>
+        <div class="phase-title"><span>1</span> Solve for supplies</div>
+        <div id="question-text" class="question-text">8 + 7 = ?</div>
+        <div id="answer-options" class="answer-options"></div>
+      </div>
+
+      <div id="armory-panel" class="phase-panel armory-panel" hidden>
+        <div class="phase-title"><span>2</span> Choose your move</div>
+        <div class="armory-options">
+          <button class="armory-card" type="button" data-weapon="standard">
+            <i data-lucide="circle"></i>
+            <span><strong>Stone</strong><small>Reliable shot</small></span>
+            <b>1</b>
+          </button>
+          <button class="armory-card" type="button" data-weapon="heavy">
+            <i data-lucide="circle-dot"></i>
+            <span><strong>Heavy Stone</strong><small>More block damage</small></span>
+            <b>2</b>
+          </button>
+          <button class="armory-card" type="button" data-weapon="scatter">
+            <i data-lucide="sparkles"></i>
+            <span><strong>Scatter Shot</strong><small>Three small stones</small></span>
+            <b>3</b>
+          </button>
+          <button class="armory-card" type="button" data-weapon="repair">
+            <i data-lucide="hammer"></i>
+            <span><strong>Field Repair</strong><small>Restore one block</small></span>
+            <b>2</b>
+          </button>
         </div>
       </div>
 
-      <button id="startBtn" class="btn-primary">⚔️ COMMENCE MOUNTING</button>
-      <a href="index.html" class="back-link">← Back to Hub</a>
+      <div id="aim-panel" class="phase-panel aim-panel" hidden>
+        <div class="phase-title"><span>3</span> Aim the catapult</div>
+        <label class="aim-control" for="angle-slider">
+          <span><i data-lucide="move-up-right"></i> Angle</span>
+          <input id="angle-slider" type="range" min="20" max="70" value="45" step="1">
+          <output id="angle-value" for="angle-slider">45 degrees</output>
+        </label>
+        <label class="aim-control" for="power-slider">
+          <span><i data-lucide="gauge"></i> Power</span>
+          <input id="power-slider" type="range" min="20" max="100" value="65" step="1">
+          <output id="power-value" for="power-slider">65%</output>
+        </label>
+        <button id="launch-button" class="launch-button" type="button">
+          <i data-lucide="send"></i> Launch
+        </button>
+      </div>
+
+      <div id="waiting-panel" class="phase-panel waiting-panel" hidden>
+        <div class="thinking-mark"><i data-lucide="brain-circuit"></i></div>
+        <div><strong id="waiting-title">Blue Keep is planning</strong><span id="waiting-copy">Watch the wind and the walls.</span></div>
+      </div>
+    </section>
+
+    <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+
+    <section id="setup-modal" class="overlay overlay--open" aria-labelledby="game-title">
+      <div class="setup-card">
+        <div class="title-lockup">
+          <span class="title-kicker">BODEE'S GAMES PRESENTS</span>
+          <h1 id="game-title">CATAPULT<br><em>CLASH</em></h1>
+          <p>Solve. Supply. Siege.</p>
+        </div>
+
+        <fieldset class="setup-group">
+          <legend>Match</legend>
+          <div class="segmented-control" id="mode-control">
+            <button type="button" class="is-selected" data-mode="solo" aria-pressed="true"><i data-lucide="bot"></i> Solo vs AI</button>
+            <button type="button" data-mode="duel" aria-pressed="false"><i data-lucide="users"></i> Local Duel</button>
+          </div>
+        </fieldset>
+
+        <fieldset class="setup-group">
+          <legend>Math challenge</legend>
+          <div class="segmented-control segmented-control--three" id="difficulty-control">
+            <button type="button" data-difficulty="easy" aria-pressed="false">Easy</button>
+            <button type="button" class="is-selected" data-difficulty="medium" aria-pressed="true">Medium</button>
+            <button type="button" data-difficulty="hard" aria-pressed="false">Hard</button>
+          </div>
+        </fieldset>
+
+        <button id="start-button" class="primary-button" type="button"><i data-lucide="swords"></i> Start Match</button>
+        <a class="hub-link" href="/"><i data-lucide="arrow-left"></i> All games</a>
+      </div>
+    </section>
+
+    <section id="pause-modal" class="overlay" aria-labelledby="pause-title" hidden>
+      <div class="dialog-card">
+        <i class="dialog-icon" data-lucide="pause-circle"></i>
+        <h2 id="pause-title">Match Paused</h2>
+        <button id="resume-button" class="primary-button" type="button"><i data-lucide="play"></i> Resume</button>
+        <button id="restart-button" class="secondary-button" type="button"><i data-lucide="rotate-ccw"></i> Restart Match</button>
+        <button id="pause-menu-button" class="text-button" type="button"><i data-lucide="house"></i> Game Menu</button>
+      </div>
+    </section>
+
+    <section id="results-modal" class="overlay" aria-labelledby="results-title" hidden>
+      <div class="dialog-card results-card">
+        <span class="results-kicker">MATCH COMPLETE</span>
+        <h2 id="results-title">Red Keep Wins!</h2>
+        <p id="results-copy">The banner still flies over Red Keep.</p>
+        <div class="result-stats">
+          <div><span id="result-accuracy">0%</span><small>Math accuracy</small></div>
+          <div><span id="result-streak">0</span><small>Best streak</small></div>
+          <div><span id="result-shots">0</span><small>Shots fired</small></div>
+        </div>
+        <button id="rematch-button" class="primary-button" type="button"><i data-lucide="swords"></i> Rematch</button>
+        <button id="results-menu-button" class="text-button" type="button"><i data-lucide="house"></i> Game Menu</button>
+      </div>
+    </section>
+
+    <div id="rotate-notice" class="rotate-notice" aria-hidden="true">
+      <i data-lucide="screen-share"></i>
+      <strong>Turn your device sideways</strong>
+      <span>Catapult Clash plays best in landscape.</span>
     </div>
-  </div>
+  </main>
 
-  <!-- ── RESULTS OVERLAY ── -->
-  <div id="resultsOverlay" class="overlay" style="display:none">
-    <div class="overlay-card results-card">
-      <div id="resultsEmoji" class="results-emoji">👑</div>
-      <div id="resultsHeadline" class="results-headline">Player 1 Wins!</div>
-      <div id="resultsSub" style="color:#aaa; font-size:14px; margin-bottom: 24px">The enemy castle has crumbled.</div>
-      <div class="result-btns">
-        <button id="playAgainBtn" class="btn-primary">REMATCH</button>
-        <button id="menuBtn" class="btn-secondary">MENU</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Audio load/trick -->
+  <script src="https://cdn.jsdelivr.net/npm/matter-js@0.20.0/build/matter.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/lucide@0.468.0/dist/umd/lucide.min.js"></script>
+  <script src="/shared/profile-manager.js"></script>
+  <script src="/shared/play-timer.js"></script>
+  <script src="/shared/analytics.js"></script>
   <script src="castle.js"></script>
 </body>
 </html>

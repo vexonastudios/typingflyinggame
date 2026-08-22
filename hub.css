@@ -718,6 +718,13 @@ body {
 .card-art--mathrace {
   background: linear-gradient(180deg, #1f1235 0%, #46237a 60%, #6b21a8 100%);
 }
+
+.card-art--catapult {
+  background-color: #79c7e7;
+  background-image: linear-gradient(0deg, rgba(24, 48, 71, 0.24), transparent 46%), url("images/catapult-clash-valley.png");
+  background-position: center 58%;
+  background-size: cover;
+}
 .art-race-number {
   position: absolute;
   top: 50%; left: 50%; transform: translate(-50%, -50%);
@@ -1493,4 +1500,3 @@ body {
   0%, 100% { transform: translateY(0) rotate(0deg); opacity: 0.9; }
   50%       { transform: translateY(-8px) rotate(10deg); opacity: 1; }
 }
-
