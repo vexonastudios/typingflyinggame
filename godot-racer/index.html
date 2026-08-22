@@ -3,6 +3,7 @@
 	<head>
 		<meta charset="utf-8">
 		<meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0">
+		<meta name="theme-color" content="#071325">
 		<title>Tiny Turbo Racers</title>
 		<base href="/godot-racer/">
 		<style>
@@ -90,14 +91,42 @@ body {
 	text-align: center;
 	z-index: 1;
 }
+
+#rotate-notice {
+	display: none;
+	position: fixed;
+	inset: 0;
+	z-index: 1000000;
+	align-items: center;
+	justify-content: center;
+	padding: 32px;
+	background: #071325;
+	color: #f7c948;
+	font: 700 26px/1.25 system-ui, sans-serif;
+	text-align: center;
+}
+
+#kid-timer-btn {
+	top: 10px !important;
+	right: 10px !important;
+	transform: scale(0.86);
+	transform-origin: top right;
+}
+
+@media (orientation: portrait) and (max-width: 800px) {
+	#rotate-notice {
+		display: flex;
+	}
+}
 		</style>
 		<link id="-gd-engine-icon" rel="icon" type="image/png" href="index.icon.png" />
 <link rel="apple-touch-icon" href="index.apple-touch-icon.png"/>
 
-	  <link rel="stylesheet" href="../play-timer.css">
-  <script src="../play-timer.js"></script>
-</head>
+	<link rel="stylesheet" href="../play-timer.css">
+	<script src="../play-timer.js"></script>
+	</head>
 	<body>
+		<div id="rotate-notice" role="status">Rotate your screen to race</div>
 		<canvas id="canvas">
 			Your browser does not support the canvas tag.
 		</canvas>
@@ -107,14 +136,14 @@ body {
 		</noscript>
 
 		<div id="status">
-			<img id="status-splash" class="show-image--true fullsize--true use-filter--false" src="index.png" alt="">
-			<progress id="status-progress"></progress>
+			<img id="status-splash" class="show-image--true fullsize--true use-filter--false" src="index.png" alt="Tiny Turbo Racers">
+			<progress id="status-progress" aria-label="Loading game"></progress>
 			<div id="status-notice"></div>
 		</div>
 
 		<script src="index.js"></script>
 		<script>
-const GODOT_CONFIG = {"args":[],"canvasResizePolicy":2,"emscriptenPoolSize":8,"ensureCrossOriginIsolationHeaders":true,"executable":"index","experimentalVK":false,"fileSizes":{"index.pck":6309304,"index.wasm":37700666},"focusCanvas":true,"gdextensionLibs":[],"godotPoolSize":4};
+const GODOT_CONFIG = {"args":[],"canvasResizePolicy":2,"emscriptenPoolSize":8,"ensureCrossOriginIsolationHeaders":true,"executable":"index","experimentalVK":false,"fileSizes":{"index.pck":6368848,"index.wasm":37700666},"focusCanvas":true,"gdextensionLibs":[],"godotPoolSize":4};
 const GODOT_THREADS_ENABLED = false;
 const engine = new Engine(GODOT_CONFIG);
 
@@ -220,4 +249,3 @@ const engine = new Engine(GODOT_CONFIG);
 		</script>
 	</body>
 </html>
-
