@@ -11,11 +11,11 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Ramp Racer | Stunt Tour</title>
-  <meta name="description" content="Master launch power, control your car in the air, and conquer a fifteen-stunt tour."/>
+  <meta name="description" content="Boost through a nonstop stunt run, chain jumps, and stick every landing."/>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800;900&family=Share+Tech+Mono&display=swap"/>
   <link rel="icon" type="image/svg+xml" href="favicon.svg"/>
-  <link rel="stylesheet" href="ramp.css?v=3.0"/>
+  <link rel="stylesheet" href="ramp.css?v=3.1"/>
   <link rel="stylesheet" href="play-timer.css"/>
   <script src="profile-manager.js"></script>
   <script src="play-timer.js"></script>
@@ -38,7 +38,7 @@
         <div>
           <p class="eyebrow">Bodee Books stunt series</p>
           <h1 id="gameTitle">Ramp <strong>Racer</strong></h1>
-          <p class="tagline">Charge the launch. Control the flight. Stick the landing.</p>
+          <p class="tagline">Hold boost. Hit the ramps. Keep the run alive.</p>
         </div>
       </header>
 
@@ -48,7 +48,7 @@
           <label class="select-option selected">
             <input type="radio" name="mode" value="adventure" checked/>
             <i data-lucide="map"></i>
-            <span><strong>Stunt Tour</strong><small>15 named challenges</small></span>
+            <span><strong>Stunt Tour</strong><small>15 jumps, one nonstop run</small></span>
           </label>
           <label class="select-option">
             <input type="radio" name="mode" value="endless"/>
@@ -69,18 +69,18 @@
             <label><input type="radio" name="diff" value="medium" checked/><span>Pro</span></label>
             <label><input type="radio" name="diff" value="hard"/><span>Legend</span></label>
           </div>
-          <p id="difficultyNote" class="difficulty-note">Balanced landing zones and power windows</p>
+          <p id="difficultyNote" class="difficulty-note">Balanced landing zones and speed targets</p>
         </fieldset>
 
         <div class="controls-display" aria-label="Player controls">
           <div class="control-line red-control">
             <span class="driver-name"><i data-lucide="circle"></i> Driver 1</span>
-            <span><kbd>→</kbd> Hold / release</span>
+            <span><kbd>→</kbd> Hold to boost</span>
             <span><kbd>↑</kbd><kbd>↓</kbd> Rotate</span>
           </div>
           <div id="playerTwoControls" class="control-line blue-control muted-control">
             <span class="driver-name"><i data-lucide="circle"></i> Driver 2</span>
-            <span><kbd>D</kbd> Hold / release</span>
+            <span><kbd>D</kbd> Hold to boost</span>
             <span><kbd>W</kbd><kbd>S</kbd> Rotate</span>
           </div>
         </div>
@@ -101,7 +101,7 @@
 
   <div id="touchControls" class="touch-controls hidden" aria-label="Touch controls">
     <button type="button" data-touch="tiltUp" aria-label="Rotate counterclockwise"><i data-lucide="rotate-ccw"></i></button>
-    <button type="button" class="rev-btn" data-touch="accel" aria-label="Hold to charge launch"><i data-lucide="gauge"></i><span>REV</span></button>
+    <button type="button" class="rev-btn" data-touch="accel" aria-label="Hold to boost"><i data-lucide="gauge"></i><span>BOOST</span></button>
     <button type="button" data-touch="tiltDown" aria-label="Rotate clockwise"><i data-lucide="rotate-cw"></i></button>
   </div>
 
@@ -132,6 +132,6 @@
   </section>
 
   <script src="https://cdn.jsdelivr.net/npm/lucide@0.468.0/dist/umd/lucide.min.js"></script>
-  <script src="ramp.js?v=3.0"></script>
+  <script src="ramp.js?v=3.1"></script>
 </body>
 </html>

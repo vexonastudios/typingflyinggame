@@ -1,15 +1,17 @@
 'use strict';
 
 // ═══════════════════════════════════════════════════════════
-//  RAMP RACER v2 — Continuous Track + Horizontal Split-Screen
-//  Drive, rev, launch off ramps, chain jumps, race to finish!
+//  RAMP RACER v3 — Continuous Stunt Run + Horizontal Split-Screen
+//  Hold boost, chain jumps, control the landing, race to finish!
 // ═══════════════════════════════════════════════════════════
 
 // ─── Physics / Tuning ───────────────────────────────────────
 const GRAVITY       = 1050;
-const MAX_SPEED     = 760;
-const ACCEL_RATE    = 180;
-const DRIVE_SPEED   = 380;    // auto-roll speed between jumps (px/s)
+const MAX_SPEED     = 790;
+const START_SPEED   = 470;
+const MIN_SPEED     = 420;
+const ACCEL_RATE    = 320;
+const COAST_DRAG    = 46;
 const AIR_TILT_SPD  = 2.6;
 const FIXED_STEP    = 1 / 120;
 const CAR_W         = 58;
@@ -17,7 +19,7 @@ const CAR_H         = 26;
 const WHEEL_R       = 10;
 const PLATFORM_H    = 48;
 const STAR_R        = 13;
-const RESPAWN_PENALTY = 1.15;
+const RESPAWN_PENALTY = 0.65;
 
 // ─── Track config ───────────────────────────────────────────
 const ADVENTURE_JUMPS = 15;   // jumps per adventure track
@@ -253,12 +255,12 @@ class Player {
     this._init();
   }
   _init() {
-    this.phase      = 'charging'; // charging|launching|airborne|driving|respawning|finished
+    this.phase      = 'driving'; // driving|launching|airborne|respawning|finished
     this.x          = 60;
     this.y          = 0;
     this.vx         = 0;
     this.vy         = 0;
-    this.speed      = 0;
+    this.speed      = START_SPEED;
     this.angle      = 0;
     this.wheelAngle = 0;
     this.jumpIdx    = 0;      // which jump in the track we're at
@@ -266,6 +268,7 @@ class Player {
     this.totalScore = 0;
     this.starsGot   = 0;
     this.streak     = 0;
+    this.bestStreak = 0;
     this.raceTime   = 0;      // total elapsed race time
     this.penaltyTime= 0;      // accumulated penalty seconds
     this.respawnTimer = 0;
@@ -286,6 +289,7 @@ class Player {
     const firstPlat = track.platforms[0];
     this.x = firstPlat.x + 60;
     this.y = firstPlat.y - CAR_H;
+    this.speed = START_SPEED;
     this.camX = this.x - 200;
     this.camY = this.y - 150;
   }
@@ -403,9 +407,9 @@ class RampRacer {
     const startLabels = { adventure:'Start Tour', endless:'Start Survival', versus:'Start Split Race' };
     document.querySelector('#startBtn span').textContent = startLabels[mode];
     const notes = {
-      easy:'Wide landings and generous power windows',
-      medium:'Balanced landing zones and power windows',
-      hard:'Narrow decks and precise launch windows'
+      easy:'Wide landings and forgiving speed targets',
+      medium:'Balanced landing zones and speed targets',
+      hard:'Narrow decks and precise boost timing'
     };
     document.getElementById('difficultyNote').textContent = notes[diff];
     const best = this._loadBest();
@@ -470,8 +474,8 @@ class RampRacer {
     this.raceStarted = false;
     this.accumulator = 0;
 
-    this._cdCount = 3;
-    this._cdTimer = 0.95;
+    this._cdCount = 2;
+    this._cdTimer = 0.72;
     this.state = 'countdown';
     this._showStuntBanner(this.players[0]);
     Sfx.countdown();
@@ -529,12 +533,12 @@ class RampRacer {
     const plat = this.track.platforms[p.jumpIdx];
     p.x = plat.x + 60;
     p.y = plat.y - CAR_H;
-    p.vx = 0; p.vy = 0; p.speed = 0; p.angle = 0;
-    p.phase = 'charging';
+    p.vx = 0; p.vy = 0; p.speed = START_SPEED; p.angle = 0;
+    p.phase = 'driving';
     p._lastAccel = false;
     p.trailDots = [];
     p.streak = 0;
-    p.raceTime += 1;
+    p.raceTime += 0.5;
     p.flashTimer = 0.22;
     p.flashColor = '#f6c453';
     this._showStuntBanner(p);
@@ -570,7 +574,7 @@ class RampRacer {
     void banner.offsetWidth;
     banner.style.animation = '';
     window.clearTimeout(this._bannerTimer);
-    this._bannerTimer = window.setTimeout(() => banner.classList.add('hidden'), 1750);
+    this._bannerTimer = window.setTimeout(() => banner.classList.add('hidden'), 1050);
   }
 
   // ─── Loop ────────────────────────────────────────────────
@@ -595,7 +599,7 @@ class RampRacer {
       this._cdTimer -= dt;
       if (this._cdTimer <= 0) {
         this._cdCount--;
-        if (this._cdCount > 0) { this._cdTimer = 0.95; Sfx.countdown(); }
+        if (this._cdCount > 0) { this._cdTimer = 0.72; Sfx.countdown(); }
         else { this.state = 'racing'; this.raceStarted = true; Sfx.go(); }
       }
       this.players.forEach(p => this._updateCamera(p, dt));
@@ -636,7 +640,9 @@ class RampRacer {
     const zoom = this._getZoom(vpW, vpH);
     const worldW = vpW / zoom;
     const worldH = vpH / zoom;
-    const speedLead = p.phase === 'airborne' ? clamp(p.vx * 0.16, 0, worldW * 0.12) : 0;
+    const forwardSpeed = p.phase === 'airborne' ? p.vx : p.speed;
+    const maxLead = portrait ? 0 : worldW * (touchRail ? 0.035 : 0.14);
+    const speedLead = clamp(forwardSpeed * 0.18, 0, maxLead);
     const anchor = portrait ? 0.06 : (touchRail ? 0.14 : 0.30);
     const targetCX = p.x - worldW * anchor + speedLead;
     const targetCY = p.y - worldH * 0.60;
@@ -648,6 +654,25 @@ class RampRacer {
     if (this.isVersus) return clamp(vpW / 1150, 1.05, 1.28);
     if (vpW <= 640 && vpH > 560) return 0.72;
     return clamp(vpW / 1000, 1.18, 1.55);
+  }
+
+  _updateDriveSpeed(p, dt) {
+    const boosting = this._pressed(p, 'accel');
+    if (boosting) p.speed = Math.min(MAX_SPEED, p.speed + ACCEL_RATE * dt);
+    else p.speed = Math.max(MIN_SPEED, p.speed - COAST_DRAG * dt);
+
+    p._lastAccel = boosting;
+    if (boosting) {
+      if (Math.random() < dt * 8) Sfx.rev(p.speed / MAX_SPEED);
+      if (Math.random() < 0.42) {
+        p.exhaust.push({
+          x:p.x-5, y:p.y+CAR_H-5,
+          vx:rand(-75,-28), vy:rand(-14,14),
+          life:rand(0.12,0.3), r:rand(2,5),
+          color:p.speed > MAX_SPEED * 0.76 ? '#ff6b35' : '#f6c453',
+        });
+      }
+    }
   }
 
   _updatePlayer(p, dt) {
@@ -670,11 +695,11 @@ class RampRacer {
         const plat = track.platforms[p.jumpIdx];
         p.x = plat.x + 60;
         p.y = plat.y - CAR_H;
-        p.vx = 0; p.vy = 0; p.speed = 0;
+        p.vx = 0; p.vy = 0; p.speed = START_SPEED;
         p.angle = 0;
         p.trailDots = [];
         p.ghostTrail = [...(p._lastTrail||[])];
-        p.phase = 'charging';
+        p.phase = 'driving';
         p.flashTimer = 0.3;
         p.flashColor = '#88aaff';
       }
@@ -684,37 +709,11 @@ class RampRacer {
     // --- FINISHED ---
     if (p.phase === 'finished') return;
 
-    // --- CHARGING ---
-    if (p.phase === 'charging') {
-      const accel = this._pressed(p, 'accel');
-      if (accel) {
-        p.speed = Math.min(MAX_SPEED, p.speed + ACCEL_RATE * dt);
-        // vibrate car while revving
-        const shake = (p.speed / MAX_SPEED);
-        p.x = track.platforms[p.jumpIdx].x + 60 + Math.sin(this.time * 36) * shake * 2.5;
-        p.y = track.platforms[p.jumpIdx].y - CAR_H + Math.sin(this.time * 29) * shake * 1.2;
-        p.wheelAngle += p.speed * 0.005 * dt * 60;
-        if (Math.random() < 0.25 + shake*0.5) {
-          p.exhaust.push({
-            x: p.x - 6, y: p.y + CAR_H - 4,
-            vx: rand(-35,-8), vy: rand(-12,12),
-            life: rand(0.2,0.45), r: rand(3, 5 + shake*4),
-            color: p.speed > MAX_SPEED*0.7 ? '#ff6b35' : '#8899aa',
-          });
-        }
-        if (Math.random() < dt * 7) Sfx.rev(p.speed / MAX_SPEED);
-      } else if (p._lastAccel && p.speed > 8) {
-        // Released — launch!
-        p.phase = 'launching';
-        Sfx.launch();
-      }
-      p._lastAccel = accel;
-    }
-
     // --- LAUNCHING (driving across platform and up ramp) ---
     if (p.phase === 'launching') {
       const ramp = track.ramps[p.jumpIdx];
-      const driveSpd = p.speed * 2.4;
+      this._updateDriveSpeed(p, dt);
+      const driveSpd = p.speed;
       p.x += driveSpd * dt;
       p.wheelAngle += driveSpd * 0.01 * dt * 60;
 
@@ -822,6 +821,7 @@ class RampRacer {
     // --- DRIVING (rolling to next ramp after landing) ---
     if (p.phase === 'driving') {
       const ramp = track.ramps[p.jumpIdx];
+      this._updateDriveSpeed(p, dt);
       if (!ramp) {
         // No more ramps — reached finish line area
         if (p.x >= track.finishX) {
@@ -836,8 +836,8 @@ class RampRacer {
             angle:-Math.PI/2, spread:Math.PI,
           });
         }
-        p.x += DRIVE_SPEED * dt;
-        p.wheelAngle += DRIVE_SPEED * 0.012 * dt * 60;
+        p.x += p.speed * dt;
+        p.wheelAngle += p.speed * 0.012 * dt * 60;
 
         // Exhaust while driving
         if (Math.random() < 0.2) {
@@ -851,10 +851,10 @@ class RampRacer {
       }
 
       // Roll toward the next ramp base
-      p.x += DRIVE_SPEED * dt;
+      p.x += p.speed * dt;
       p.y = track.platforms[p.jumpIdx].y - CAR_H; // stay on platform
       p.angle = lerp(p.angle, 0, Math.min(1, 12*dt));
-      p.wheelAngle += DRIVE_SPEED * 0.012 * dt * 60;
+      p.wheelAngle += p.speed * 0.012 * dt * 60;
 
       if (Math.random() < 0.2) {
         p.exhaust.push({
@@ -868,11 +868,10 @@ class RampRacer {
       if (p.x + CAR_W/2 >= ramp.baseX - 10) {
         p.x = ramp.baseX - CAR_W/2 - 12;
         p.y = track.platforms[p.jumpIdx].y - CAR_H;
-        p.speed = 0;
-        p._lastAccel = false;
-        p.phase = 'charging';
+        p.phase = 'launching';
         p.trailDots = [];
-        this._showStuntBanner(p);
+        Sfx.launch();
+        if (p.jumpIdx > 0 && p.jumpIdx % 3 === 0) this._showStuntBanner(p);
       }
     }
   }
@@ -896,12 +895,14 @@ class RampRacer {
     let label = '👍 OK!', col = '#88ccff';
     if (precision > 0.88 && angleError < 0.28) {
       pts = 1500; label = '🎯 PERFECT!'; col = '#ffcc00'; Sfx.perfect();
+      p.speed = Math.min(MAX_SPEED, p.speed + 34);
       p.particles.emit(carCx, plat.y, 35, {
         angle:-Math.PI/2, spread:1.3,
         colors:['#ffcc00','#ffe066','#fff','#ff8800'], minSpd:50, maxSpd:220, minR:2, maxR:6,
       });
     } else if (precision > 0.56 && angleError < 0.62) {
       pts = 1000; label = '✨ GREAT!'; col = '#66ff88'; Sfx.land();
+      p.speed = Math.min(MAX_SPEED, p.speed + 18);
       p.particles.emit(carCx, plat.y, 20, {
         angle:-Math.PI/2, spread:1.0,
         colors:['#8B7355','#A0926B','#C4B99A'], minSpd:40, maxSpd:180, minR:2, maxR:5,
@@ -909,15 +910,17 @@ class RampRacer {
     } else if (angleError > 0.72) {
       pts = 250; label = 'ROUGH LANDING'; col = '#ff9a5c'; Sfx.land();
       p.streak = 0;
+      p.speed = Math.max(MIN_SPEED, p.speed - 55);
     } else {
       Sfx.land();
     }
 
     p.streak++;
+    p.bestStreak = Math.max(p.bestStreak, p.streak);
     if (p.streak > 1) {
       const bonus = p.streak * 100;
       pts += bonus;
-      this._addFloat(`🔥 ${p.streak}x +${bonus}`, carCx, plat.y - 60, '#ff8844', p);
+      this._addFloat(`FLOW x${p.streak}  +${bonus}`, carCx, plat.y - 60, '#ff8844', p);
     }
 
     p.totalScore += pts;
@@ -985,7 +988,7 @@ class RampRacer {
       e.innerHTML = `
         <span class="result-pos">★</span>
         <span class="result-name">${p.totalScore.toLocaleString()} pts</span>
-        <span class="result-stat">${this._fmtTime(p.raceTime)} · ⭐${p.starsGot} · ${p.jumpIdx}/${this.track.jumps.length} jumps</span>`;
+        <span class="result-stat">${this._fmtTime(p.raceTime)} · ⭐${p.starsGot} · Flow x${p.bestStreak} · ${p.jumpIdx}/${this.track.jumps.length}</span>`;
       list.appendChild(e);
       if (completed) Sfx.win(); else Sfx.fail();
     }
@@ -1447,7 +1450,7 @@ class RampRacer {
 
   _drawPlayer(ctx, p, ox, oy) {
     // Ghost trail
-    if (p.ghostTrail && p.ghostTrail.length > 1 && (p.phase === 'charging' || p.phase === 'driving')) {
+    if (p.ghostTrail && p.ghostTrail.length > 1 && (p.phase === 'driving' || p.phase === 'launching')) {
       ctx.globalAlpha = 0.12;
       ctx.strokeStyle = '#ff4444';
       ctx.lineWidth = 2;
@@ -1472,16 +1475,17 @@ class RampRacer {
       ctx.globalAlpha = 1;
     }
 
-    // Wind lines (Speed lines)
-    if (p.phase === 'airborne' && Math.hypot(p.vx, p.vy) > 300) {
-      ctx.strokeStyle = 'rgba(255,255,255,0.6)';
+    // Wind lines make the continuous run read at a glance.
+    const travelSpeed = p.phase === 'airborne' ? Math.hypot(p.vx, p.vy) : p.speed;
+    if (!['respawning', 'finished'].includes(p.phase) && travelSpeed > 500) {
+      ctx.strokeStyle = `rgba(255,255,255,${clamp((travelSpeed - 440) / 600, 0.16, 0.58)})`;
       ctx.lineWidth = 2;
       ctx.beginPath();
-      const a = Math.atan2(p.vy, p.vx);
-      for(let i=0; i<4; i++) {
-        const lx = p.x + CAR_W/2 + rand(-40, 40);
-        const ly = p.y + CAR_H/2 + rand(-30, 30);
-        const len = rand(40, 100);
+      const a = p.phase === 'airborne' ? Math.atan2(p.vy, p.vx) : 0;
+      for(let i=0; i<6; i++) {
+        const lx = p.x + CAR_W/2 + rand(-55, 48);
+        const ly = p.y + CAR_H/2 + rand(-42, 38);
+        const len = rand(34, 74) * clamp(travelSpeed / 540, 0.8, 1.45);
         ctx.moveTo(lx, ly);
         ctx.lineTo(lx - Math.cos(a)*len, ly - Math.sin(a)*len);
       }
@@ -1563,17 +1567,17 @@ class RampRacer {
     ctx.beginPath(); ctx.moveTo(4, -CAR_H/2+2); ctx.lineTo(10, -CAR_H/2+2); ctx.lineTo(14, -CAR_H/2+6); ctx.lineTo(6, -CAR_H/2+6); ctx.fill();
 
     // Headlight / Taillight
-    ctx.fillStyle = (p.phase === 'charging') ? '#fff' : '#ffe680';
+    ctx.fillStyle = p._lastAccel ? '#fff' : '#ffe680';
     ctx.beginPath(); ctx.ellipse(CAR_W/2 + 7, -2, 3, 5, 0, 0, Math.PI*2); ctx.fill();
-    ctx.shadowColor = (p.phase === 'charging' && p.speed > 100) ? '#ffe680' : 'transparent';
+    ctx.shadowColor = p._lastAccel ? '#ffe680' : 'transparent';
     ctx.shadowBlur = 10;
     ctx.fill(); ctx.shadowBlur = 0;
 
     ctx.fillStyle = '#ff2222';
     ctx.beginPath(); ctx.ellipse(-CAR_W/2 + 1, -2, 2, 5, 0, 0, Math.PI*2); ctx.fill();
 
-    // Glowing exhaust pipe if charging
-    if (p.phase === 'charging' && p.speed > 50) {
+    // Glowing exhaust pipe while boosting
+    if (p._lastAccel && p.phase !== 'airborne') {
       ctx.fillStyle = '#555';
       ctx.fillRect(-CAR_W/2 - 4, CAR_H/2 - 8, 5, 4);
       ctx.fillStyle = '#ff8800';
@@ -1614,8 +1618,8 @@ class RampRacer {
     ctx.fillStyle = hudShade;
     ctx.fillRect(ox, oy, vpW, 62);
 
-    // Speed gauge (only when charging)
-    if (p.phase === 'charging') {
+    // Speed target stays visible so the player can set up the next launch in motion.
+    if (p.phase !== 'respawning' && p.phase !== 'finished') {
       const touchClearance = !this.isVersus && vpW <= 640 && vpH > 560 ? 98 : 18;
       this._drawGauge(ctx, p, ox + vpW/2, oy + vpH - touchClearance, Math.min(430, vpW * 0.48));
     }
@@ -1706,6 +1710,13 @@ class RampRacer {
     ctx.font = '12px Outfit';
     ctx.fillStyle = 'rgba(255,255,255,0.5)';
     ctx.fillText(`${p.totalScore} pts`, ox + vpW - 14, oy + 46);
+
+    if (p.streak > 1) {
+      ctx.font = '900 18px Outfit';
+      ctx.fillStyle = '#f6c453';
+      ctx.textAlign = 'right';
+      ctx.fillText(`FLOW x${p.streak}`, ox + vpW - 14, oy + 69);
+    }
   }
 
   _drawGauge(ctx, p, cx, bottomY, width) {
@@ -1734,10 +1745,12 @@ class RampRacer {
     ctx.font = '700 11px "Share Tech Mono"';
     ctx.textAlign = 'left';
     ctx.fillStyle = 'rgba(255,255,255,0.62)';
-    ctx.fillText('LAUNCH POWER', barX, panelY + 19);
+    ctx.fillText('RAMP SPEED', barX, panelY + 19);
     ctx.textAlign = 'right';
     ctx.fillStyle = inWindow ? '#63e0b7' : (tooHot ? '#ff755c' : '#f6c453');
-    const status = p.speed === 0 ? 'HOLD' : (inWindow ? 'RELEASE' : (tooHot ? 'TOO HOT' : 'BUILD'));
+    const status = p.phase === 'airborne'
+      ? 'AIRBORNE'
+      : (inWindow ? 'ON TARGET' : (tooHot ? 'COAST' : 'BOOST'));
     ctx.fillText(`${status}  ${Math.round(p.speed)}`, barX + barW, panelY + 19);
 
     ctx.fillStyle = 'rgba(255,255,255,0.1)';
@@ -1777,7 +1790,7 @@ class RampRacer {
 
   _drawCountdown(ctx, ox, oy, vpW, vpH) {
     const text  = this._cdCount > 0 ? String(this._cdCount) : 'GO!';
-    const scale = 1 + (1 - this._cdTimer/0.95) * 0.28;
+    const scale = 1 + (1 - this._cdTimer/0.72) * 0.28;
     ctx.save();
     ctx.translate(ox + vpW/2, oy + vpH/2 - 30);
     ctx.scale(scale, scale);
