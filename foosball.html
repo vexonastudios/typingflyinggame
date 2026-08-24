@@ -1,134 +1,175 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <!-- Google tag (gtag.js) -->
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-ZTP50MJ7CX"></script>
   <script>
     window.dataLayer = window.dataLayer || [];
     function gtag(){dataLayer.push(arguments);}
     gtag('js', new Date());
-
     gtag('config', 'G-ZTP50MJ7CX');
   </script>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Foosball Frenzy — Digital Foosball</title>
-  <meta name="description" content="Two-player digital foosball with physics, kicking, and goals."/>
+  <title>Foosball Frenzy | Solo & Local Duel</title>
+  <meta name="description" content="Fast digital foosball with solo AI and two-player local matches."/>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;900&display=swap"/>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800;900&family=Share+Tech+Mono&display=swap"/>
   <link rel="icon" type="image/svg+xml" href="favicon.svg"/>
-  <link rel="stylesheet" href="foosball.css"/>
-  <link rel="stylesheet" href="play-timer.css">
-    <script src="profile-manager.js"></script>
+  <link rel="stylesheet" href="foosball.css?v=2.0"/>
+  <link rel="stylesheet" href="play-timer.css"/>
+  <script src="profile-manager.js"></script>
   <script src="play-timer.js"></script>
   <script defer src="https://www.bodeebooks.com/bodee-analytics.js"></script>
 </head>
 <body>
+  <nav id="gameTools" class="game-tools hidden" aria-label="Game controls">
+    <a class="icon-btn" href="index.html" aria-label="Return to game hub" title="Game Hub"><i data-lucide="house"></i></a>
+    <button id="pauseBtn" class="icon-btn" type="button" aria-label="Pause match" title="Pause (Esc)"><i data-lucide="pause"></i></button>
+    <button id="fullscreenBtn" class="icon-btn" type="button" aria-label="Enter fullscreen" title="Fullscreen (F)"><i data-lucide="maximize"></i></button>
+  </nav>
 
-  <!-- ── SETUP OVERLAY ── -->
-  <div id="setupOverlay" class="overlay">
-    <div class="overlay-card setup-card">
-      <div class="game-logo">
-        <span class="logo-icon">⚽</span>
+  <main id="setupOverlay" class="setup-screen">
+    <canvas id="setupCanvas" class="setup-canvas" aria-hidden="true"></canvas>
+    <section class="setup-panel" aria-labelledby="gameTitle">
+      <header class="title-lockup">
+        <div class="title-ball" aria-hidden="true"><span></span></div>
         <div>
-          <span class="logo-main">FOOSBALL</span>
-          <span class="logo-sub">FRENZY</span>
+          <p class="eyebrow">Bodee Books table series</p>
+          <h1 id="gameTitle">Foosball <strong>Frenzy</strong></h1>
+          <p class="tagline">Control the lanes. Time the strike. Own the table.</p>
         </div>
-      </div>
-      <p class="game-tagline">Slide. Kick. Score. Two players, one table.</p>
+      </header>
 
-      <div class="setup-section">
-        <div class="settings-label">First To</div>
-        <div class="score-grid">
-          <label class="score-opt">
-            <input type="radio" name="maxScore" value="5"/>
-            <span class="score-name">⚡ 5</span>
+      <div class="setup-grid">
+        <fieldset class="setup-group mode-group">
+          <legend>Match</legend>
+          <label class="select-option selected">
+            <input type="radio" name="gameMode" value="solo" checked/>
+            <i data-lucide="bot"></i>
+            <span><strong>Solo Cup</strong><small>Challenge the table bot</small></span>
           </label>
-          <label class="score-opt selected">
-            <input type="radio" name="maxScore" value="10" checked/>
-            <span class="score-name">🏆 10</span>
+          <label class="select-option">
+            <input type="radio" name="gameMode" value="duel"/>
+            <i data-lucide="users"></i>
+            <span><strong>Local Duel</strong><small>Two players, one keyboard</small></span>
           </label>
-          <label class="score-opt">
-            <input type="radio" name="maxScore" value="15"/>
-            <span class="score-name">🔥 15</span>
-          </label>
-        </div>
-      </div>
+        </fieldset>
 
-      <div class="setup-section">
-        <div class="settings-label">Controls</div>
-        <div class="controls-info">
-          <div class="ctrl-col ctrl-col--red">
-            <div class="ctrl-title">🔴 Player 1</div>
-            <div class="ctrl-key"><kbd>W</kbd><kbd>S</kbd> Move rods</div>
-            <div class="ctrl-key"><kbd>A</kbd> Kick left <kbd>D</kbd> Kick right</div>
+        <fieldset id="difficultyGroup" class="setup-group difficulty-group">
+          <legend>Opponent</legend>
+          <div class="segmented-options">
+            <label><input type="radio" name="difficulty" value="rookie"/><span>Rookie</span></label>
+            <label><input type="radio" name="difficulty" value="skilled" checked/><span>Skilled</span></label>
+            <label><input type="radio" name="difficulty" value="champion"/><span>Champion</span></label>
           </div>
-          <div class="ctrl-vs">VS</div>
-          <div class="ctrl-col ctrl-col--blue">
-            <div class="ctrl-title">🔵 Player 2</div>
-            <div class="ctrl-key"><kbd>↑</kbd><kbd>↓</kbd> Move rods</div>
-            <div class="ctrl-key"><kbd>←</kbd> Kick left <kbd>→</kbd> Kick right</div>
+        </fieldset>
+
+        <fieldset class="setup-group score-group">
+          <legend>First To</legend>
+          <div class="segmented-options">
+            <label><input type="radio" name="maxScore" value="3"/><span>3</span></label>
+            <label><input type="radio" name="maxScore" value="5" checked/><span>5</span></label>
+            <label><input type="radio" name="maxScore" value="7"/><span>7</span></label>
+          </div>
+        </fieldset>
+
+        <div class="crew-controls" aria-label="Player controls">
+          <div class="crew red-crew">
+            <span class="crew-name"><i data-lucide="circle"></i> Red</span>
+            <span><kbd>W</kbd><kbd>S</kbd> Slide</span>
+            <span><kbd>A</kbd><kbd>D</kbd> Strike</span>
+          </div>
+          <div id="blueControls" class="crew blue-crew">
+            <span class="crew-name"><i data-lucide="bot"></i> Table Bot</span>
+            <span>Blue side is automated</span>
           </div>
         </div>
       </div>
 
-      <button id="startBtn" class="btn-primary">⚽ START MATCH</button>
-      <a href="index.html" class="back-link">← Back to Hub</a>
-    </div>
-  </div>
+      <button id="startBtn" class="primary-btn" type="button"><i data-lucide="play"></i><span>Start Match</span></button>
+      <a href="index.html" class="back-link"><i data-lucide="arrow-left"></i><span>Game Hub</span></a>
+    </section>
+  </main>
 
-  <!-- ── GAME AREA ── -->
-  <div id="gameArea" class="game-area" style="display:none">
-    <!-- Scoreboard -->
-    <div class="scoreboard" id="scoreboard">
-      <div class="score-side score-side--red">
-        <span class="score-label">🔴 RED</span>
-        <span class="score-val" id="scoreRed">0</span>
+  <section id="gameArea" class="game-area hidden" aria-label="Foosball match">
+    <header class="scoreboard" id="scoreboard">
+      <div class="score-side score-side-red">
+        <span id="redName" class="team-name">Red</span>
+        <strong id="scoreRed" class="score-value">0</strong>
       </div>
       <div class="score-center">
-        <span class="score-target" id="scoreTarget">First to 10</span>
+        <span id="scoreTarget">First to 5</span>
+        <strong id="rallyText">Kickoff</strong>
       </div>
-      <div class="score-side score-side--blue">
-        <span class="score-val" id="scoreBlue">0</span>
-        <span class="score-label">BLUE 🔵</span>
+      <div class="score-side score-side-blue">
+        <strong id="scoreBlue" class="score-value">0</strong>
+        <span id="blueName" class="team-name">Table Bot</span>
       </div>
-    </div>
+    </header>
 
-    <!-- Canvas -->
-    <div class="canvas-wrapper">
-      <canvas id="gameCanvas"></canvas>
-    </div>
-
-    <!-- Countdown Overlay -->
-    <div class="countdown-overlay" id="countdownOverlay" style="display:none">
-      <span class="countdown-num" id="countdownNum">3</span>
-    </div>
-
-    <!-- Goal Flash -->
-    <div class="goal-flash" id="goalFlash" style="display:none">
-      <span class="goal-text">⚽ GOAL!</span>
-    </div>
-
-    <!-- Bottom bar -->
-    <div class="bottom-bar">
-      <button id="menuBtn" class="bar-btn">← Menu</button>
-      <div class="bar-hint">Press ESC to pause</div>
-    </div>
-  </div>
-
-  <!-- ── RESULTS OVERLAY ── -->
-  <div id="resultsOverlay" class="overlay" style="display:none">
-    <div class="overlay-card results-card">
-      <div id="resultsEmoji" class="results-emoji">🏆</div>
-      <div id="resultsHeadline" class="results-headline">Red Wins!</div>
-      <div id="resultsSub" class="results-sub">10 – 7</div>
-      <div class="result-btns">
-        <button id="rematchBtn" class="btn-primary">REMATCH</button>
-        <button id="backMenuBtn" class="btn-secondary">MENU</button>
+    <div id="tableStage" class="table-stage">
+      <canvas id="gameCanvas" width="960" height="540"></canvas>
+      <div id="matchBanner" class="match-banner hidden" aria-live="polite">
+        <span id="bannerKicker">Kickoff</span>
+        <strong id="bannerText">3</strong>
+      </div>
+      <div id="goalFlash" class="goal-flash hidden" aria-live="polite">
+        <span id="goalTeam">Red</span>
+        <strong>Goal!</strong>
+      </div>
+      <div id="callout" class="callout hidden">Perfect strike</div>
+      <div class="shot-meter" aria-label="Shot speed">
+        <span>Shot</span><strong id="shotSpeed">0</strong><small>km/h</small>
       </div>
     </div>
-  </div>
 
-  <script src="foosball.js"></script>
+    <footer class="match-footer">
+      <span id="footerRed"><kbd>W</kbd><kbd>S</kbd> Slide · <kbd>A</kbd><kbd>D</kbd> Strike</span>
+      <span id="footerBlue">Skilled table bot</span>
+    </footer>
+
+    <div id="touchControls" class="touch-controls" aria-label="Touch controls">
+      <div class="touch-slide">
+        <button type="button" data-touch="up" aria-label="Slide up"><i data-lucide="chevron-up"></i></button>
+        <button type="button" data-touch="down" aria-label="Slide down"><i data-lucide="chevron-down"></i></button>
+      </div>
+      <div class="touch-kicks">
+        <button type="button" data-kick="-1" aria-label="Strike left"><i data-lucide="arrow-left"></i></button>
+        <button type="button" data-kick="1" aria-label="Strike right"><i data-lucide="arrow-right"></i></button>
+      </div>
+    </div>
+  </section>
+
+  <section id="pauseOverlay" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="pauseTitle">
+    <div class="modal-panel">
+      <p class="eyebrow">Timeout</p>
+      <h2 id="pauseTitle">Match Paused</h2>
+      <div class="modal-actions">
+        <button id="resumeBtn" class="primary-btn" type="button"><i data-lucide="play"></i><span>Resume</span></button>
+        <button id="restartBtn" class="secondary-btn" type="button"><i data-lucide="rotate-ccw"></i><span>Restart</span></button>
+        <button id="menuBtn" class="secondary-btn" type="button"><i data-lucide="sliders-horizontal"></i><span>Setup</span></button>
+      </div>
+    </div>
+  </section>
+
+  <section id="resultsOverlay" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="resultsHeadline">
+    <div class="modal-panel results-panel">
+      <p id="resultsKicker" class="eyebrow">Match complete</p>
+      <h2 id="resultsHeadline">Red Wins</h2>
+      <div id="resultsSub" class="final-score">5 <span>–</span> 3</div>
+      <div class="result-stats">
+        <span>Longest rally<strong id="resultRally">0</strong></span>
+        <span>Fastest shot<strong id="resultSpeed">0 km/h</strong></span>
+      </div>
+      <div class="modal-actions">
+        <button id="rematchBtn" class="primary-btn" type="button"><i data-lucide="rotate-ccw"></i><span>Rematch</span></button>
+        <button id="backMenuBtn" class="secondary-btn" type="button"><i data-lucide="sliders-horizontal"></i><span>Setup</span></button>
+        <a class="secondary-btn" href="index.html"><i data-lucide="house"></i><span>Game Hub</span></a>
+      </div>
+    </div>
+  </section>
+
+  <script src="https://cdn.jsdelivr.net/npm/lucide@0.468.0/dist/umd/lucide.min.js"></script>
+  <script src="foosball.js?v=2.0"></script>
 </body>
 </html>
