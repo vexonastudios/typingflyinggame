@@ -146,8 +146,9 @@
   }
 
   function getRodMaxOffset(count) {
-    const spacing = (H - PAD * 2) / (count + 1);
-    return Math.max(38, spacing * 0.55);
+    const firstFigureY = PAD + (H - PAD * 2) / (count + 1);
+    const railClearance = PAD + FIG_H / 2 + 5;
+    return Math.max(0, firstFigureY - railClearance);
   }
 
   function figureBaseY(rod, index) {
