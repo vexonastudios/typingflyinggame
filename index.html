@@ -23,11 +23,12 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;900&display=swap" rel="stylesheet">
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
-  <link rel="stylesheet" href="hub.css">
+  <link rel="stylesheet" href="hub.css?v=2.0">
   <link rel="stylesheet" href="profile-picker.css">
   <link rel="stylesheet" href="play-timer.css">
   <script src="profile-manager.js"></script>
   <script src="play-timer.js"></script>
+  <script defer src="hub-mobile.js?v=1.0"></script>
   <script defer src="https://www.bodeebooks.com/bodee-analytics.js"></script>
 </head>
 <body>
@@ -125,12 +126,26 @@
       <p class="hub-subtitle">Pick a game and play together</p>
     </header>
 
+    <section id="deviceFilter" class="device-filter" aria-labelledby="deviceFilterTitle" hidden>
+      <div class="device-filter-copy">
+        <span class="device-filter-icon" aria-hidden="true">📱</span>
+        <div>
+          <strong id="deviceFilterTitle">Games for this device</strong>
+          <span id="deviceFilterCount" aria-live="polite">Showing games made for touch</span>
+        </div>
+      </div>
+      <div class="device-filter-tabs" role="group" aria-label="Game compatibility filter">
+        <button type="button" class="active" data-device-filter="mobile" aria-pressed="true">Mobile-ready</button>
+        <button type="button" data-device-filter="all" aria-pressed="false">All games</button>
+      </div>
+    </section>
+
     <main class="hub-grid">
 
       <!-- ── ROW 1 ─────────────────────────────────── -->
 
       <!-- Harvest Dash -->
-      <a href="runner.html" class="game-card" id="card-runner" aria-label="Play Harvest Dash">
+      <a href="runner.html" class="game-card" id="card-runner" data-mobile-support="ready" aria-label="Play Harvest Dash">
         <div class="card-glow card-glow--harvest"></div>
         <div class="card-art card-art--runner">
           <div class="art-runner-sky"></div>
@@ -170,7 +185,7 @@
       </a>
 
       <!-- Duck Hunt Duel -->
-      <a href="duel.html" class="game-card" id="card-duel" aria-label="Play Duck Hunt Duel">
+      <a href="duel.html" class="game-card" id="card-duel" data-mobile-support="desktop" data-desktop-reason="Requires keyboard controls" aria-label="Play Duck Hunt Duel">
         <div class="card-glow card-glow--green"></div>
         <div class="card-art card-art--duel">
           <div class="art-duck">🦆</div>
@@ -191,7 +206,7 @@
       </a>
 
       <!-- Spelling Bee -->
-      <a href="spelling.html" class="game-card" id="card-spelling" aria-label="Play Spelling Bee">
+      <a href="spelling.html" class="game-card" id="card-spelling" data-mobile-support="ready" aria-label="Play Spelling Bee">
         <div class="card-glow card-glow--orange"></div>
         <div class="card-art card-art--spelling">
           <div class="art-spelling-words">
@@ -220,7 +235,7 @@
       <!-- ── ROW 2 ─────────────────────────────────── -->
 
       <!-- Chess Duel -->
-      <a href="chess.html" class="game-card" id="card-chess" aria-label="Play Chess Duel">
+      <a href="chess.html" class="game-card" id="card-chess" data-mobile-support="ready" aria-label="Play Chess Duel">
         <div class="card-glow card-glow--gold"></div>
         <div class="card-art card-art--chess">
           <div class="art-chess-board"></div>
@@ -243,7 +258,7 @@
       </a>
 
       <!-- 8-Ball Pool -->
-      <a href="pool.html" class="game-card" id="card-pool" aria-label="Play 8-Ball Pool">
+      <a href="pool.html" class="game-card" id="card-pool" data-mobile-support="desktop" data-desktop-reason="Designed for mouse aiming on a larger screen" aria-label="Play 8-Ball Pool">
         <div class="card-glow card-glow--teal"></div>
         <div class="card-art card-art--pool">
           <div class="art-pool-felt"></div>
@@ -271,7 +286,7 @@
       </a>
 
       <!-- Connect 4 Duel -->
-      <a href="connect4.html" class="game-card" id="card-connect4" aria-label="Play Connect 4 Duel">
+      <a href="connect4.html" class="game-card" id="card-connect4" data-mobile-support="ready" aria-label="Play Connect 4 Duel">
         <div class="card-glow card-glow--blue"></div>
         <div class="card-art card-art--connect4">
           <div class="art-c4-board">
@@ -306,7 +321,7 @@
       <!-- ── ROW 3 ─────────────────────────────────── -->
 
       <!-- Sky Typer Squadron -->
-      <a href="sky-typer.html" class="game-card" id="card-skytyper" aria-label="Play Sky Typer Squadron">
+      <a href="sky-typer.html" class="game-card" id="card-skytyper" data-mobile-support="desktop" data-desktop-reason="Requires a physical keyboard for two-player controls" aria-label="Play Sky Typer Squadron">
         <div class="card-glow card-glow--blue"></div>
         <div class="card-art card-art--sky">
           <div class="art-plane art-plane--player"><div class="art-plane-cockpit"></div></div>
@@ -328,7 +343,7 @@
       </a>
 
       <!-- Math Tower -->
-      <a href="tower.html" class="game-card" id="card-tower" aria-label="Play Math Tower">
+      <a href="tower.html" class="game-card" id="card-tower" data-mobile-support="desktop" data-desktop-reason="Requires a physical keyboard for multiplayer answers" aria-label="Play Math Tower">
         <div class="card-glow card-glow--cyan"></div>
         <div class="card-art card-art--tower">
           <div class="art-tower-base"></div>
@@ -350,7 +365,7 @@
       </a>
 
       <!-- Foosball Frenzy -->
-      <a href="foosball.html" class="game-card" id="card-foosball" aria-label="Play Foosball Frenzy">
+      <a href="foosball.html" class="game-card" id="card-foosball" data-mobile-support="ready" aria-label="Play Foosball Frenzy">
         <div class="card-glow card-glow--green"></div>
         <div class="card-art card-art--foosball">
           <div class="art-foos-field"></div>
@@ -382,7 +397,7 @@
       <!-- ── REST ─────────────────────────────────── -->
 
       <!-- Abrams Tank Assault -->
-      <a href="tank.html" class="game-card" id="card-tank" aria-label="Play Abrams Tank Assault">
+      <a href="tank.html" class="game-card" id="card-tank" data-mobile-support="desktop" data-desktop-reason="Requires two sets of keyboard controls" aria-label="Play Abrams Tank Assault">
         <div class="card-glow card-glow--green"></div>
         <div class="card-art card-art--tank">
           <div class="art-tank-ground"></div>
@@ -409,7 +424,7 @@
       </a>
 
       <!-- Math Race -->
-      <a href="math-race.html" class="game-card" id="card-mathrace" aria-label="Play Math Race">
+      <a href="math-race.html" class="game-card" id="card-mathrace" data-mobile-support="desktop" data-desktop-reason="Requires physical keyboard buzzer controls" aria-label="Play Math Race">
         <div class="card-glow card-glow--purple"></div>
         <div class="card-art card-art--mathrace">
           <div class="art-race-number">15</div>
@@ -430,7 +445,7 @@
       </a>
 
       <!-- Math Ascent -->
-      <a href="math-ascent.html" class="game-card" id="card-mathascent" aria-label="Play Math Ascent">
+      <a href="math-ascent.html" class="game-card" id="card-mathascent" data-mobile-support="ready" aria-label="Play Math Ascent">
         <div class="card-glow card-glow--purple" style="box-shadow: 0 0 40px rgba(167,139,250,0.5);"></div>
         <div class="card-art card-art--mathrace">
           <div class="art-race-number" style="font-size:32px; background:#1e0a4a; color:#a78bfa; padding:4px 8px; border-radius:4px">7×8</div>
@@ -450,7 +465,7 @@
       </a>
 
       <!-- Nerf Arena -->
-      <a href="nerf.html" class="game-card" id="card-nerf" aria-label="Play Nerf Arena">
+      <a href="nerf.html" class="game-card" id="card-nerf" data-mobile-support="ready" aria-label="Play Nerf Arena">
         <div class="card-glow card-glow--red"></div>
         <div class="card-art card-art--nerf">
           <div class="art-nerf-bg"></div>
@@ -474,7 +489,7 @@
       </a>
 
       <!-- Bug Match -->
-      <a href="bug-match.html" class="game-card" id="card-bugmatch" aria-label="Play Bug Match">
+      <a href="bug-match.html" class="game-card" id="card-bugmatch" data-mobile-support="ready" aria-label="Play Bug Match">
         <div class="card-glow card-glow--bugmatch"></div>
         <div class="card-art card-art--bugmatch">
           <div class="art-bugmatch-grass"></div>
@@ -500,7 +515,7 @@
       </a>
 
       <!-- Tiny Turbo Racers (3D Godot) -->
-      <a href="godot-racer/index.html" class="game-card" id="card-turboracers" aria-label="Play Tiny Turbo Racers">
+      <a href="godot-racer/index.html" class="game-card" id="card-turboracers" data-mobile-support="desktop" data-desktop-reason="Requires keyboard or gamepad controls" aria-label="Play Tiny Turbo Racers">
         <div class="card-glow card-glow--red" style="box-shadow: 0 0 60px rgba(255,60,30,0.55);"></div>
         <div class="card-art card-art--turboracer"></div>
         <div class="card-body">
@@ -518,7 +533,7 @@
       </a>
 
       <!-- Catapult Clash -->
-      <a href="castle.html" class="game-card" id="card-castle" aria-label="Play Catapult Clash">
+      <a href="castle.html" class="game-card" id="card-castle" data-mobile-support="ready" aria-label="Play Catapult Clash">
         <div class="card-glow card-glow--cyan"></div>
         <div class="card-art card-art--catapult"></div>
         <div class="card-body">
@@ -535,7 +550,7 @@
       </a>
 
       <!-- Family Paintball Showdown preview -->
-      <a href="family-paintball.html" class="game-card" id="card-family-paintball" aria-label="Preview Family Paintball Showdown">
+      <a href="family-paintball.html" class="game-card" id="card-family-paintball" data-mobile-support="ready" aria-label="Preview Family Paintball Showdown">
         <div class="card-glow card-glow--paintball"></div>
         <div class="card-art card-art--family-paintball">
           <img src="images/family-paintball/gameplay-downtown.webp" width="1600" height="900" loading="lazy" decoding="async" alt="Family Paintball Showdown gameplay in Downtown Lockdown">
@@ -564,7 +579,7 @@
       <div class="hub-grid">
 
         <!-- Pixel Racer -->
-        <a href="racer.html" class="game-card" id="card-racer" aria-label="Play Pixel Racer">
+        <a href="racer.html" class="game-card" id="card-racer" data-mobile-support="desktop" data-desktop-reason="Requires multiple physical keyboard control sets" aria-label="Play Pixel Racer">
           <div class="card-glow card-glow--red"></div>
           <div class="card-art card-art--race">
             <div class="art-track"></div>
@@ -586,7 +601,7 @@
         </a>
 
         <!-- Ramp Racer -->
-        <a href="ramp.html" class="game-card" id="card-ramp" aria-label="Play Ramp Racer">
+        <a href="ramp.html" class="game-card" id="card-ramp" data-mobile-support="ready" aria-label="Play Ramp Racer">
           <div class="card-glow card-glow--orange"></div>
           <div class="card-art card-art--ramp">
             <div class="art-ramp-sky"></div>
@@ -616,6 +631,19 @@
     <footer class="hub-footer">
       <p>Bodee Books · Family Game Hub · All games playable in browser</p>
     </footer>
+  </div>
+
+  <div id="desktopGameNotice" class="device-notice" role="dialog" aria-modal="true" aria-labelledby="desktopGameTitle" hidden>
+    <div class="device-notice-panel">
+      <div class="device-notice-icon" aria-hidden="true">⌨</div>
+      <p class="device-notice-kicker">Desktop game</p>
+      <h2 id="desktopGameTitle">This game needs a computer</h2>
+      <p id="desktopGameReason">It uses keyboard or mouse controls that are not designed for a phone or tablet.</p>
+      <div class="device-notice-actions">
+        <button type="button" id="closeDesktopGameNotice">Back to games</button>
+        <a id="openDesktopGameAnyway" href="#">Open anyway</a>
+      </div>
+    </div>
   </div>
 
   <script>
