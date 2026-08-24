@@ -42,6 +42,7 @@ class PlayerTank {
 
     // Track animation
     this.trackOffset = 0;
+    this.spawnShield = 0;
   }
 
   update(dt, keys, map, worldOffsetX, enemies) {
@@ -199,6 +200,15 @@ class PlayerTank {
     const sx = this.x - camX;
     const sy = this.y - camY;
 
+    // Contact shadow keeps the vehicle planted on the battlefield.
+    ctx.save();
+    ctx.globalAlpha = 0.28;
+    ctx.fillStyle = '#071006';
+    ctx.beginPath();
+    ctx.ellipse(sx + 5, sy + 7, 29, 20, this.angle, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+
     ctx.save();
     ctx.translate(sx, sy);
 
@@ -245,6 +255,32 @@ class PlayerTank {
     ctx.fill();
 
     ctx.restore();
+
+    // Friendly recognition ring and forward chevron.
+    ctx.save();
+    ctx.strokeStyle = 'rgba(135,255,100,0.55)';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([5, 7]);
+    ctx.beginPath();
+    ctx.arc(sx, sy, 34, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.restore();
+
+    if (this.spawnShield > 0) {
+      const pulse = 38 + Math.sin(performance.now() * 0.008) * 3;
+      ctx.save();
+      ctx.strokeStyle = 'rgba(112,224,255,0.85)';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(sx, sy, pulse, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.fillStyle = 'rgba(92,205,255,0.08)';
+      ctx.beginPath();
+      ctx.arc(sx, sy, pulse, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
 
     // --- Turret (independent rotation) ---
     ctx.save();
@@ -329,11 +365,27 @@ class Enemy {
     return false;
   }
   drawHpBar(ctx, sx, sy, w = 36) {
+    if (this.hp >= this.maxHp) return;
     const pct = this.hp / this.maxHp;
     ctx.fillStyle = 'rgba(0,0,0,0.5)';
     ctx.fillRect(sx - w/2, sy - 36, w, 5);
     ctx.fillStyle = pct > 0.5 ? '#4ade80' : pct > 0.25 ? '#eab308' : '#ef4444';
     ctx.fillRect(sx - w/2, sy - 36, w * pct, 5);
+  }
+  drawThreatMarker(ctx, sx, sy, label = '') {
+    ctx.save();
+    ctx.translate(sx, sy - 31);
+    ctx.fillStyle = 'rgba(145,24,24,0.95)';
+    ctx.beginPath();
+    ctx.moveTo(-6, -5); ctx.lineTo(6, -5); ctx.lineTo(0, 3); ctx.closePath();
+    ctx.fill();
+    if (label) {
+      ctx.font = '800 9px Outfit, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillStyle = '#fff3dc';
+      ctx.fillText(label, 0, -10);
+    }
+    ctx.restore();
   }
 }
 
@@ -463,9 +515,9 @@ class EnemyInfantry extends Enemy {
 
     const fl = this.flashTimer > 0;
     // Body
-    ctx.fillStyle = fl ? '#ff8888' : '#5c4a2a';
+    ctx.fillStyle = fl ? '#ff8888' : '#774130';
     ctx.beginPath();
-    ctx.arc(0, 0, 9, 0, Math.PI * 2);
+    ctx.ellipse(0, 2, 11, 13, 0, 0, Math.PI * 2);
     ctx.fill();
     // Body shadow
     ctx.fillStyle = 'rgba(0,0,0,0.25)';
@@ -475,17 +527,17 @@ class EnemyInfantry extends Enemy {
     // Helmet
     ctx.fillStyle = fl ? '#ff9999' : '#3d5735';
     ctx.beginPath();
-    ctx.arc(0, -2, 7, Math.PI, 0);
+    ctx.arc(0, -4, 9, Math.PI, 0);
     ctx.fill();
     // Helmet band
     ctx.strokeStyle = fl ? '#ffaaaa' : '#2c3d22';
     ctx.lineWidth = 1.5;
     ctx.beginPath();
-    ctx.moveTo(-7, -2); ctx.lineTo(7, -2);
+    ctx.moveTo(-9, -4); ctx.lineTo(9, -4);
     ctx.stroke();
     // Rifle
     ctx.fillStyle = '#1a1a1a';
-    ctx.fillRect(-1.5, -17, 3, 15);
+    ctx.fillRect(-2, -21, 4, 18);
     // Rifle grip
     ctx.fillStyle = '#3a2a10';
     ctx.fillRect(-1.5, -8, 3, 4);
@@ -501,7 +553,8 @@ class EnemyInfantry extends Enemy {
     ctx.globalAlpha = 1;
     ctx.restore();
 
-    this.drawHpBar(ctx, sx, sy, 24);
+    this.drawThreatMarker(ctx, sx, sy);
+    this.drawHpBar(ctx, sx, sy, 28);
   }
 }
 
@@ -541,6 +594,9 @@ class EnemyBunker extends Enemy {
     ctx.save();
     ctx.translate(sx, sy);
 
+    ctx.fillStyle = 'rgba(0,0,0,0.28)';
+    ctx.fillRect(-20, -16, 49, 47);
+
     // Bunker base
     ctx.fillStyle = fl ? '#888877' : '#555a4a';
     ctx.fillRect(-22, -22, 44, 44);
@@ -564,6 +620,7 @@ class EnemyBunker extends Enemy {
     ctx.fill();
 
     ctx.restore();
+    this.drawThreatMarker(ctx, sx, sy, 'BUNKER');
     this.drawHpBar(ctx, sx, sy, 44);
   }
 }
@@ -586,6 +643,7 @@ class EnemyTank extends Enemy {
     this.stuckTimer = 0;
     this.escapeTimer = 0;
     this.escapeAngle = 0;
+    this.threatLabel = 'ARMOR';
   }
 
   update(dt, playerTank, projectiles, map) {
@@ -668,6 +726,14 @@ class EnemyTank extends Enemy {
     const fl = this.flashTimer > 0;
 
     ctx.save();
+    ctx.globalAlpha = 0.3;
+    ctx.fillStyle = '#120707';
+    ctx.beginPath();
+    ctx.ellipse(sx + 4, sy + 6, 27, 18, this.angle, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+
+    ctx.save();
     ctx.translate(sx, sy);
     ctx.rotate(this.angle);
 
@@ -712,7 +778,46 @@ class EnemyTank extends Enemy {
     ctx.fill();
 
     ctx.restore();
+    this.drawThreatMarker(ctx, sx, sy, this.threatLabel);
     this.drawHpBar(ctx, sx, sy, 40);
+  }
+}
+
+// Heavy command tank anchors the final urban encounter.
+class EnemyCommander extends EnemyTank {
+  constructor(x, y) {
+    super(x, y);
+    this.hp = 500;
+    this.maxHp = 500;
+    this.maxSpeed = 65;
+    this.width = 42;
+    this.height = 60;
+    this.score = 1000;
+    this.isBoss = true;
+    this.threatLabel = 'COMMANDER';
+  }
+
+  update(dt, playerTank, projectiles, map) {
+    const shotsBefore = projectiles.length;
+    super.update(dt, playerTank, projectiles, map);
+    if (projectiles.length > shotsBefore) this.fireTimer = 1.7 + Math.random() * 0.8;
+  }
+
+  draw(ctx, camX, camY) {
+    super.draw(ctx, camX, camY);
+    if (!this.alive) return;
+    const sx = this.x - camX;
+    const sy = this.y - camY;
+    ctx.save();
+    ctx.strokeStyle = 'rgba(255,190,60,0.8)';
+    ctx.lineWidth = 3;
+    ctx.setLineDash([8, 5]);
+    ctx.beginPath();
+    ctx.arc(sx, sy, 39, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.restore();
+    this.drawHpBar(ctx, sx, sy - 22, 64);
   }
 }
 
@@ -969,4 +1074,3 @@ class FloatingText {
     ctx.globalAlpha = 1;
   }
 }
-

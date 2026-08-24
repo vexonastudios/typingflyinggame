@@ -19,15 +19,27 @@ resizeCanvas();
 // ── Camera update ─────────────────────────────────────────
 // Uses dt-based exponential lerp so speed is frame-rate independent
 function updateCamera(tank, dt) {
-  const targetX = tank.x - gameCanvas.width  / 2;
-  const targetY = tank.y - gameCanvas.height / 2;
+  const lookAhead = Math.min(145, gameCanvas.width * 0.13);
+  const targetX = tank.x + Math.sin(tank.turretAngle) * lookAhead - gameCanvas.width / 2;
+  const targetY = tank.y - Math.cos(tank.turretAngle) * lookAhead - gameCanvas.height / 2;
   const k = 1 - Math.exp(-9 * dt);
   camX += (targetX - camX) * k;
   camY += (targetY - camY) * k;
 }
 
+function snapCameraToTank(tank, map) {
+  const mapW = map[0].length * TILE_SIZE;
+  const mapH = map.length * TILE_SIZE;
+  camX = Math.max(0, Math.min(tank.x - gameCanvas.width * 0.38, Math.max(0, mapW - gameCanvas.width)));
+  camY = Math.max(0, Math.min(tank.y - gameCanvas.height / 2, Math.max(0, mapH - gameCanvas.height)));
+}
+
 // ── Map drawing ───────────────────────────────────────────
 function drawMap(ctx, map, camX, camY, worldOffX) {
+  const groundBases = ['#78965d', '#b89757', '#6f8066'];
+  ctx.fillStyle = groundBases[typeof currentZone === 'number' ? currentZone : 0] || groundBases[0];
+  ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+
   const startCol = Math.max(0, Math.floor((camX - worldOffX) / TILE_SIZE) - 1);
   const endCol   = Math.min(map[0].length - 1, Math.floor((camX - worldOffX + ctx.canvas.width) / TILE_SIZE) + 1);
   const startRow = Math.max(0, Math.floor(camY / TILE_SIZE) - 1);
@@ -41,11 +53,19 @@ function drawMap(ctx, map, camX, camY, worldOffX) {
       const ts = TILE_SIZE;
 
       // Base fill
-      ctx.fillStyle = TILE_COLORS[tile] || '#8fad6e';
-      ctx.fillRect(tx, ty, ts, ts);
+      if (tile === T.EMPTY || tile === T.SPAWN) {
+        ctx.fillStyle = groundBases[typeof currentZone === 'number' ? currentZone : 0] || groundBases[0];
+      } else if (tile === T.SAND) {
+        ctx.fillStyle = '#b89757';
+      } else {
+        ctx.fillStyle = TILE_COLORS[tile] || '#8fad6e';
+      }
+      ctx.fillRect(tx, ty, ts + 1, ts + 1);
 
       // ── Enhanced tile decorations ────────────────────────
       if (tile === T.WALL) {
+        ctx.fillStyle = 'rgba(18,24,14,0.28)';
+        ctx.fillRect(tx + 6, ty + 7, ts - 1, ts - 1);
         // Darker top-left gradient (pseudo-lighting)
         const wg = ctx.createLinearGradient(tx, ty, tx + ts, ty + ts);
         wg.addColorStop(0, 'rgba(255,255,255,0.12)');
@@ -140,8 +160,9 @@ function drawMap(ctx, map, camX, camY, worldOffX) {
         ctx.fillRect(tx + ts - 4, ty, 4, ts);
 
       } else if (tile === T.OBJECTIVE) {
+        const pulse = 0.65 + Math.sin(performance.now() * 0.005 + c) * 0.25;
         const og = ctx.createRadialGradient(tx+ts/2, ty+ts/2, 0, tx+ts/2, ty+ts/2, ts/2);
-        og.addColorStop(0, 'rgba(255,220,60,0.5)');
+        og.addColorStop(0, `rgba(255,220,60,${pulse})`);
         og.addColorStop(1, 'rgba(200,140,20,0.0)');
         ctx.fillStyle = og;
         ctx.fillRect(tx, ty, ts, ts);
@@ -193,13 +214,21 @@ function drawMap(ctx, map, camX, camY, worldOffX) {
           ctx.arc(tx + px, ty + py, 1.5, 0, Math.PI*2);
           ctx.fill();
         }
+        if ((c * 7 + r * 11) % 13 === 0) {
+          ctx.strokeStyle = tile === T.SAND ? 'rgba(92,68,30,0.16)' : 'rgba(38,74,30,0.2)';
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.moveTo(tx + 12, ty + 35);
+          ctx.quadraticCurveTo(tx + 19, ty + 27, tx + 28, ty + 34);
+          ctx.stroke();
+        }
       }
     }
   }
 }
 
 // ── Minimap ───────────────────────────────────────────────
-function drawMinimap(map, worldOffX, tank, enemies) {
+function drawMinimap(map, worldOffX, tank, enemies, viewX = 0, viewY = 0, viewW = 0, viewH = 0) {
   const mw = minimapEl.width;
   const mh = minimapEl.height;
   const totalW = map[0].length * TILE_SIZE;
@@ -238,10 +267,73 @@ function drawMinimap(map, worldOffX, tank, enemies) {
   mmCtx.fillStyle = '#78f050';
   mmCtx.fillRect(px - 3, py - 3, 6, 6);
 
+  if (viewW > 0 && viewH > 0) {
+    mmCtx.strokeStyle = 'rgba(255,255,255,0.72)';
+    mmCtx.lineWidth = 1;
+    mmCtx.strokeRect(viewX * scaleX, viewY * scaleY, viewW * scaleX, viewH * scaleY);
+  }
+
   // Border
   mmCtx.strokeStyle = 'rgba(90,200,50,0.5)';
   mmCtx.lineWidth = 1;
   mmCtx.strokeRect(0, 0, mw, mh);
+}
+
+function drawObjectiveGuidance(ctx, tank, target, cameraX, cameraY, label) {
+  if (!target) return;
+  const sx = target.x - cameraX;
+  const sy = target.y - cameraY;
+  const margin = 58;
+  const inside = sx > margin && sx < ctx.canvas.width - margin && sy > margin && sy < ctx.canvas.height - margin;
+  const dx = sx - ctx.canvas.width / 2;
+  const dy = sy - ctx.canvas.height / 2;
+  const distance = Math.round(Math.hypot(target.x - tank.x, target.y - tank.y) / TILE_SIZE);
+
+  ctx.save();
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  if (inside) {
+    ctx.strokeStyle = 'rgba(255,196,68,0.82)';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([6, 5]);
+    ctx.beginPath();
+    ctx.arc(sx, sy, 30, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = '#fff2b7';
+    ctx.font = '800 10px Outfit, sans-serif';
+    ctx.fillText(`${label} · ${distance}`, sx, sy - 41);
+  } else {
+    const scale = Math.min(
+      Math.abs((ctx.canvas.width / 2 - margin) / (dx || 1)),
+      Math.abs((ctx.canvas.height / 2 - margin) / (dy || 1))
+    );
+    const ex = ctx.canvas.width / 2 + dx * scale;
+    const ey = ctx.canvas.height / 2 + dy * scale;
+    const a = Math.atan2(dy, dx);
+    ctx.translate(ex, ey);
+    ctx.rotate(a);
+    ctx.fillStyle = 'rgba(255,178,48,0.96)';
+    ctx.beginPath();
+    ctx.moveTo(13, 0); ctx.lineTo(-8, -8); ctx.lineTo(-5, 0); ctx.lineTo(-8, 8); ctx.closePath();
+    ctx.fill();
+    ctx.rotate(-a);
+    ctx.fillStyle = '#fff2b7';
+    ctx.font = '800 10px Outfit, sans-serif';
+    ctx.fillText(`${label} · ${distance}`, 0, -17);
+  }
+  ctx.restore();
+}
+
+function drawBattlefieldOverlay(ctx, damageAmount = 0) {
+  const vignette = ctx.createRadialGradient(
+    ctx.canvas.width / 2, ctx.canvas.height / 2, Math.min(ctx.canvas.width, ctx.canvas.height) * 0.25,
+    ctx.canvas.width / 2, ctx.canvas.height / 2, Math.max(ctx.canvas.width, ctx.canvas.height) * 0.72
+  );
+  vignette.addColorStop(0, 'rgba(0,0,0,0)');
+  vignette.addColorStop(1, `rgba(${damageAmount > 0 ? '95,0,0' : '8,14,7'},${0.18 + damageAmount * 0.5})`);
+  ctx.fillStyle = vignette;
+  ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
 }
 
 // ── Input map ─────────────────────────────────────────────

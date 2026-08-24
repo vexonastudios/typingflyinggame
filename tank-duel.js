@@ -1,6 +1,7 @@
 // tank-duel.js — PvP Tank Duel mode
 
 const DUEL_ROUNDS_TO_WIN = 3;
+const DUEL_FIXED_STEP = 1 / 120;
 
 // ── Duel Arena Map ───────────────────────────────────────────
 function emptyGrid(cols, rows, defaultTile) {
@@ -137,6 +138,14 @@ class DuelTank {
     const sx = this.x - camX, sy = this.y - camY;
     const fl = this.flashTimer > 0;
 
+    ctx.save();
+    ctx.globalAlpha = 0.3;
+    ctx.fillStyle = '#050706';
+    ctx.beginPath();
+    ctx.ellipse(sx + 4, sy + 7, 27, 18, this.angle, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+
     ctx.save(); ctx.translate(sx, sy); ctx.rotate(this.angle);
 
     // Tracks
@@ -195,6 +204,15 @@ class DuelTank {
     ctx.beginPath(); ctx.ellipse(0, 0, 16, 12, 0, 0, Math.PI*2); ctx.stroke();
     ctx.restore();
 
+    ctx.save();
+    ctx.strokeStyle = `${this.colorHull}aa`;
+    ctx.lineWidth = 2;
+    ctx.setLineDash([5, 6]);
+    ctx.beginPath();
+    ctx.arc(sx, sy, 31, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
+
     // Label above
     ctx.fillStyle = this.colorHull;
     ctx.font = 'bold 11px Outfit, sans-serif';
@@ -222,6 +240,8 @@ const dCtx = DUEL_CANVAS.getContext('2d');
 let dCamX = 0, dCamY = 0;
 let duelLastTs = 0;
 let duelLoopId = null;
+let duelAccumulator = 0;
+let duelPaused = false;
 
 function resizeDuelCanvas() {
   const hudH = document.getElementById('duelHud').offsetHeight || 54;
@@ -238,15 +258,19 @@ function initDuel() {
   const mx = duelMap[0].length * TILE_SIZE / 2;
   const my = duelMap.length    * TILE_SIZE / 2;
 
-  p1Tank = new DuelTank(mx - 180, my, 0,           '#4a8c4a', '#2a5c2a', 'P1');
-  p2Tank = new DuelTank(mx + 180, my, Math.PI,      '#c44040', '#7a1a1a', 'P2');
+  p1Tank = new DuelTank(mx - 180, my, Math.PI / 2,  '#4a8c4a', '#2a5c2a', 'P1');
+  p2Tank = new DuelTank(mx + 180, my, -Math.PI / 2, '#c44040', '#7a1a1a', 'P2');
 
   duelState = 'playing';
+  duelPaused = false;
   updateDuelHUD();
   if (typeof initAudio === 'function') initAudio();
 
   if (duelLoopId) cancelAnimationFrame(duelLoopId);
   duelLastTs = performance.now();
+  duelAccumulator = 0;
+  dCamX = Math.max(0, mx - DUEL_CANVAS.width / 2);
+  dCamY = Math.max(0, my - DUEL_CANVAS.height / 2);
   duelLoopId = requestAnimationFrame(duelLoop);
 }
 
@@ -254,10 +278,10 @@ function resetDuelRound() {
   duelProjectiles = []; duelParticles = []; duelFloats = [];
   const mx = duelMap[0].length * TILE_SIZE / 2;
   const my = duelMap.length    * TILE_SIZE / 2;
-  p1Tank.x = mx - 180; p1Tank.y = my; p1Tank.angle = 0; p1Tank.turretAngle = 0;
-  p1Tank.hp = 100; p1Tank.speed = 0; p1Tank.alive = true;
-  p2Tank.x = mx + 180; p2Tank.y = my; p2Tank.angle = Math.PI; p2Tank.turretAngle = Math.PI;
-  p2Tank.hp = 100; p2Tank.speed = 0; p2Tank.alive = true;
+  p1Tank.x = mx - 180; p1Tank.y = my; p1Tank.angle = Math.PI / 2; p1Tank.turretAngle = Math.PI / 2;
+  p1Tank.hp = 100; p1Tank.speed = 0; p1Tank.alive = true; p1Tank.cannonCooldown = 0; p1Tank.flashTimer = 0;
+  p2Tank.x = mx + 180; p2Tank.y = my; p2Tank.angle = -Math.PI / 2; p2Tank.turretAngle = -Math.PI / 2;
+  p2Tank.hp = 100; p2Tank.speed = 0; p2Tank.alive = true; p2Tank.cannonCooldown = 0; p2Tank.flashTimer = 0;
   duelState = 'playing';
   updateDuelHUD();
 }
@@ -266,12 +290,17 @@ function duelLoop(ts) {
   if (duelState === 'idle') return;
   const dt = Math.min((ts - duelLastTs) / 1000, 0.05);
   duelLastTs = ts;
-  duelUpdate(dt);
+  duelAccumulator = Math.min(0.08, duelAccumulator + dt);
+  while (duelAccumulator >= DUEL_FIXED_STEP) {
+    duelUpdate(DUEL_FIXED_STEP);
+    duelAccumulator -= DUEL_FIXED_STEP;
+  }
   duelRender();
   duelLoopId = requestAnimationFrame(duelLoop);
 }
 
 function duelUpdate(dt) {
+  if (duelPaused) return;
   if (duelState === 'round_end') {
     duelRoundTimer -= dt;
     if (duelRoundTimer <= 0) {
@@ -307,16 +336,23 @@ function duelUpdate(dt) {
 
   if (p1Tank.alive) p1Tank.update(dt, p1fwd, p1back, p1left, p1right, p1fire, duelMap, duelProjectiles, 'p1');
   if (p2Tank.alive) p2Tank.update(dt, p2fwd, p2back, p2left, p2right, p2fire, duelMap, duelProjectiles, 'p2');
+  resolveDuelTankOverlap();
 
   // Projectiles
   for (let i = duelProjectiles.length-1; i >= 0; i--) {
     const p = duelProjectiles[i];
     p.update(dt, duelMap, 0);
+    if (!p.alive) {
+      spawnExplosion(p.x, p.y, 7, duelParticles);
+      duelProjectiles.splice(i, 1);
+      continue;
+    }
     if (p.alive) {
       if (p.owner === 'p1' && p2Tank.alive) {
         if (circleCircle(p.x, p.y, p.radius, p2Tank.x, p2Tank.y, 22)) {
           p2Tank.takeDamage(p.damage);
           spawnExplosion(p.x, p.y, 12, duelParticles);
+          duelFloats.push(new FloatingText(p2Tank.x, p2Tank.y - 26, `-${p.damage}`, '#ff9a80'));
           if (typeof playSound === 'function') playSound('hit');
           p.alive = false;
         }
@@ -324,6 +360,7 @@ function duelUpdate(dt) {
         if (circleCircle(p.x, p.y, p.radius, p1Tank.x, p1Tank.y, 22)) {
           p1Tank.takeDamage(p.damage);
           spawnExplosion(p.x, p.y, 12, duelParticles);
+          duelFloats.push(new FloatingText(p1Tank.x, p1Tank.y - 26, `-${p.damage}`, '#ff9a80'));
           if (typeof playSound === 'function') playSound('hit');
           p.alive = false;
         }
@@ -368,7 +405,7 @@ function duelUpdate(dt) {
   const my = (p1Tank.y + p2Tank.y) / 2;
   const tX = mx - DUEL_CANVAS.width  / 2;
   const tY = my - DUEL_CANVAS.height / 2;
-  const k  = 1 - Math.exp(-8 * 0.016);
+  const k  = 1 - Math.exp(-8 * dt);
   dCamX += (tX - dCamX) * k;
   dCamY += (tY - dCamY) * k;
 
@@ -381,6 +418,26 @@ function duelUpdate(dt) {
   updateDuelHUD();
 }
 
+function resolveDuelTankOverlap() {
+  if (!p1Tank?.alive || !p2Tank?.alive) return;
+  const dx = p2Tank.x - p1Tank.x;
+  const dy = p2Tank.y - p1Tank.y;
+  const dist = Math.hypot(dx, dy) || 0.001;
+  const minDist = 44;
+  if (dist >= minDist) return;
+  const push = (minDist - dist) / 2;
+  const nx = dx / dist;
+  const ny = dy / dist;
+  const p1x = p1Tank.x - nx * push;
+  const p1y = p1Tank.y - ny * push;
+  const p2x = p2Tank.x + nx * push;
+  const p2y = p2Tank.y + ny * push;
+  if (!p1Tank.circleHit(p1x, p1y, 20, duelMap)) { p1Tank.x = p1x; p1Tank.y = p1y; }
+  if (!p2Tank.circleHit(p2x, p2y, 20, duelMap)) { p2Tank.x = p2x; p2Tank.y = p2y; }
+  p1Tank.speed *= 0.55;
+  p2Tank.speed *= 0.55;
+}
+
 function duelRender() {
   dCtx.clearRect(0, 0, DUEL_CANVAS.width, DUEL_CANVAS.height);
   drawMap(dCtx, duelMap, dCamX, dCamY, 0);
@@ -390,6 +447,7 @@ function duelRender() {
   if (p2Tank.alive) p2Tank.draw(dCtx, dCamX, dCamY);
   for (const p of duelProjectiles) p.draw(dCtx, dCamX, dCamY);
   for (const f of duelFloats) f.draw(dCtx, dCamX, dCamY);
+  drawBattlefieldOverlay(dCtx, 0);
 
   // Round end overlay
   if (duelState === 'round_end') {

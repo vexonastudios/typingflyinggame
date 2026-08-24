@@ -39,6 +39,7 @@ function parseMap(mapStrs, defaultTile = T.EMPTY) {
   const cols = mapStrs[0].length;
   const g = Array.from({ length: rows }, () => Array(cols).fill(defaultTile));
   const spawns = [];
+  let objective = null;
 
   for (let r = 0; r < rows; r++) {
     const rowStr = mapStrs[r];
@@ -51,18 +52,19 @@ function parseMap(mapStrs, defaultTile = T.EMPTY) {
       else if (char === '~') tile = T.WATER;
       else if (char === 'R') tile = T.ROAD;
       else if (char === 'x') tile = T.RUBBLE;
-      else if (char === '*') tile = T.OBJECTIVE;
+      else if (char === '*') { tile = T.OBJECTIVE; objective = { col: c, row: r }; }
       else if (char === 'O') tile = T.SPAWN;
       
       // Spawns
       if (char === 'i') { spawns.push({ type: 'infantry', col: c, row: r }); }
       else if (char === 'b') { spawns.push({ type: 'bunker', col: c, row: r }); }
       else if (char === 't') { spawns.push({ type: 'tank', col: c, row: r }); }
+      else if (char === 'c') { spawns.push({ type: 'commander', col: c, row: r }); }
 
       g[r][c] = tile;
     }
   }
-  return { tiles: g, enemySpawns: spawns };
+  return { tiles: g, enemySpawns: spawns, objective };
 }
 
 // ── Zones ────────────────────────────────────────────────────
@@ -75,11 +77,11 @@ const z1 = parseMap([
   "#...i....x..#.............#............#",
   "#.......##..#..............#.#.........#",
   "#........#..#..........................#",
-  "O.......x#.............................#",
-  "O..................#x..................#",
+  "#..O....x#.............................#",
+  "#..................#x..................#",
   "#........~~~.......##........~~~~~.....#",
   "#.......~~~~~................~~~~~~~...#",
-  "#......~~~~~~~x.............~~~~~~~~~..#",
+  "#......~~~~~~~x.............~~~~~~~~~*.#",
   "#......~~~~~~~~...x#x...i..~~~~~~~~~~~.#",
   "#x......~~~~~~....x#x.......~~~~~~~~~..#",
   "##x......~~~~...i..x#.....i..~~~~~~~~..#",
@@ -104,10 +106,10 @@ const z2 = parseMap([
   "#.....x....i....RR.............#.......#",
   "#..........##...RR...i..i..i...#.......#",
   "#...........#...RR.............#..b....#",
-  "O...........#...RR.............#.......#",
-  "O...i...i...#...RR.....##......#.......#",
+  "#..O........#...RR.....................#",
+  "#...i...i...#...RR.....##..............#",
   "#...............RR.....##...t..#.......#",
-  "#.....i.........RR.............#.......#",
+  "#.....i.........RR.............#.....*.#",
   "#....##x........RR...b.........#.......#",
   "#x...##x...##...RR.............#...t...#",
   "#x.....i....#...RR...i.........#.......#",
@@ -125,17 +127,17 @@ const z2 = parseMap([
 const z3 = parseMap([
   "########################################",
   "#TTT..x................x#x...##........#",
-  "#TT....x#x...b......i...#..i.##...t....#",
+  "#TT....x#x...b......i...#..i.##...c....#",
   "#...i...#.........t.....#..i.##........#",
   "#.......#..x#x......#x.......##...i....#",
   "#...i...#...#.......##.......##........#",
   "#.......#...#......i.........##........#",
   "#...........#................##........#",
-  "O...........#......t.........##..b.....#",
-  "O.......#x...................##........#",
+  "#..O........#......t.............b.....#",
+  "#.......#x.............................#",
   "#.......##......#......i.....##........#",
   "#...............#x........b..##........#",
-  "#...i...x#x.....##...i.......##........#",
+  "#...i...x#x.....##...i.......##......*.#",
   "#........#...................##...t....#",
   "#........#......t...i........##........#",
   "#x..x....#......i............##........#",
@@ -155,18 +157,21 @@ const ZONE_DEFS = [
     name: "ZONE 1 — FOREST RIVER",
     cols: z1.tiles[0].length, rows: z1.tiles.length,
     enemySpawns: z1.enemySpawns,
+    objective: z1.objective,
     tiles: z1.tiles
   },
   {
     name: "ZONE 2 — CANYON BRIDGE",
     cols: z2.tiles[0].length, rows: z2.tiles.length,
     enemySpawns: z2.enemySpawns,
+    objective: z2.objective,
     tiles: z2.tiles
   },
   {
     name: "ZONE 3 — URBAN WARZONE",
     cols: z3.tiles[0].length, rows: z3.tiles.length,
     enemySpawns: z3.enemySpawns,
+    objective: z3.objective,
     tiles: z3.tiles
   }
 ];

@@ -1,15 +1,22 @@
 // tank-main.js — Game loop, state machine, zone management, HUD
 
 // ── State ─────────────────────────────────────────────────
-const STATE = { MENU: 0, PLAYING: 1, ZONE_CLEAR: 2, OVER: 3, WIN: 4 };
+const STATE = { MENU: 0, PLAYING: 1, ZONE_CLEAR: 2, OVER: 3, WIN: 4, PAUSED: 5 };
+const FIXED_STEP = 1 / 120;
 let state = STATE.MENU;
 let lastTs = 0;
+let simAccumulator = 0;
+let gameLoopId = null;
 let gameMode = 'coop'; // 'coop' | 'duel'
 
 // ── Game world ────────────────────────────────────────────
 let playerTank, projectiles, particles, enemies, ammoCrates, floatingTexts;
 let currentZone, zoneMap, worldOffsetX;
 let kills = 0, zoneClearTimer = 0, zoneStarted = false;
+let zoneEnemyTotal = 0, objectiveUnlocked = false, missionIntroTimer = 0;
+let damageFlash = 0, treadTimer = 0;
+let scorchMarks = [], treadMarks = [];
+let pausedFromState = STATE.PLAYING;
 
 // ── HUD refs ──────────────────────────────────────────────
 const hudSpeed    = document.getElementById('hudSpeed');
@@ -23,6 +30,8 @@ const hudMgState  = document.getElementById('hudMgState');
 const hudKills    = document.getElementById('hudKills');
 const hudZone     = document.getElementById('hudZone');
 const hudMsg      = document.getElementById('hudMsg');
+const hudObjective= document.getElementById('hudObjective');
+const hudThreats  = document.getElementById('hudThreats');
 
 // ── Zone loader ───────────────────────────────────────────
 function loadZone(zoneIndex) {
@@ -36,7 +45,13 @@ function loadZone(zoneIndex) {
   enemies     = [];
   ammoCrates  = [];
   floatingTexts = [];
+  scorchMarks = [];
+  treadMarks = [];
   zoneStarted = false;
+  objectiveUnlocked = false;
+  missionIntroTimer = 3.4;
+  damageFlash = 0;
+  treadTimer = 0;
 
   // Spawn enemies
   for (const s of def.enemySpawns) {
@@ -45,7 +60,9 @@ function loadZone(zoneIndex) {
     if (s.type === 'infantry') enemies.push(new EnemyInfantry(wx, wy));
     else if (s.type === 'bunker') enemies.push(new EnemyBunker(wx, wy));
     else if (s.type === 'tank')   enemies.push(new EnemyTank(wx, wy));
+    else if (s.type === 'commander') enemies.push(new EnemyCommander(wx, wy));
   }
+  zoneEnemyTotal = enemies.length;
 
   // Place player at spawn
   let spawnCol = 2, spawnRow = Math.floor(def.rows / 2);
@@ -74,9 +91,14 @@ function loadZone(zoneIndex) {
     playerTank.speed = 0;
     playerTank.angle = 0;
     playerTank.hp = playerTank.maxHp;
+    playerTank.alive = true;
   }
+  playerTank.spawnShield = 4.2;
 
+  snapCameraToTank(playerTank, zoneMap);
   hudZone.textContent = def.name;
+  hudObjective.textContent = currentZone === ZONE_DEFS.length - 1 ? 'ELIMINATE THE COMMANDER' : 'CLEAR THE SECTOR';
+  hudThreats.textContent = `${zoneEnemyTotal} HOSTILES`;
   showMessage('');
 }
 
@@ -84,28 +106,36 @@ function loadZone(zoneIndex) {
 function initGame() {
   kills = 0;
   playerTank = null;
+  showScreen('screen-game');
+  resizeCanvas();
   loadZone(0);
   state = STATE.PLAYING;
   lastTs = performance.now();
+  simAccumulator = 0;
   initAudio();
-  showScreen('screen-game');
-  // Small delay before starting loop so the screen is visible
-  requestAnimationFrame(gameLoop);
+  document.getElementById('btnRetry').textContent = '↺ START OVER';
+  if (gameLoopId) cancelAnimationFrame(gameLoopId);
+  gameLoopId = requestAnimationFrame(gameLoop);
 }
 
 // ── Main loop ─────────────────────────────────────────────
 function gameLoop(ts) {
-  if (state === STATE.OVER || state === STATE.WIN) return;
+  if (state === STATE.OVER || state === STATE.WIN) { gameLoopId = null; return; }
 
   const dt = Math.min((ts - lastTs) / 1000, 0.05);
   lastTs = ts;
 
-  update(dt);
+  simAccumulator = Math.min(0.08, simAccumulator + dt);
+  while (simAccumulator >= FIXED_STEP) {
+    update(FIXED_STEP);
+    simAccumulator -= FIXED_STEP;
+  }
   render();
-  requestAnimationFrame(gameLoop);
+  gameLoopId = requestAnimationFrame(gameLoop);
 }
 
 function update(dt) {
+  if (state === STATE.PAUSED) return;
   if (state === STATE.ZONE_CLEAR) {
     zoneClearTimer -= dt;
     if (zoneClearTimer <= 0) {
@@ -122,9 +152,20 @@ function update(dt) {
 
   if (state !== STATE.PLAYING) return;
 
+  missionIntroTimer = Math.max(0, missionIntroTimer - dt);
+  damageFlash = Math.max(0, damageFlash - dt * 2.8);
+  playerTank.spawnShield = Math.max(0, (playerTank.spawnShield || 0) - dt);
+
   // Player
   playerTank.update(dt, keys, zoneMap, worldOffsetX, enemies);
   if (!playerTank.alive) { doGameOver('Your tank was destroyed!'); return; }
+
+  treadTimer -= dt;
+  if (Math.abs(playerTank.speed) > 30 && treadTimer <= 0) {
+    treadTimer = 0.075;
+    treadMarks.push({ x: playerTank.x, y: playerTank.y, angle: playerTank.angle, life: 8 });
+    if (treadMarks.length > 180) treadMarks.shift();
+  }
 
   // ── Weapon firing ─────────────────────────────────────
   if (keys['KeyW']) {
@@ -158,6 +199,15 @@ function update(dt) {
     const p = projectiles[i];
     p.update(dt, zoneMap, worldOffsetX);
 
+    if (!p.alive) {
+      if (p instanceof CannonShell) {
+        addScorch(p.x, p.y, 14);
+        spawnExplosion(p.x, p.y, 8, particles);
+      }
+      projectiles.splice(i, 1);
+      continue;
+    }
+
     if (p.alive) {
       // Player shells / MG hit enemies
       if (p.owner === 'player') {
@@ -168,6 +218,7 @@ function update(dt) {
             spawnExplosion(p.x, p.y, p instanceof CannonShell ? 12 : 4, particles);
             if (killed) {
               spawnExplosion(e.x, e.y, 20, particles);
+              addScorch(e.x, e.y, e instanceof EnemyInfantry ? 10 : 22);
               kills++;
               hudKills.textContent = kills;
               playSound('explosion');
@@ -186,7 +237,12 @@ function update(dt) {
       // Enemy projectiles hit player
       else {
         if (circleCircle(p.x, p.y, p.radius, playerTank.x, playerTank.y, 24)) {
-          playerTank.takeDamage(p.damage);
+          if (playerTank.spawnShield > 0) {
+            spawnExplosion(p.x, p.y, 5, particles);
+          } else {
+            playerTank.takeDamage(p.damage);
+            damageFlash = Math.min(1, damageFlash + (p instanceof CannonShell ? 0.75 : 0.16));
+          }
           spawnExplosion(p.x, p.y, p instanceof CannonShell ? 14 : 4, particles);
           if (p instanceof CannonShell) {
             shakeScreen();
@@ -241,18 +297,28 @@ function update(dt) {
     if (!particles[i].alive) particles.splice(i, 1);
   }
 
+  for (const mark of scorchMarks) mark.life -= dt;
+  scorchMarks = scorchMarks.filter(mark => mark.life > 0);
+  for (const mark of treadMarks) mark.life -= dt;
+  treadMarks = treadMarks.filter(mark => mark.life > 0);
+
   // ── Zone clear check ──────────────────────────────────
   // zoneStarted guard prevents false trigger if a zone has 0 enemies
   if (!zoneStarted && state === STATE.PLAYING) zoneStarted = true;
   if (zoneStarted && enemies.length === 0 && state === STATE.PLAYING) {
-    // Check if we're at the objective (zone 3) or just zone clear
-    const totalZones = ZONE_DEFS.length;
-    const msg = currentZone < totalZones - 1
-      ? `ZONE CLEAR! Advancing in 3s...`
-      : `OBJECTIVE REACHED! Mission complete!`;
-    showMessage(msg);
-    state = STATE.ZONE_CLEAR;
-    zoneClearTimer = 3.0;
+    if (!objectiveUnlocked) {
+      objectiveUnlocked = true;
+      hudObjective.textContent = 'REACH EXTRACTION';
+      showMessage('SECTOR CLEAR — MOVE TO EXTRACTION');
+    }
+    const objective = ZONE_DEFS[currentZone].objective;
+    const objectiveX = (objective.col + 0.5) * TILE_SIZE;
+    const objectiveY = (objective.row + 0.5) * TILE_SIZE;
+    if (Math.hypot(playerTank.x - objectiveX, playerTank.y - objectiveY) < 48) {
+      showMessage(currentZone < ZONE_DEFS.length - 1 ? 'EXTRACTION SECURED' : 'COMMAND POST SECURED');
+      state = STATE.ZONE_CLEAR;
+      zoneClearTimer = 3.0;
+    }
   }
 
   // ── HUD update ────────────────────────────────────────
@@ -265,6 +331,8 @@ function render() {
 
   // Map
   drawMap(gctx, zoneMap, camX, camY, worldOffsetX);
+
+  drawGroundMarks(gctx);
 
   // Particles (below entities)
   for (const p of particles) p.draw(gctx, camX, camY);
@@ -281,6 +349,28 @@ function render() {
 
   // Floating texts (top layer)
   for (const ft of floatingTexts) ft.draw(gctx, camX, camY);
+
+  const boss = enemies.find(enemy => enemy.isBoss && enemy.alive);
+  if (boss) drawBossStatus(gctx, boss);
+
+  let guidanceTarget = null;
+  let guidanceLabel = '';
+  if (objectiveUnlocked) {
+    const objective = ZONE_DEFS[currentZone].objective;
+    guidanceTarget = { x: (objective.col + 0.5) * TILE_SIZE, y: (objective.row + 0.5) * TILE_SIZE };
+    guidanceLabel = 'EXTRACT';
+  } else if (enemies.length) {
+    guidanceTarget = enemies.reduce((nearest, enemy) => {
+      if (!nearest) return enemy;
+      const nd = Math.hypot(nearest.x - playerTank.x, nearest.y - playerTank.y);
+      const ed = Math.hypot(enemy.x - playerTank.x, enemy.y - playerTank.y);
+      return ed < nd ? enemy : nearest;
+    }, null);
+    guidanceLabel = guidanceTarget?.isBoss ? 'COMMANDER' : 'HOSTILE';
+  }
+  drawObjectiveGuidance(gctx, playerTank, guidanceTarget, camX, camY, guidanceLabel);
+
+  if (missionIntroTimer > 0 && state === STATE.PLAYING) drawMissionIntro(gctx);
 
   // Zone clear overlay
   if (state === STATE.ZONE_CLEAR) {
@@ -305,7 +395,94 @@ function render() {
   }
 
   // Minimap
-  drawMinimap(zoneMap, worldOffsetX, playerTank, enemies);
+  drawBattlefieldOverlay(gctx, damageFlash);
+
+  drawMinimap(zoneMap, worldOffsetX, playerTank, enemies, camX, camY, gameCanvas.width, gameCanvas.height);
+}
+
+function addScorch(x, y, radius) {
+  scorchMarks.push({ x, y, radius, life: 16, rotation: Math.random() * Math.PI });
+  if (scorchMarks.length > 90) scorchMarks.shift();
+}
+
+function drawGroundMarks(ctx) {
+  for (const mark of treadMarks) {
+    const alpha = Math.min(0.22, mark.life * 0.04);
+    const sx = mark.x - camX;
+    const sy = mark.y - camY;
+    ctx.save();
+    ctx.translate(sx, sy);
+    ctx.rotate(mark.angle);
+    ctx.strokeStyle = `rgba(24,28,18,${alpha})`;
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(-15, -8); ctx.lineTo(15, -8);
+    ctx.moveTo(-15, 8); ctx.lineTo(15, 8);
+    ctx.stroke();
+    ctx.restore();
+  }
+  for (const mark of scorchMarks) {
+    const alpha = Math.min(0.34, mark.life * 0.035);
+    const sx = mark.x - camX;
+    const sy = mark.y - camY;
+    ctx.save();
+    ctx.translate(sx, sy);
+    ctx.rotate(mark.rotation);
+    const crater = ctx.createRadialGradient(0, 0, 1, 0, 0, mark.radius);
+    crater.addColorStop(0, `rgba(18,16,12,${alpha})`);
+    crater.addColorStop(0.7, `rgba(37,29,19,${alpha * 0.75})`);
+    crater.addColorStop(1, 'rgba(30,24,18,0)');
+    ctx.fillStyle = crater;
+    ctx.beginPath();
+    ctx.ellipse(0, 0, mark.radius, mark.radius * 0.72, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+}
+
+function drawMissionIntro(ctx) {
+  const alpha = Math.min(1, missionIntroTimer, (3.4 - missionIntroTimer) * 2.5);
+  const def = ZONE_DEFS[currentZone];
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  const w = Math.min(460, ctx.canvas.width - 40);
+  const x = (ctx.canvas.width - w) / 2;
+  const y = 34;
+  ctx.fillStyle = 'rgba(7,13,7,0.88)';
+  ctx.fillRect(x, y, w, 82);
+  ctx.fillStyle = '#ffc94f';
+  ctx.fillRect(x, y, 5, 82);
+  ctx.textAlign = 'left';
+  ctx.fillStyle = '#ffc94f';
+  ctx.font = '800 11px Share Tech Mono, monospace';
+  ctx.fillText(`MISSION ${currentZone + 1} / ${ZONE_DEFS.length}`, x + 22, y + 23);
+  ctx.fillStyle = '#fff';
+  ctx.font = '900 24px Outfit, sans-serif';
+  ctx.fillText(def.name.replace(/^ZONE \d+ — /, ''), x + 22, y + 51);
+  ctx.fillStyle = '#c8d8bd';
+  ctx.font = '600 12px Outfit, sans-serif';
+  const task = currentZone === ZONE_DEFS.length - 1 ? 'Break the defense and destroy the command tank.' : 'Clear the sector, then reach the extraction marker.';
+  ctx.fillText(task, x + 22, y + 70);
+  ctx.restore();
+}
+
+function drawBossStatus(ctx, boss) {
+  const w = Math.min(420, ctx.canvas.width - 80);
+  const x = (ctx.canvas.width - w) / 2;
+  const y = ctx.canvas.height - 34;
+  const pct = boss.hp / boss.maxHp;
+  ctx.save();
+  ctx.fillStyle = 'rgba(12,8,5,0.82)';
+  ctx.fillRect(x, y, w, 22);
+  ctx.fillStyle = '#6b1e1e';
+  ctx.fillRect(x + 4, y + 4, (w - 8) * pct, 14);
+  ctx.strokeStyle = 'rgba(255,199,76,0.65)';
+  ctx.strokeRect(x, y, w, 22);
+  ctx.fillStyle = '#fff3ce';
+  ctx.font = '800 10px Share Tech Mono, monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText('COMMAND TANK', ctx.canvas.width / 2, y - 7);
+  ctx.restore();
 }
 
 // ── HUD helpers ───────────────────────────────────────────
@@ -331,6 +508,8 @@ function updateHUD() {
   hudMgBar.style.width = mgPct + '%';
   hudMgState.textContent = t.mgOverheat ? 'OVERHEAT' : 'READY';
   hudMgState.style.color = t.mgOverheat ? '#ff5555' : '#78f050';
+  const remaining = enemies.filter(enemy => enemy.alive).length;
+  hudThreats.textContent = objectiveUnlocked ? 'EXTRACTION OPEN' : `${remaining} / ${zoneEnemyTotal} HOSTILES`;
 }
 
 let msgTimeout;
@@ -355,6 +534,7 @@ function shakeScreen() {
 function showScreen(id) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.getElementById(id).classList.add('active');
+  document.getElementById('gameTools').classList.toggle('hidden', id !== 'screen-game' && id !== 'screen-duel');
 }
 
 // ── Win / Game Over ───────────────────────────────────────
@@ -366,6 +546,7 @@ function doGameOver(msg) {
   document.getElementById('resultDesc').textContent   = msg;
   document.getElementById('resultStats').innerHTML    =
     `Enemies eliminated: ${kills}<br>Zone reached: ${currentZone + 1} / ${ZONE_DEFS.length}`;
+  document.getElementById('pauseOverlay').classList.add('hidden');
 
   const btnRestart = document.getElementById('btnRestartLevel');
   if (btnRestart) {
@@ -386,6 +567,8 @@ function doWin() {
   document.getElementById('resultDesc').textContent   = 'All three zones cleared. Outstanding teamwork!';
   document.getElementById('resultStats').innerHTML    =
     `Enemies eliminated: ${kills}<br>Zones completed: ${ZONE_DEFS.length} / ${ZONE_DEFS.length}`;
+  document.getElementById('pauseOverlay').classList.add('hidden');
+  document.getElementById('btnRestartLevel').style.display = 'none';
 }
 
 // ── Menu canvas animation (animated top-down tank preview) ──
@@ -483,6 +666,7 @@ document.getElementById('btnDuel').addEventListener('click', () => {
 
 document.getElementById('btnStart').addEventListener('click', () => {
   gameMode = _selectedMode;
+  document.getElementById('pauseOverlay').classList.add('hidden');
   if (gameMode === 'duel') {
     p1Score = 0; p2Score = 0; duelRound = 1;
     showScreen('screen-duel');
@@ -494,6 +678,7 @@ document.getElementById('btnStart').addEventListener('click', () => {
 });
 
 document.getElementById('btnRetry').addEventListener('click', () => {
+  document.getElementById('pauseOverlay').classList.add('hidden');
   if (gameMode === 'duel') {
     p1Score = 0; p2Score = 0; duelRound = 1;
     showScreen('screen-duel');
@@ -519,24 +704,102 @@ if (btnRestartLevel) {
     loadZone(currentZone);
     state = STATE.PLAYING;
     lastTs = performance.now();
+    simAccumulator = 0;
     showScreen('screen-game');
-    requestAnimationFrame(gameLoop);
+    if (gameLoopId) cancelAnimationFrame(gameLoopId);
+    gameLoopId = requestAnimationFrame(gameLoop);
   });
 }
 
-// Pause on P key
-window.addEventListener('keydown', e => {
-  if (e.code === 'KeyP') {
-    if (state === STATE.PLAYING) {
-      state = STATE.ZONE_CLEAR; // repurpose as "paused" indicator
-      zoneClearTimer = Infinity;
-      showMessage('⏸ PAUSED — Press P to resume');
-    } else if (state === STATE.ZONE_CLEAR && zoneClearTimer === Infinity) {
-      state = STATE.PLAYING;
-      showMessage('');
-    }
+function setPauseUi(paused) {
+  document.getElementById('pauseOverlay').classList.toggle('hidden', !paused);
+  const button = document.getElementById('pauseBtn');
+  button.setAttribute('aria-label', paused ? 'Resume game' : 'Pause game');
+  button.title = paused ? 'Resume' : 'Pause (P or Esc)';
+  button.innerHTML = `<i data-lucide="${paused ? 'play' : 'pause'}"></i>`;
+  if (window.lucide) window.lucide.createIcons();
+}
+
+function pauseGame() {
+  const coopActive = document.getElementById('screen-game').classList.contains('active');
+  const duelActive = document.getElementById('screen-duel').classList.contains('active');
+  if (coopActive && (state === STATE.PLAYING || state === STATE.ZONE_CLEAR)) {
+    pausedFromState = state;
+    state = STATE.PAUSED;
+    setPauseUi(true);
+  } else if (duelActive && duelState !== 'idle' && duelState !== 'done' && !duelPaused) {
+    duelPaused = true;
+    setPauseUi(true);
+  }
+}
+
+function resumeGame() {
+  if (state === STATE.PAUSED) {
+    state = pausedFromState;
+    lastTs = performance.now();
+    simAccumulator = 0;
+  }
+  if (duelPaused) {
+    duelPaused = false;
+    duelLastTs = performance.now();
+    duelAccumulator = 0;
+  }
+  setPauseUi(false);
+}
+
+function togglePause() {
+  if (state === STATE.PAUSED || duelPaused) resumeGame();
+  else pauseGame();
+}
+
+function toggleFullscreen() {
+  const action = document.fullscreenElement
+    ? document.exitFullscreen?.()
+    : document.documentElement.requestFullscreen?.();
+  action?.catch?.(() => {});
+}
+
+document.getElementById('pauseBtn').addEventListener('click', togglePause);
+document.getElementById('resumeBtn').addEventListener('click', resumeGame);
+document.getElementById('fullscreenBtn').addEventListener('click', toggleFullscreen);
+document.getElementById('restartMissionBtn').addEventListener('click', () => {
+  setPauseUi(false);
+  if (gameMode === 'duel') {
+    p1Score = 0; p2Score = 0; duelRound = 1; duelPaused = false;
+    showScreen('screen-duel');
+    initDuel();
+  } else {
+    initGame();
   }
 });
+
+window.addEventListener('keydown', e => {
+  if (e.repeat) return;
+  if (e.code === 'KeyF') {
+    e.preventDefault();
+    toggleFullscreen();
+  } else if ((e.code === 'KeyP' || e.code === 'Escape') &&
+             (document.getElementById('screen-game').classList.contains('active') ||
+              document.getElementById('screen-duel').classList.contains('active'))) {
+    e.preventDefault();
+    togglePause();
+  }
+});
+
+window.addEventListener('blur', () => {
+  Object.keys(keys).forEach(key => { if (Object.prototype.hasOwnProperty.call(keys, key)) keys[key] = false; });
+});
+document.addEventListener('visibilitychange', () => { if (document.hidden) pauseGame(); });
+document.addEventListener('fullscreenchange', () => {
+  const button = document.getElementById('fullscreenBtn');
+  const active = Boolean(document.fullscreenElement);
+  button.setAttribute('aria-label', active ? 'Exit fullscreen' : 'Enter fullscreen');
+  button.title = active ? 'Exit fullscreen (F)' : 'Fullscreen (F)';
+  button.innerHTML = `<i data-lucide="${active ? 'minimize' : 'maximize'}"></i>`;
+  if (window.lucide) window.lucide.createIcons();
+});
+
+if (window.lucide) window.lucide.createIcons();
 
 // ── Web Audio — Procedural Sound System ───────────────────
 let audioCtx = null;
@@ -623,4 +886,3 @@ function playSound(type) {
     }
   } catch(e) { /* silent fail */ }
 }
-

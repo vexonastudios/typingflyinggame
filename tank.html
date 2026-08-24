@@ -17,13 +17,19 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
-  <link rel="stylesheet" href="tank.css">
+  <link rel="stylesheet" href="tank.css?v=2.0">
   <link rel="stylesheet" href="play-timer.css">
     <script src="profile-manager.js"></script>
   <script src="play-timer.js"></script>
   <script defer src="https://www.bodeebooks.com/bodee-analytics.js"></script>
 </head>
 <body>
+
+  <nav id="gameTools" class="game-tools hidden" aria-label="Game controls">
+    <a class="icon-btn" href="index.html" aria-label="Return to game hub" title="Game Hub"><i data-lucide="house"></i></a>
+    <button id="pauseBtn" class="icon-btn" type="button" aria-label="Pause game" title="Pause (P or Esc)"><i data-lucide="pause"></i></button>
+    <button id="fullscreenBtn" class="icon-btn" type="button" aria-label="Enter fullscreen" title="Fullscreen (F)"><i data-lucide="maximize"></i></button>
+  </nav>
 
   <!-- ═══════════════ MENU SCREEN ═══════════════ -->
   <div id="screen-menu" class="screen active">
@@ -40,7 +46,7 @@
 
       <!-- Mode Select -->
       <div class="mode-select">
-        <button id="btnCoop" class="mode-card mode-card--coop">
+        <button id="btnCoop" class="mode-card mode-card--coop selected">
           <div class="mode-icon">🤝</div>
           <div class="mode-info">
             <div class="mode-name">CO-OP MISSION</div>
@@ -130,6 +136,10 @@
           </div>
         </div>
         <div id="hudZone" class="hud-zone">ZONE 1 — VILLAGE OUTSKIRTS</div>
+        <div class="hud-mission-row">
+          <span id="hudObjective">CLEAR THE SECTOR</span>
+          <span id="hudThreats">0 HOSTILES</span>
+        </div>
         <div id="hudMsg" class="hud-msg"></div>
       </div>
       <div class="hud-section hud-gunner">
@@ -167,7 +177,7 @@
     <div id="duelHud">
       <!-- Player 1 side -->
       <div class="dhud-player dhud-p1">
-        <div class="dhud-name">🟢 PLAYER 1</div>
+        <div class="dhud-name">🟢 PLAYER 1 <span class="dhud-keys">WASD · Q FIRE</span></div>
         <div class="dhud-bar-wrap">
           <div class="dhud-bar-track">
             <div id="dHudP1Bar" class="dhud-bar dhud-bar--p1"></div>
@@ -195,7 +205,7 @@
 
       <!-- Player 2 side -->
       <div class="dhud-player dhud-p2">
-        <div class="dhud-name">🔴 PLAYER 2</div>
+        <div class="dhud-name">🔴 PLAYER 2 <span class="dhud-keys">IJKL · U FIRE</span></div>
         <div class="dhud-bar-wrap">
           <div class="dhud-bar-track">
             <div id="dHudP2Bar" class="dhud-bar dhud-bar--p2"></div>
@@ -226,10 +236,24 @@
     </div>
   </div>
 
-  <script src="tank-map.js"></script>
-  <script src="tank-entities.js"></script>
-  <script src="tank-engine.js"></script>
-  <script src="tank-duel.js"></script>
-  <script src="tank-main.js"></script>
+  <div id="pauseOverlay" class="game-modal hidden" role="dialog" aria-modal="true" aria-labelledby="pauseTitle">
+    <div class="game-modal-panel">
+      <p class="modal-eyebrow">Crew hold</p>
+      <h2 id="pauseTitle">Mission Paused</h2>
+      <p>Take a breath. Your position is secured.</p>
+      <div class="modal-actions">
+        <button id="resumeBtn" class="btn-deploy" type="button"><i data-lucide="play"></i><span>Resume</span></button>
+        <button id="restartMissionBtn" class="modal-secondary" type="button"><i data-lucide="rotate-ccw"></i><span>Restart</span></button>
+        <a class="modal-secondary" href="index.html"><i data-lucide="house"></i><span>Game Hub</span></a>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/lucide@0.468.0/dist/umd/lucide.min.js"></script>
+  <script src="tank-map.js?v=2.0"></script>
+  <script src="tank-entities.js?v=2.0"></script>
+  <script src="tank-engine.js?v=2.0"></script>
+  <script src="tank-duel.js?v=2.0"></script>
+  <script src="tank-main.js?v=2.0"></script>
 </body>
 </html>
