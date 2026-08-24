@@ -1,122 +1,137 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <!-- Google tag (gtag.js) -->
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-ZTP50MJ7CX"></script>
   <script>
     window.dataLayer = window.dataLayer || [];
     function gtag(){dataLayer.push(arguments);}
     gtag('js', new Date());
-
     gtag('config', 'G-ZTP50MJ7CX');
   </script>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Ramp Racer — Bodee Books</title>
-  <meta name="description" content="Launch your car off ramps and land on distant platforms! Find the perfect speed in this physics-based jumping game.">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;900&display=swap" rel="stylesheet">
-  <link rel="icon" type="image/svg+xml" href="favicon.svg">
-  <link rel="stylesheet" href="ramp.css">
-  <link rel="stylesheet" href="play-timer.css">
-    <script src="profile-manager.js"></script>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Ramp Racer | Stunt Tour</title>
+  <meta name="description" content="Master launch power, control your car in the air, and conquer a fifteen-stunt tour."/>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800;900&family=Share+Tech+Mono&display=swap"/>
+  <link rel="icon" type="image/svg+xml" href="favicon.svg"/>
+  <link rel="stylesheet" href="ramp.css?v=3.0"/>
+  <link rel="stylesheet" href="play-timer.css"/>
+  <script src="profile-manager.js"></script>
   <script src="play-timer.js"></script>
   <script defer src="https://www.bodeebooks.com/bodee-analytics.js"></script>
 </head>
 <body>
+  <canvas id="gameCanvas" aria-label="Ramp Racer stunt course"></canvas>
 
-  <canvas id="gameCanvas" aria-label="Ramp Racer game"></canvas>
+  <nav id="gameTools" class="game-tools hidden" aria-label="Game controls">
+    <a class="icon-btn" href="index.html" aria-label="Return to game hub" title="Game Hub"><i data-lucide="house"></i></a>
+    <button id="retryBtn" class="icon-btn" type="button" aria-label="Retry current stunt" title="Retry Stunt (R)"><i data-lucide="rotate-ccw"></i></button>
+    <button id="pauseBtn" class="icon-btn" type="button" aria-label="Pause game" title="Pause (Esc)"><i data-lucide="pause"></i></button>
+    <button id="fullscreenBtn" class="icon-btn" type="button" aria-label="Enter fullscreen" title="Fullscreen (F)"><i data-lucide="maximize"></i></button>
+  </nav>
 
-  <!-- ── Level Banner ────────────────────────────── -->
-  <div id="levelBanner" class="level-banner"></div>
+  <main id="gameSetup" class="setup-screen">
+    <section class="setup-panel" aria-labelledby="gameTitle">
+      <header class="title-lockup">
+        <span class="title-mark" aria-hidden="true"><i data-lucide="gauge"></i></span>
+        <div>
+          <p class="eyebrow">Bodee Books stunt series</p>
+          <h1 id="gameTitle">Ramp <strong>Racer</strong></h1>
+          <p class="tagline">Charge the launch. Control the flight. Stick the landing.</p>
+        </div>
+      </header>
 
-  <!-- ── Setup Screen ────────────────────────────── -->
-  <div id="gameSetup" class="overlay">
-    <div class="setup-panel">
-      <a href="index.html" class="back-link">← Back to Hub</a>
-      <h1>🚗 Ramp Racer</h1>
-      <p class="subtitle">Find the perfect speed to clear the gap!</p>
-
-      <!-- Mode -->
-      <div class="option-group">
-        <h3>Game Mode</h3>
-        <div class="option-row">
-          <label class="mode-opt selected" id="opt-adventure">
-            <input type="radio" name="mode" value="adventure" checked>
-            <span class="opt-icon">🗺️</span>
-            <span class="opt-label">Adventure</span>
-            <span class="opt-desc">25 Levels</span>
+      <div class="setup-grid">
+        <fieldset class="option-group mode-group">
+          <legend>Event</legend>
+          <label class="select-option selected">
+            <input type="radio" name="mode" value="adventure" checked/>
+            <i data-lucide="map"></i>
+            <span><strong>Stunt Tour</strong><small>15 named challenges</small></span>
           </label>
-          <label class="mode-opt" id="opt-endless">
-            <input type="radio" name="mode" value="endless">
-            <span class="opt-icon">♾️</span>
-            <span class="opt-label">Endless</span>
-            <span class="opt-desc">How far?</span>
+          <label class="select-option">
+            <input type="radio" name="mode" value="endless"/>
+            <i data-lucide="heart-pulse"></i>
+            <span><strong>Survival</strong><small>30 jumps, 3 lives</small></span>
           </label>
-          <label class="mode-opt" id="opt-versus">
-            <input type="radio" name="mode" value="versus">
-            <span class="opt-icon">⚔️</span>
-            <span class="opt-label">Versus</span>
-            <span class="opt-desc">2 Players</span>
+          <label class="select-option">
+            <input type="radio" name="mode" value="versus"/>
+            <i data-lucide="split"></i>
+            <span><strong>Split Race</strong><small>12 jumps, 2 drivers</small></span>
           </label>
+        </fieldset>
+
+        <fieldset class="option-group difficulty-group">
+          <legend>Class</legend>
+          <div class="segmented-options">
+            <label><input type="radio" name="diff" value="easy"/><span>Rookie</span></label>
+            <label><input type="radio" name="diff" value="medium" checked/><span>Pro</span></label>
+            <label><input type="radio" name="diff" value="hard"/><span>Legend</span></label>
+          </div>
+          <p id="difficultyNote" class="difficulty-note">Balanced landing zones and power windows</p>
+        </fieldset>
+
+        <div class="controls-display" aria-label="Player controls">
+          <div class="control-line red-control">
+            <span class="driver-name"><i data-lucide="circle"></i> Driver 1</span>
+            <span><kbd>→</kbd> Hold / release</span>
+            <span><kbd>↑</kbd><kbd>↓</kbd> Rotate</span>
+          </div>
+          <div id="playerTwoControls" class="control-line blue-control muted-control">
+            <span class="driver-name"><i data-lucide="circle"></i> Driver 2</span>
+            <span><kbd>D</kbd> Hold / release</span>
+            <span><kbd>W</kbd><kbd>S</kbd> Rotate</span>
+          </div>
         </div>
       </div>
 
-      <!-- Difficulty -->
-      <div class="option-group">
-        <h3>Difficulty</h3>
-        <div class="option-row">
-          <label class="diff-opt" id="opt-easy">
-            <input type="radio" name="diff" value="easy">
-            <span class="opt-label">Easy</span>
-            <span class="opt-desc">Wide platforms</span>
-          </label>
-          <label class="diff-opt selected" id="opt-medium">
-            <input type="radio" name="diff" value="medium" checked>
-            <span class="opt-label">Medium</span>
-            <span class="opt-desc">Balanced</span>
-          </label>
-          <label class="diff-opt" id="opt-hard">
-            <input type="radio" name="diff" value="hard">
-            <span class="opt-label">Hard</span>
-            <span class="opt-desc">Tiny targets</span>
-          </label>
-        </div>
+      <div class="setup-actions">
+        <button id="startBtn" class="primary-btn" type="button"><i data-lucide="flag-triangle-right"></i><span>Start Tour</span></button>
+        <a href="index.html" class="back-link"><i data-lucide="arrow-left"></i><span>Game Hub</span></a>
+        <span id="bestRecord" class="best-record">Best tour: --</span>
       </div>
+    </section>
+  </main>
 
-      <!-- Controls -->
-      <div class="controls-display">
-        <div class="ctrl-col">
-          <h4>Player 1</h4>
-          <p>Hold <b>→</b> to rev</p>
-          <p>Release to launch</p>
-          <p><b>↑ ↓</b> tilt in air</p>
-        </div>
-        <div class="ctrl-divider"></div>
-        <div class="ctrl-col p2-ctrl">
-          <h4>Player 2</h4>
-          <p>Hold <b>D</b> to rev</p>
-          <p>Release to launch</p>
-          <p><b>W S</b> tilt in air</p>
-        </div>
-      </div>
-
-      <button id="startBtn" class="start-btn">🏁 Start Game</button>
-    </div>
+  <div id="levelBanner" class="level-banner hidden" aria-live="polite">
+    <span id="bannerWorld">Morning Hills</span>
+    <strong id="bannerStunt">First Flight</strong>
   </div>
 
-  <!-- ── Results Screen ──────────────────────────── -->
-  <div id="gameResults" class="overlay" style="display:none">
-    <div class="results-panel">
-      <div id="resultsIcon" class="results-icon">🏆</div>
-      <h2 id="resultsTitle">Results</h2>
-      <div id="resultsList"></div>
-      <button id="restartBtn" class="start-btn">🔄 Play Again</button>
-      <br>
-      <a href="index.html" class="hub-link">← Back to Hub</a>
-    </div>
+  <div id="touchControls" class="touch-controls hidden" aria-label="Touch controls">
+    <button type="button" data-touch="tiltUp" aria-label="Rotate counterclockwise"><i data-lucide="rotate-ccw"></i></button>
+    <button type="button" class="rev-btn" data-touch="accel" aria-label="Hold to charge launch"><i data-lucide="gauge"></i><span>REV</span></button>
+    <button type="button" data-touch="tiltDown" aria-label="Rotate clockwise"><i data-lucide="rotate-cw"></i></button>
   </div>
 
-  <script src="ramp.js"></script>
+  <section id="pauseOverlay" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="pauseTitle">
+    <div class="modal-panel">
+      <p class="eyebrow">Pit stop</p>
+      <h2 id="pauseTitle">Race Paused</h2>
+      <div class="modal-actions">
+        <button id="resumeBtn" class="primary-btn" type="button"><i data-lucide="play"></i><span>Resume</span></button>
+        <button id="restartTrackBtn" class="secondary-btn" type="button"><i data-lucide="refresh-cw"></i><span>Restart Event</span></button>
+        <button id="setupBtn" class="secondary-btn" type="button"><i data-lucide="sliders-horizontal"></i><span>Setup</span></button>
+      </div>
+    </div>
+  </section>
+
+  <section id="gameResults" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="resultsTitle">
+    <div class="modal-panel results-panel">
+      <span id="resultsIcon" class="results-icon" aria-hidden="true"><i data-lucide="trophy"></i></span>
+      <p id="resultsKicker" class="eyebrow">Event complete</p>
+      <h2 id="resultsTitle">Tour Complete</h2>
+      <div id="resultsList" class="results-list"></div>
+      <div class="modal-actions">
+        <button id="restartBtn" class="primary-btn" type="button"><i data-lucide="rotate-ccw"></i><span>Race Again</span></button>
+        <button id="resultsSetupBtn" class="secondary-btn" type="button"><i data-lucide="sliders-horizontal"></i><span>Setup</span></button>
+        <a href="index.html" class="secondary-btn"><i data-lucide="house"></i><span>Game Hub</span></a>
+      </div>
+    </div>
+  </section>
+
+  <script src="https://cdn.jsdelivr.net/npm/lucide@0.468.0/dist/umd/lucide.min.js"></script>
+  <script src="ramp.js?v=3.0"></script>
 </body>
 </html>

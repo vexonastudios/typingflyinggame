@@ -7,16 +7,17 @@
 
 // ─── Physics / Tuning ───────────────────────────────────────
 const GRAVITY       = 1050;
-const MAX_SPEED     = 640;
-const ACCEL_RATE    = 150;
+const MAX_SPEED     = 760;
+const ACCEL_RATE    = 180;
 const DRIVE_SPEED   = 380;    // auto-roll speed between jumps (px/s)
 const AIR_TILT_SPD  = 2.6;
+const FIXED_STEP    = 1 / 120;
 const CAR_W         = 58;
 const CAR_H         = 26;
 const WHEEL_R       = 10;
 const PLATFORM_H    = 48;
 const STAR_R        = 13;
-const RESPAWN_PENALTY = 3.0; // seconds lost on crash
+const RESPAWN_PENALTY = 1.15;
 
 // ─── Track config ───────────────────────────────────────────
 const ADVENTURE_JUMPS = 15;   // jumps per adventure track
@@ -25,11 +26,29 @@ const ENDLESS_LIVES   = 3;
 
 // ─── World themes ───────────────────────────────────────────
 const WORLDS = [
-  { name:'Sunny Fields',    sky1:'#5bb8f5', sky2:'#c8e6fc', ground:'#4caf50', dirt:'#6d4c41', accent:'#8bc34a', mtn1:'#78a87e', mtn2:'#5d9463' },
-  { name:'Canyon Crossing', sky1:'#f4845f', sky2:'#ffd9b3', ground:'#d4a373', dirt:'#8d5524', accent:'#e6b980', mtn1:'#c17f59', mtn2:'#a06030' },
-  { name:'Sky Bridges',     sky1:'#7986cb', sky2:'#c5cae9', ground:'#78909c', dirt:'#546e7a', accent:'#b0bec5', mtn1:'#6a7b8a', mtn2:'#4e6070' },
-  { name:'Moving Mayhem',   sky1:'#26a69a', sky2:'#b2dfdb', ground:'#2e7d6f', dirt:'#1b5e50', accent:'#4db6ac', mtn1:'#3a9080', mtn2:'#267065' },
-  { name:'Stunt Circus',    sky1:'#8e24aa', sky2:'#e1bee7', ground:'#9c27b0', dirt:'#6a1b9a', accent:'#ce93d8', mtn1:'#7b1fa2', mtn2:'#5c1580' },
+  { name:'Morning Hills', sky1:'#51b7df', sky2:'#d8f2e8', ground:'#3e9b5f', dirt:'#65462f', accent:'#8ed45f', mtn1:'#78a889', mtn2:'#4f8668' },
+  { name:'Redrock Run', sky1:'#ef8a66', sky2:'#ffe0ae', ground:'#c89555', dirt:'#914b2e', accent:'#f0c56b', mtn1:'#bd7051', mtn2:'#8f452c' },
+  { name:'Alpine Airfield', sky1:'#679acb', sky2:'#e5edf2', ground:'#668a83', dirt:'#405b62', accent:'#b9d7cf', mtn1:'#718999', mtn2:'#4e6471' },
+  { name:'Neon Harbor', sky1:'#238f93', sky2:'#b9e5d7', ground:'#268478', dirt:'#22525b', accent:'#59d1bd', mtn1:'#347b7c', mtn2:'#275e68' },
+  { name:'Stunt Festival', sky1:'#73599c', sky2:'#efc9c4', ground:'#b24f63', dirt:'#613449', accent:'#f6c453', mtn1:'#8c5878', mtn2:'#59415f' },
+];
+
+const TOUR_STUNTS = [
+  { name:'First Flight', gap:145, width:260, angle:24, rise:0 },
+  { name:'Orchard Hop', gap:165, width:240, angle:28, rise:-15 },
+  { name:'Creek Skip', gap:190, width:230, angle:30, rise:20 },
+  { name:'Redrock Reach', gap:200, width:230, angle:28, rise:20 },
+  { name:'Mesa Step-Up', gap:220, width:210, angle:34, rise:-45 },
+  { name:'Dustbowl Drop', gap:240, width:220, angle:26, rise:70 },
+  { name:'Hangar Bound', gap:230, width:220, angle:38, rise:-35 },
+  { name:'Tailwind Gap', gap:270, width:200, angle:32, rise:0 },
+  { name:'High Road', gap:250, width:190, angle:42, rise:-40 },
+  { name:'Dockside Dive', gap:260, width:200, angle:30, rise:55 },
+  { name:'Crane Leap', gap:290, width:180, angle:38, rise:-25 },
+  { name:'Needle Deck', gap:275, width:170, angle:34, rise:0 },
+  { name:'Big Top Bound', gap:300, width:185, angle:42, rise:20 },
+  { name:'Moonshot', gap:330, width:175, angle:46, rise:-30 },
+  { name:'Last Light', gap:350, width:200, angle:40, rise:45 },
 ];
 
 const P_COLORS = ['#ff6b35', '#38bdf8'];
@@ -83,13 +102,14 @@ const lerp   = (a,b,t)   => a + (b-a)*t;
 const clamp  = (v,lo,hi) => Math.max(lo, Math.min(hi, v));
 const rand   = (lo,hi)   => lo + Math.random()*(hi-lo);
 const degRad = d          => d * Math.PI / 180;
+const normAngle = a       => Math.atan2(Math.sin(a), Math.cos(a));
 
 // ═══════════════════════════════════════════════════════════
 //  TRACK GENERATION  — full multi-jump track, stitched end-to-end
 // ═══════════════════════════════════════════════════════════
 function generateTrack(numJumps, diff, mode) {
-  const dMult = [0.70, 1.0, 1.38][diff];
-  const wMult = [1.45, 1.0, 0.62][diff];
+  const dMult = [0.90, 1.0, 1.08][diff];
+  const wMult = [1.28, 1.0, 0.78][diff];
 
   const RAMP_LEN   = 88;
   const START_PLAT = 300; // first platform width
@@ -107,19 +127,16 @@ function generateTrack(numJumps, diff, mode) {
   platforms.push({ x: curX, y: curY, w: curW });
 
   for (let j = 0; j < numJumps; j++) {
-    const worldProgress = j / numJumps;
-    const difficulty    = worldProgress * 0.6 + 0.4; // ramps up 0.4→1.0
-
-    const gapDist   = (140 + j * 18 + rand(0, 30)) * dMult * difficulty;
-    const platW     = Math.max(50, (220 - j * 5 + rand(0, 25)) * wMult);
-    const rampAngle = clamp(24 + rand(0, 20) * difficulty, 18, 50);
+    const profile = TOUR_STUNTS[j % TOUR_STUNTS.length];
+    const cycle = Math.floor(j / TOUR_STUNTS.length);
+    const gapDist = (profile.gap + cycle * 18) * dMult;
+    const platW = Math.max(86, profile.width * wMult - cycle * 8);
+    const rampAngle = clamp(profile.angle + cycle * 1.5, 20, 48);
     const rampRad   = degRad(rampAngle);
     const rampH     = RAMP_LEN * Math.sin(rampRad);
     const rampHoriz = RAMP_LEN * Math.cos(rampRad);
 
-    // Height variation increases with progression
-    let heightDiff = 0;
-    if (j > 3) heightDiff = rand(-1, 1) * Math.min(j * 8, 80) * difficulty;
+    const heightDiff = profile.rise;
 
     const rampBaseX = curX + curW - rampHoriz;
     const rampTipX  = curX + curW;
@@ -140,6 +157,11 @@ function generateTrack(numJumps, diff, mode) {
       if (val <= 0) return MAX_SPEED;
       return Math.sqrt(GRAVITY * d * d / (2 * cosA * cosA * val));
     }
+    const safeMargin = clamp(platW * 0.15, 18, 34);
+    const edgeA = speedForDist(gapDist + safeMargin);
+    const edgeB = speedForDist(gapDist + platW - safeMargin);
+    const minSpeed = Math.min(edgeA, edgeB);
+    const maxSpeed = Math.min(MAX_SPEED, Math.max(edgeA, edgeB));
     const idealMid = speedForDist(gapDist + platW / 2);
 
     // Stars along arc
@@ -155,8 +177,13 @@ function generateTrack(numJumps, diff, mode) {
       });
     }
 
-    jumps.push({ gapDist, platW, rampAngle, rampRad, nextX, nextY, nextW, idealMid,
-                 rampBaseX, rampTipX, rampTipY, rampHoriz, startY: curY });
+    jumps.push({
+      name: cycle ? `${profile.name} +` : profile.name,
+      worldIdx: Math.floor((j % TOUR_STUNTS.length) / 3),
+      gapDist, platW, rampAngle, rampRad, nextX, nextY, nextW,
+      idealMid, minSpeed, maxSpeed,
+      rampBaseX, rampTipX, rampTipY, rampHoriz, startY: curY
+    });
 
     curX = nextX; curY = nextY; curW = nextW;
   }
@@ -274,8 +301,12 @@ class RampRacer {
     this.keys   = {};
     this.state  = 'setup';
     this.lastTs = 0;
+    this.accumulator = 0;
     this.time   = 0;
     this._globalShake = 0;
+    this._resumeState = 'racing';
+    this._bannerTimer = 0;
+    this.touch = { accel:false, tiltUp:false, tiltDown:false };
 
     this.track   = null;
     this.players = [];
@@ -295,9 +326,24 @@ class RampRacer {
     window.addEventListener('resize', () => this._resize());
     window.addEventListener('keydown', e => {
       this.keys[e.code] = true;
-      if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space','KeyW','KeyS','KeyA','KeyD'].includes(e.code)) e.preventDefault();
+      if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space','KeyW','KeyS','KeyA','KeyD','KeyR','KeyF','Escape'].includes(e.code)) e.preventDefault();
+      if (e.repeat) return;
+      if (e.code === 'Escape') this._togglePause();
+      if (e.code === 'KeyF') this._toggleFullscreen();
+      if (e.code === 'KeyR' && !this.isVersus) this._retryStunt();
     });
     window.addEventListener('keyup', e => { this.keys[e.code] = false; });
+    window.addEventListener('blur', () => {
+      this._clearInput();
+      if (this.state === 'racing' || this.state === 'countdown') this._pause();
+    });
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden && (this.state === 'racing' || this.state === 'countdown')) this._pause();
+    });
+    document.addEventListener('fullscreenchange', () => this._updateFullscreenIcon());
+    this._updateSetupUI();
+    this._updateFullscreenIcon();
+    this._refreshIcons();
     requestAnimationFrame(ts => this._loop(ts));
   }
 
@@ -310,27 +356,82 @@ class RampRacer {
 
   // ─── UI ─────────────────────────────────────────────────
   _bindUI() {
-    document.querySelectorAll('.mode-opt').forEach(el => {
-      el.addEventListener('click', () => {
-        document.querySelectorAll('.mode-opt').forEach(e => e.classList.remove('selected'));
-        el.classList.add('selected');
-        el.querySelector('input').checked = true;
-        const m = el.querySelector('input').value;
-        document.querySelector('.ctrl-divider').style.opacity = m === 'versus' ? '1' : '0.2';
-        document.querySelector('.p2-ctrl').style.opacity = m === 'versus' ? '1' : '0.3';
-        Sfx.click();
-      });
-    });
-    document.querySelectorAll('.diff-opt').forEach(el => {
-      el.addEventListener('click', () => {
-        document.querySelectorAll('.diff-opt').forEach(e => e.classList.remove('selected'));
-        el.classList.add('selected');
-        el.querySelector('input').checked = true;
+    document.querySelectorAll('input[name="mode"], input[name="diff"]').forEach(input => {
+      input.addEventListener('change', () => {
+        this._updateSetupUI();
         Sfx.click();
       });
     });
     document.getElementById('startBtn').addEventListener('click',   () => this._startGame());
-    document.getElementById('restartBtn').addEventListener('click', () => this._goSetup());
+    document.getElementById('restartBtn').addEventListener('click', () => this._startGame());
+    document.getElementById('resultsSetupBtn').addEventListener('click', () => this._goSetup());
+    document.getElementById('pauseBtn').addEventListener('click', () => this._pause());
+    document.getElementById('resumeBtn').addEventListener('click', () => this._resume());
+    document.getElementById('restartTrackBtn').addEventListener('click', () => this._startGame());
+    document.getElementById('setupBtn').addEventListener('click', () => this._goSetup());
+    document.getElementById('retryBtn').addEventListener('click', () => this._retryStunt());
+    document.getElementById('fullscreenBtn').addEventListener('click', () => this._toggleFullscreen());
+    document.querySelectorAll('[data-touch]').forEach(button => {
+      const action = button.dataset.touch;
+      const setPressed = pressed => {
+        this.touch[action] = pressed;
+        button.classList.toggle('active', pressed);
+        if (pressed) Sfx._r();
+      };
+      button.addEventListener('pointerdown', e => {
+        e.preventDefault();
+        button.setPointerCapture(e.pointerId);
+        setPressed(true);
+      });
+      button.addEventListener('pointerup', () => setPressed(false));
+      button.addEventListener('pointercancel', () => setPressed(false));
+      button.addEventListener('lostpointercapture', () => setPressed(false));
+    });
+  }
+
+  _refreshIcons() {
+    if (window.lucide) window.lucide.createIcons();
+  }
+
+  _updateSetupUI() {
+    const mode = document.querySelector('input[name="mode"]:checked')?.value || 'adventure';
+    const diff = document.querySelector('input[name="diff"]:checked')?.value || 'medium';
+    document.querySelectorAll('.select-option').forEach(option => {
+      option.classList.toggle('selected', option.querySelector('input').checked);
+    });
+    document.getElementById('playerTwoControls').classList.toggle('muted-control', mode !== 'versus');
+    const startLabels = { adventure:'Start Tour', endless:'Start Survival', versus:'Start Split Race' };
+    document.querySelector('#startBtn span').textContent = startLabels[mode];
+    const notes = {
+      easy:'Wide landings and generous power windows',
+      medium:'Balanced landing zones and power windows',
+      hard:'Narrow decks and precise launch windows'
+    };
+    document.getElementById('difficultyNote').textContent = notes[diff];
+    const best = this._loadBest();
+    document.getElementById('bestRecord').textContent = best
+      ? `Best tour: ${best.score.toLocaleString()} pts`
+      : 'Best tour: --';
+    this._refreshIcons();
+  }
+
+  _bestKey() {
+    return typeof ProfileManager !== 'undefined'
+      ? ProfileManager.getKey('ramp_racer_best')
+      : 'ramp_racer_best';
+  }
+
+  _loadBest() {
+    try { return JSON.parse(localStorage.getItem(this._bestKey())); }
+    catch (e) { return null; }
+  }
+
+  _saveBest(player) {
+    if (this.mode !== 'adventure' || !player.finished) return;
+    const previous = this._loadBest();
+    if (!previous || player.totalScore > previous.score) {
+      localStorage.setItem(this._bestKey(), JSON.stringify({ score:player.totalScore, time:player.raceTime }));
+    }
   }
 
   _readSettings() {
@@ -346,13 +447,19 @@ class RampRacer {
   _startGame() {
     this._readSettings();
     Sfx._r();
-    document.getElementById('gameSetup').style.display   = 'none';
-    document.getElementById('gameResults').style.display = 'none';
+    this._clearInput();
+    document.getElementById('gameSetup').classList.add('hidden');
+    document.getElementById('gameResults').classList.add('hidden');
+    document.getElementById('pauseOverlay').classList.add('hidden');
+    document.getElementById('gameTools').classList.remove('hidden');
+    document.getElementById('retryBtn').classList.toggle('hidden', this.isVersus);
+    document.body.classList.add('playing');
+    document.body.classList.toggle('versus-mode', this.isVersus);
 
     const numJumps = this.isEndless ? 30 : this.isVersus ? VERSUS_JUMPS : ADVENTURE_JUMPS;
     this.track = generateTrack(numJumps, this.diff, this.mode);
 
-    const C1 = { accel:'ArrowRight', tiltUp:'ArrowUp',    tiltDown:'ArrowDown' };
+    const C1 = { accel:'ArrowRight', accelAlt:'Space', tiltUp:'ArrowUp', tiltDown:'ArrowDown' };
     const C2 = { accel:'KeyD',       tiltUp:'KeyW',        tiltDown:'KeyS'     };
 
     this.players = [new Player(0, C1)];
@@ -361,17 +468,109 @@ class RampRacer {
     this.players.forEach(p => p.initForTrack(this.track));
     this.floatTexts = [];
     this.raceStarted = false;
+    this.accumulator = 0;
 
     this._cdCount = 3;
     this._cdTimer = 0.95;
     this.state = 'countdown';
+    this._showStuntBanner(this.players[0]);
     Sfx.countdown();
   }
 
   _goSetup() {
-    document.getElementById('gameSetup').style.display   = '';
-    document.getElementById('gameResults').style.display = 'none';
+    this._clearInput();
+    document.getElementById('gameSetup').classList.remove('hidden');
+    document.getElementById('gameResults').classList.add('hidden');
+    document.getElementById('pauseOverlay').classList.add('hidden');
+    document.getElementById('gameTools').classList.add('hidden');
+    document.getElementById('levelBanner').classList.add('hidden');
+    document.body.classList.remove('playing', 'versus-mode');
     this.state = 'setup';
+    this._updateSetupUI();
+  }
+
+  _clearInput() {
+    Object.keys(this.keys).forEach(key => { this.keys[key] = false; });
+    Object.keys(this.touch).forEach(key => { this.touch[key] = false; });
+    document.querySelectorAll('[data-touch]').forEach(button => button.classList.remove('active'));
+  }
+
+  _pressed(player, action) {
+    const primary = player.ctrl[action];
+    const alternate = action === 'accel' ? player.ctrl.accelAlt : null;
+    const keyboard = Boolean(this.keys[primary] || (alternate && this.keys[alternate]));
+    const touchInput = player.id === 0 && !this.isVersus && Boolean(this.touch[action]);
+    return keyboard || touchInput;
+  }
+
+  _togglePause() {
+    if (this.state === 'paused') this._resume();
+    else this._pause();
+  }
+
+  _pause() {
+    if (this.state !== 'racing' && this.state !== 'countdown') return;
+    this._resumeState = this.state;
+    this.state = 'paused';
+    this._clearInput();
+    document.getElementById('pauseOverlay').classList.remove('hidden');
+  }
+
+  _resume() {
+    if (this.state !== 'paused') return;
+    document.getElementById('pauseOverlay').classList.add('hidden');
+    this.state = this._resumeState || 'racing';
+  }
+
+  _retryStunt() {
+    if (this.isVersus || !this.players.length || !['racing','countdown'].includes(this.state)) return;
+    const p = this.players[0];
+    if (p.finished) return;
+    const plat = this.track.platforms[p.jumpIdx];
+    p.x = plat.x + 60;
+    p.y = plat.y - CAR_H;
+    p.vx = 0; p.vy = 0; p.speed = 0; p.angle = 0;
+    p.phase = 'charging';
+    p._lastAccel = false;
+    p.trailDots = [];
+    p.streak = 0;
+    p.raceTime += 1;
+    p.flashTimer = 0.22;
+    p.flashColor = '#f6c453';
+    this._showStuntBanner(p);
+    Sfx.click();
+  }
+
+  async _toggleFullscreen() {
+    try {
+      if (!document.fullscreenElement) await document.documentElement.requestFullscreen();
+      else await document.exitFullscreen();
+    } catch (e) {
+      console.warn('Fullscreen is unavailable:', e);
+    }
+  }
+
+  _updateFullscreenIcon() {
+    const button = document.getElementById('fullscreenBtn');
+    const active = Boolean(document.fullscreenElement);
+    button.innerHTML = `<i data-lucide="${active ? 'minimize' : 'maximize'}"></i>`;
+    button.setAttribute('aria-label', active ? 'Exit fullscreen' : 'Enter fullscreen');
+    button.title = active ? 'Exit Fullscreen (F)' : 'Fullscreen (F)';
+    this._refreshIcons();
+  }
+
+  _showStuntBanner(player) {
+    if (!this.track || !this.track.jumps[player.jumpIdx]) return;
+    const jump = this.track.jumps[player.jumpIdx];
+    const banner = document.getElementById('levelBanner');
+    document.getElementById('bannerWorld').textContent = WORLDS[jump.worldIdx].name;
+    document.getElementById('bannerStunt').textContent = `${player.jumpIdx + 1}. ${jump.name}`;
+    banner.classList.remove('hidden');
+    banner.style.animation = 'none';
+    void banner.offsetWidth;
+    banner.style.animation = '';
+    window.clearTimeout(this._bannerTimer);
+    this._bannerTimer = window.setTimeout(() => banner.classList.add('hidden'), 1750);
   }
 
   // ─── Loop ────────────────────────────────────────────────
@@ -379,14 +578,18 @@ class RampRacer {
     const dt = clamp((ts - this.lastTs) / 1000, 0, 0.05);
     this.lastTs = ts;
     this.time  += dt;
-    this._update(dt);
+    this.accumulator = Math.min(0.08, this.accumulator + dt);
+    while (this.accumulator >= FIXED_STEP) {
+      this._update(FIXED_STEP);
+      this.accumulator -= FIXED_STEP;
+    }
     this._draw();
     requestAnimationFrame(ts2 => this._loop(ts2));
   }
 
   // ─── Update ──────────────────────────────────────────────
   _update(dt) {
-    if (this.state === 'setup' || this.state === 'results') return;
+    if (this.state === 'setup' || this.state === 'results' || this.state === 'paused') return;
 
     if (this.state === 'countdown') {
       this._cdTimer -= dt;
@@ -395,6 +598,7 @@ class RampRacer {
         if (this._cdCount > 0) { this._cdTimer = 0.95; Sfx.countdown(); }
         else { this.state = 'racing'; this.raceStarted = true; Sfx.go(); }
       }
+      this.players.forEach(p => this._updateCamera(p, dt));
       return;
     }
 
@@ -426,10 +630,24 @@ class RampRacer {
 
   _updateCamera(p, dt) {
     const vpH = this.isVersus ? this.H / 2 : this.H;
-    const targetCX = p.x - this.W * 0.28;
-    const targetCY = p.y - vpH * 0.42;
-    p.camX = lerp(p.camX, targetCX, Math.min(1, 4*dt));
-    p.camY = lerp(p.camY, targetCY, Math.min(1, 3.5*dt));
+    const touchRail = !this.isVersus && this.W <= 900 && this.H <= 560 ? 188 : 0;
+    const portrait = !this.isVersus && this.W <= 640 && this.H > 560;
+    const vpW = this.W - touchRail;
+    const zoom = this._getZoom(vpW, vpH);
+    const worldW = vpW / zoom;
+    const worldH = vpH / zoom;
+    const speedLead = p.phase === 'airborne' ? clamp(p.vx * 0.16, 0, worldW * 0.12) : 0;
+    const anchor = portrait ? 0.06 : (touchRail ? 0.14 : 0.30);
+    const targetCX = p.x - worldW * anchor + speedLead;
+    const targetCY = p.y - worldH * 0.60;
+    p.camX = lerp(p.camX, targetCX, Math.min(1, 5.2*dt));
+    p.camY = lerp(p.camY, targetCY, Math.min(1, 4.4*dt));
+  }
+
+  _getZoom(vpW, vpH) {
+    if (this.isVersus) return clamp(vpW / 1150, 1.05, 1.28);
+    if (vpW <= 640 && vpH > 560) return 0.72;
+    return clamp(vpW / 1000, 1.18, 1.55);
   }
 
   _updatePlayer(p, dt) {
@@ -468,7 +686,7 @@ class RampRacer {
 
     // --- CHARGING ---
     if (p.phase === 'charging') {
-      const accel = !!this.keys[p.ctrl.accel];
+      const accel = this._pressed(p, 'accel');
       if (accel) {
         p.speed = Math.min(MAX_SPEED, p.speed + ACCEL_RATE * dt);
         // vibrate car while revving
@@ -484,7 +702,7 @@ class RampRacer {
             color: p.speed > MAX_SPEED*0.7 ? '#ff6b35' : '#8899aa',
           });
         }
-        if (Math.random() < 0.14) Sfx.rev(p.speed / MAX_SPEED);
+        if (Math.random() < dt * 7) Sfx.rev(p.speed / MAX_SPEED);
       } else if (p._lastAccel && p.speed > 8) {
         // Released — launch!
         p.phase = 'launching';
@@ -530,15 +748,16 @@ class RampRacer {
 
     // --- AIRBORNE ---
     if (p.phase === 'airborne') {
-      const tiltUp   = !!this.keys[p.ctrl.tiltUp];
-      const tiltDown = !!this.keys[p.ctrl.tiltDown];
-      if (tiltUp)   { p.angle -= AIR_TILT_SPD*dt; p.vy -= 30*dt; }
-      if (tiltDown) { p.angle += AIR_TILT_SPD*dt; p.vy += 22*dt; }
+      const tiltUp   = this._pressed(p, 'tiltUp');
+      const tiltDown = this._pressed(p, 'tiltDown');
+      if (tiltUp) p.angle -= AIR_TILT_SPD * dt;
+      if (tiltDown) p.angle += AIR_TILT_SPD * dt;
 
       p.vy += GRAVITY * dt;
       p.x  += p.vx * dt;
       p.y  += p.vy * dt;
-      p.angle = lerp(p.angle, Math.atan2(p.vy, p.vx), Math.min(1, 2.2*dt));
+      const flightAngle = Math.atan2(p.vy, p.vx);
+      p.angle = lerp(p.angle, flightAngle * 0.32, Math.min(1, 0.45 * dt));
       p.wheelAngle += 4 * dt;
 
       // Trail
@@ -579,6 +798,10 @@ class RampRacer {
 
       if (nextPlat && carBot >= nextPlat.y && p.vy > 0) {
         if (carCx >= nextPlat.x && carCx <= nextPlat.x + nextPlat.w) {
+          if (Math.abs(normAngle(p.angle)) > 1.05) {
+            this._handleCrash(p, 'BAD LANDING');
+            return;
+          }
           this._handleLanding(p, nextPlat);
           return;
         }
@@ -649,6 +872,7 @@ class RampRacer {
         p._lastAccel = false;
         p.phase = 'charging';
         p.trailDots = [];
+        this._showStuntBanner(p);
       }
     }
   }
@@ -656,7 +880,10 @@ class RampRacer {
   _handleLanding(p, plat) {
     const carCx = p.x + CAR_W/2;
     const platCenter = plat.x + plat.w/2;
-    const precision = 1 - clamp(Math.abs(carCx - platCenter) / (plat.w/2), 0, 1);
+    const centerScore = 1 - clamp(Math.abs(carCx - platCenter) / (plat.w/2), 0, 1);
+    const angleError = Math.abs(normAngle(p.angle));
+    const uprightScore = 1 - clamp(angleError / 1.05, 0, 1);
+    const precision = centerScore * 0.72 + uprightScore * 0.28;
 
     p.phase = 'driving';
     p.y  = plat.y - CAR_H;
@@ -667,18 +894,21 @@ class RampRacer {
     // Score & feedback
     let pts = 500;
     let label = '👍 OK!', col = '#88ccff';
-    if (precision > 0.85) {
+    if (precision > 0.88 && angleError < 0.28) {
       pts = 1500; label = '🎯 PERFECT!'; col = '#ffcc00'; Sfx.perfect();
       p.particles.emit(carCx, plat.y, 35, {
         angle:-Math.PI/2, spread:1.3,
         colors:['#ffcc00','#ffe066','#fff','#ff8800'], minSpd:50, maxSpd:220, minR:2, maxR:6,
       });
-    } else if (precision > 0.5) {
+    } else if (precision > 0.56 && angleError < 0.62) {
       pts = 1000; label = '✨ GREAT!'; col = '#66ff88'; Sfx.land();
       p.particles.emit(carCx, plat.y, 20, {
         angle:-Math.PI/2, spread:1.0,
         colors:['#8B7355','#A0926B','#C4B99A'], minSpd:40, maxSpd:180, minR:2, maxR:5,
       });
+    } else if (angleError > 0.72) {
+      pts = 250; label = 'ROUGH LANDING'; col = '#ff9a5c'; Sfx.land();
+      p.streak = 0;
     } else {
       Sfx.land();
     }
@@ -696,7 +926,7 @@ class RampRacer {
     p.flashTimer = 0.25; p.flashColor = '#ffe066';
   }
 
-  _handleCrash(p) {
+  _handleCrash(p, reason = 'CRASH') {
     p.phase = 'respawning';
     p.respawnTimer = RESPAWN_PENALTY;
     p.streak = 0;
@@ -709,7 +939,7 @@ class RampRacer {
       colors:['#ff4444','#ff8844','#ffcc44','#888'],
       minSpd:80, maxSpd:280, minR:3, maxR:8, minLife:0.4, maxLife:1.1,
     });
-    this._addFloat('💥 CRASH!', p.x+CAR_W/2, p.y, '#ff4444', p);
+    this._addFloat(`💥 ${reason}!`, p.x+CAR_W/2, p.y, '#ff4444', p);
     p.flashTimer = 0.5; p.flashColor = '#ff4444';
 
     // Endless: out of lives
@@ -720,22 +950,24 @@ class RampRacer {
 
   _showResults() {
     this.state = 'results';
-    document.getElementById('gameResults').style.display = 'flex';
+    this._clearInput();
+    document.getElementById('gameResults').classList.remove('hidden');
+    document.getElementById('gameTools').classList.add('hidden');
     const list = document.getElementById('resultsList');
     list.innerHTML = '';
 
     if (this.isVersus) {
       const sorted = [...this.players].sort((a,b) => (a.finishTime||99999) - (b.finishTime||99999));
       const winner = sorted[0];
-      document.getElementById('resultsIcon').textContent = '🏆';
+      document.getElementById('resultsIcon').innerHTML = '<i data-lucide="trophy"></i>';
+      document.getElementById('resultsKicker').textContent = 'Split race complete';
       document.getElementById('resultsTitle').textContent = `${winner.name} Wins!`;
       sorted.forEach((p, i) => {
         const e = document.createElement('div');
         e.className = 'result-entry';
         const t = p.finishTime ? this._fmtTime(p.finishTime) : 'DNF';
         e.innerHTML = `
-          <span class="result-pos">${i===0?'🥇 1st':'🥈 2nd'}</span>
-          <span class="result-swatch" style="background:${p.color}"></span>
+          <span class="result-pos">${i + 1}</span>
           <span class="result-name">${p.name}</span>
           <span class="result-stat">${t} · ⭐${p.starsGot} · ${p.totalScore}pts</span>`;
         list.appendChild(e);
@@ -744,18 +976,21 @@ class RampRacer {
     } else {
       const p = this.players[0];
       const completed = p.finished;
-      document.getElementById('resultsIcon').textContent = completed ? '🏁' : '💀';
-      document.getElementById('resultsTitle').textContent = completed ? 'Track Complete!' : 'Game Over';
+      this._saveBest(p);
+      document.getElementById('resultsIcon').innerHTML = `<i data-lucide="${completed ? 'flag' : 'shield-x'}"></i>`;
+      document.getElementById('resultsKicker').textContent = completed ? 'Event complete' : 'Survival ended';
+      document.getElementById('resultsTitle').textContent = completed ? (this.isEndless ? 'Survival Complete' : 'Tour Complete') : 'Out of Lives';
       const e = document.createElement('div');
       e.className = 'result-entry';
       e.innerHTML = `
-        <span class="result-pos">🌟</span>
-        <span class="result-swatch" style="background:${p.color}"></span>
-        <span class="result-name">${p.totalScore} pts</span>
+        <span class="result-pos">★</span>
+        <span class="result-name">${p.totalScore.toLocaleString()} pts</span>
         <span class="result-stat">${this._fmtTime(p.raceTime)} · ⭐${p.starsGot} · ${p.jumpIdx}/${this.track.jumps.length} jumps</span>`;
       list.appendChild(e);
       if (completed) Sfx.win(); else Sfx.fail();
     }
+    this._refreshIcons();
+    this._updateSetupUI();
   }
 
   _fmtTime(t) {
@@ -781,8 +1016,15 @@ class RampRacer {
 
     ctx.clearRect(-20,-20, this.W+40, this.H+40);
 
-    if (this.state === 'setup' || this.state === 'results') {
+    if (this.state === 'setup') {
       this._drawBackground(ctx, 0, 0, this.W, this.H, 0);
+      this._drawSetupPreview(ctx);
+      ctx.restore();
+      return;
+    }
+
+    if (this.state === 'results') {
+      this._drawBackground(ctx, 0, 0, this.W, this.H, 4);
       ctx.restore();
       return;
     }
@@ -808,33 +1050,104 @@ class RampRacer {
       ctx.fillStyle = 'rgba(255,255,255,0.15)';
       ctx.fillRect(0, vpH - 1, this.W, 1);
 
-      // Player labels on divider
-      ['P1 ▲', 'P2 ▼'].forEach((label, i) => {
-        const px = 20;
-        const py = vpH + (i === 0 ? -8 : 14);
-        ctx.font = 'bold 11px Outfit';
-        ctx.fillStyle = P_COLORS[i];
-        ctx.textAlign = 'left';
-        ctx.fillText(label, px, py);
-      });
     } else {
       // Single player full screen
-      this._drawViewport(ctx, this.players[0], 0, 0, this.W, this.H);
+      const touchRail = this.W <= 900 && this.H <= 560 ? 188 : 0;
+      const playW = this.W - touchRail;
+      this._drawViewport(ctx, this.players[0], 0, 0, playW, this.H);
+      if (touchRail) {
+        ctx.fillStyle = 'rgba(6,13,14,0.92)';
+        ctx.fillRect(playW, 0, touchRail, this.H);
+        ctx.fillStyle = 'rgba(255,255,255,0.12)';
+        ctx.fillRect(playW, 0, 1, this.H);
+      }
     }
 
     ctx.restore();
   }
 
+  _drawSetupPreview(ctx) {
+    const world = WORLDS[0];
+    const baseY = this.H * 0.66;
+    const startX = this.W * 0.52;
+    const startW = this.W * 0.20;
+    const rampW = Math.min(150, this.W * 0.09);
+    const rampH = rampW * 0.48;
+    const landingX = startX + startW + this.W * 0.10;
+    const landingW = this.W * 0.18;
+
+    ctx.save();
+    ctx.shadowColor = 'rgba(0,0,0,0.35)';
+    ctx.shadowBlur = 28;
+    this._drawPlatform(ctx, startX, baseY, startW, world, 0, 0);
+    this._drawPlatform(ctx, landingX, baseY - 22, landingW, world, 0, 1);
+    ctx.shadowColor = 'transparent';
+
+    ctx.fillStyle = '#593a2b';
+    ctx.beginPath();
+    ctx.moveTo(startX + startW - rampW, baseY);
+    ctx.lineTo(startX + startW, baseY - rampH);
+    ctx.lineTo(startX + startW, baseY);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = '#f6c453';
+    ctx.lineWidth = 9;
+    ctx.beginPath();
+    ctx.moveTo(startX + startW - rampW, baseY);
+    ctx.lineTo(startX + startW, baseY - rampH);
+    ctx.stroke();
+
+    const arc = (Math.sin(this.time * 0.9) * 0.5 + 0.5);
+    const carX = lerp(startX + startW - 20, landingX + 45, arc);
+    const carY = lerp(baseY - rampH - 40, baseY - 75, arc) - Math.sin(arc * Math.PI) * 120;
+    const carAngle = lerp(-0.42, 0.12, arc);
+    this._drawPreviewCar(ctx, carX, carY, carAngle);
+
+    for (let i = 0; i < 3; i++) {
+      const sx = lerp(startX + startW + 45, landingX - 35, (i + 1) / 4);
+      const sy = baseY - 105 - Math.sin(((i + 1) / 4) * Math.PI) * 90;
+      this._drawStar(ctx, sx, sy, 15 + Math.sin(this.time * 3 + i) * 1.5);
+    }
+    ctx.restore();
+  }
+
+  _drawPreviewCar(ctx, x, y, angle) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(angle);
+    ctx.fillStyle = '#20282a';
+    ctx.beginPath(); ctx.roundRect(-38, -16, 76, 27, 7); ctx.fill();
+    const body = ctx.createLinearGradient(0, -18, 0, 14);
+    body.addColorStop(0, '#ff9a64');
+    body.addColorStop(0.5, '#f25c35');
+    body.addColorStop(1, '#9c2f22');
+    ctx.fillStyle = body;
+    ctx.beginPath();
+    ctx.moveTo(-36, 8); ctx.lineTo(-32, -12); ctx.lineTo(16, -15);
+    ctx.quadraticCurveTo(34, -13, 40, 3); ctx.lineTo(40, 9); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#d9f3f2';
+    ctx.beginPath(); ctx.roundRect(-5, -12, 22, 9, 2); ctx.fill();
+    this._drawWheel(ctx, -22, 10, 12, this.time * 4);
+    this._drawWheel(ctx, 24, 10, 12, this.time * 4);
+    ctx.restore();
+  }
+
   _drawViewport(ctx, p, ox, oy, vpW, vpH) {
-    const worldIdx = Math.min(4, Math.floor(p.jumpIdx / Math.ceil(this.track.jumps.length / 5)));
+    const jump = this.track.jumps[Math.min(p.jumpIdx, this.track.jumps.length - 1)];
+    const worldIdx = jump ? jump.worldIdx : 4;
+    const zoom = this._getZoom(vpW, vpH);
+    const worldW = vpW / zoom;
+    const worldH = vpH / zoom;
 
     // Background
     this._drawBackground(ctx, p.camX, p.camY, vpW, vpH, worldIdx);
 
     // World elements (relative to player's camera)
     ctx.save();
-    ctx.translate(-p.camX + ox, -p.camY + oy);
-    this._drawTrack(ctx, p.camX, p.camY, p.camX + vpW, p.camY + vpH, worldIdx);
+    ctx.translate(ox, oy);
+    ctx.scale(zoom, zoom);
+    ctx.translate(-p.camX, -p.camY);
+    this._drawTrack(ctx, p.camX, p.camY, p.camX + worldW, p.camY + worldH, worldIdx);
     this._drawPlayer(ctx, p, 0, 0);
     ctx.restore();
 
@@ -854,8 +1167,8 @@ class RampRacer {
     // Float texts for this player
     this.floatTexts.forEach(f => {
       if (f.player && f.player.id !== p.id) return;
-      const sx = f.x - p.camX + ox;
-      const sy = f.y - p.camY + oy;
+      const sx = (f.x - p.camX) * zoom + ox;
+      const sy = (f.y - p.camY) * zoom + oy;
       if (sx < ox || sx > ox+vpW || sy < oy || sy > oy+vpH) return;
       const alpha = clamp(f.life / 1.0, 0, 1);
       ctx.globalAlpha = alpha;
@@ -941,9 +1254,10 @@ class RampRacer {
     const track  = this.track;
 
     // Platforms
-    track.platforms.forEach(pl => {
+    track.platforms.forEach((pl, index) => {
       if (pl.x > visR || pl.x + pl.w < visL) return;
-      this._drawPlatform(ctx, pl.x, pl.y, pl.w, world);
+      this._drawPlatform(ctx, pl.x, pl.y, pl.w, world, worldIdx, index);
+      if (index > 0) this._drawLandingZone(ctx, pl, track.jumps[index - 1], worldIdx);
     });
 
     // Ramps with slick racing stripes
@@ -1032,7 +1346,17 @@ class RampRacer {
     }
   }
 
-  _drawPlatform(ctx, x, y, w, world) {
+  _drawPlatform(ctx, x, y, w, world, worldIdx = 0, index = 0) {
+    // Underside silhouette gives each floating section visible structure.
+    ctx.fillStyle = 'rgba(0,0,0,0.18)';
+    ctx.beginPath();
+    ctx.moveTo(x + 12, y + PLATFORM_H);
+    ctx.lineTo(x + w - 12, y + PLATFORM_H);
+    ctx.lineTo(x + w - 28, y + PLATFORM_H + 42);
+    ctx.lineTo(x + 28, y + PLATFORM_H + 42);
+    ctx.closePath();
+    ctx.fill();
+
     // Dirt body with gradient depth
     const dirtG = ctx.createLinearGradient(0, y, 0, y+PLATFORM_H);
     dirtG.addColorStop(0, world.dirt);
@@ -1058,6 +1382,52 @@ class RampRacer {
       ctx.lineTo(gx+4, y-6);
       ctx.fill();
     }
+
+    // Theme-specific structure keeps the five districts visually distinct.
+    if (worldIdx === 1) {
+      ctx.strokeStyle = 'rgba(255,220,160,0.2)';
+      ctx.lineWidth = 2;
+      for (let sy = y + 17; sy < y + PLATFORM_H; sy += 10) {
+        ctx.beginPath(); ctx.moveTo(x + 12, sy); ctx.lineTo(x + w - 12, sy + Math.sin(index + sy) * 3); ctx.stroke();
+      }
+    } else if (worldIdx === 2 || worldIdx === 3) {
+      ctx.strokeStyle = worldIdx === 3 ? 'rgba(89,209,189,0.52)' : 'rgba(220,235,238,0.42)';
+      ctx.lineWidth = 4;
+      const left = x + Math.min(34, w * 0.2);
+      const right = x + w - Math.min(34, w * 0.2);
+      ctx.beginPath();
+      ctx.moveTo(left, y + PLATFORM_H); ctx.lineTo(left + 8, y + PLATFORM_H + 54);
+      ctx.moveTo(right, y + PLATFORM_H); ctx.lineTo(right - 8, y + PLATFORM_H + 54);
+      ctx.moveTo(left + 4, y + PLATFORM_H + 24); ctx.lineTo(right - 4, y + PLATFORM_H + 42);
+      ctx.moveTo(right - 4, y + PLATFORM_H + 24); ctx.lineTo(left + 4, y + PLATFORM_H + 42);
+      ctx.stroke();
+    } else if (worldIdx === 4) {
+      ctx.fillStyle = index % 2 ? '#f6c453' : '#f25c35';
+      for (let fx = x + 18; fx < x + w - 10; fx += 32) {
+        ctx.beginPath(); ctx.moveTo(fx, y + PLATFORM_H - 5); ctx.lineTo(fx + 10, y + PLATFORM_H - 5); ctx.lineTo(fx + 5, y + PLATFORM_H + 8); ctx.fill();
+      }
+    }
+  }
+
+  _drawLandingZone(ctx, platform, jump, worldIdx) {
+    const margin = clamp(platform.w * 0.15, 18, 34);
+    const zx = platform.x + margin;
+    const zw = Math.max(24, platform.w - margin * 2);
+    ctx.save();
+    ctx.fillStyle = worldIdx === 3 ? 'rgba(89,209,189,0.34)' : 'rgba(246,196,83,0.25)';
+    ctx.fillRect(zx, platform.y - 9, zw, 5);
+    ctx.strokeStyle = 'rgba(255,255,255,0.72)';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([7, 7]);
+    ctx.beginPath();
+    ctx.moveTo(platform.x + platform.w / 2, platform.y - 9);
+    ctx.lineTo(platform.x + platform.w / 2, platform.y + 8);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = '#f6c453';
+    ctx.fillRect(zx, platform.y - 17, 3, 14);
+    ctx.fillRect(zx + zw - 3, platform.y - 17, 3, 14);
+    ctx.restore();
   }
 
   _drawStar(ctx, x, y, r) {
@@ -1238,9 +1608,16 @@ class RampRacer {
   }
 
   _drawHUD(ctx, p, ox, oy, vpW, vpH) {
+    const hudShade = ctx.createLinearGradient(0, oy, 0, oy + 62);
+    hudShade.addColorStop(0, 'rgba(5,12,13,0.58)');
+    hudShade.addColorStop(1, 'rgba(5,12,13,0)');
+    ctx.fillStyle = hudShade;
+    ctx.fillRect(ox, oy, vpW, 62);
+
     // Speed gauge (only when charging)
     if (p.phase === 'charging') {
-      this._drawGauge(ctx, p, ox + vpW/2, oy + vpH - 78);
+      const touchClearance = !this.isVersus && vpW <= 640 && vpH > 560 ? 98 : 18;
+      this._drawGauge(ctx, p, ox + vpW/2, oy + vpH - touchClearance, Math.min(430, vpW * 0.48));
     }
 
     // Progress bar
@@ -1264,19 +1641,20 @@ class RampRacer {
       ctx.beginPath(); ctx.roundRect(barX, barY, fillW, barH, 4); ctx.fill();
     }
 
-    // Car icon on bar
-    ctx.font = '12px Outfit';
-    ctx.textAlign = 'center';
-    ctx.fillText('🚗', barX + fillW, barY - 5);
-
-    // Flag at end
-    ctx.fillText('🏁', barX + barW, barY - 5);
+    // Car marker and finish post
+    ctx.fillStyle = p.color;
+    ctx.beginPath(); ctx.arc(barX + fillW, barY - 5, 5, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = '#f7f3e8';
+    ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(barX + barW, barY + 5); ctx.lineTo(barX + barW, barY - 12); ctx.stroke();
+    ctx.fillStyle = '#f7f3e8';
+    ctx.fillRect(barX + barW, barY - 12, 10, 7);
 
     // Jump counter
     ctx.font = 'bold 12px Outfit';
     ctx.fillStyle = 'rgba(255,255,255,0.6)';
     ctx.textAlign = 'center';
-    ctx.fillText(`Jump ${p.jumpIdx}/${totalJumps}`, barX + barW/2, barY + barH + 14);
+    ctx.fillText(`Stunt ${Math.min(p.jumpIdx + 1, totalJumps)}/${totalJumps}`, barX + barW/2, barY + barH + 14);
 
     // Player name (versus mode)
     if (this.isVersus) {
@@ -1284,6 +1662,12 @@ class RampRacer {
       ctx.fillStyle = p.color;
       ctx.textAlign = 'left';
       ctx.fillText(p.name, ox + 12, oy + 26);
+    } else {
+      const jump = this.track.jumps[Math.min(p.jumpIdx, totalJumps - 1)];
+      ctx.font = 'bold 13px Outfit';
+      ctx.fillStyle = '#fff';
+      ctx.textAlign = 'left';
+      ctx.fillText(`${WORLDS[jump.worldIdx].name} · ${jump.name}`, ox + 14, oy + 26);
     }
 
     // Race timer
@@ -1317,14 +1701,6 @@ class RampRacer {
       ctx.fillText(`💥 RESPAWNING… ${Math.ceil(p.respawnTimer)}s`, ox + vpW/2, oy + vpH/2);
     }
 
-    // Instruction hint
-    if (p.phase === 'charging' && p.speed === 0) {
-      ctx.font = '13px Outfit';
-      ctx.fillStyle = 'rgba(255,255,255,0.45)';
-      ctx.textAlign = 'center';
-      ctx.fillText('Hold → to rev, release to launch!', ox + vpW/2, oy + vpH - 28);
-    }
-
     // Score
     ctx.textAlign = 'right';
     ctx.font = '12px Outfit';
@@ -1332,87 +1708,71 @@ class RampRacer {
     ctx.fillText(`${p.totalScore} pts`, ox + vpW - 14, oy + 46);
   }
 
-  _drawGauge(ctx, p, cx, cy) {
-    const r      = 75;
-    const frac   = clamp(p.speed / MAX_SPEED, 0, 1);
-    const sAngle = Math.PI * 0.75;
-    const totalA = Math.PI * 1.5;
-    const nAngle = sAngle + totalA * frac;
+  _drawGauge(ctx, p, cx, bottomY, width) {
+    const jump = this.track.jumps[Math.min(p.jumpIdx, this.track.jumps.length - 1)];
+    const panelW = Math.max(280, width);
+    const panelH = 72;
+    const panelX = cx - panelW / 2;
+    const panelY = bottomY - panelH;
+    const barX = panelX + 15;
+    const barY = panelY + 37;
+    const barW = panelW - 30;
+    const barH = 15;
+    const speedFrac = clamp(p.speed / MAX_SPEED, 0, 1);
+    const minFrac = clamp(jump.minSpeed / MAX_SPEED, 0, 1);
+    const maxFrac = clamp(jump.maxSpeed / MAX_SPEED, 0, 1);
+    const idealFrac = clamp(jump.idealMid / MAX_SPEED, 0, 1);
+    const inWindow = p.speed >= jump.minSpeed && p.speed <= jump.maxSpeed;
+    const tooHot = p.speed > jump.maxSpeed;
 
-    // Outer glow ring
-    ctx.beginPath();
-    ctx.arc(cx, cy, r + 8, 0, Math.PI*2);
-    ctx.fillStyle = 'rgba(0,0,0,0.5)';
-    ctx.fill();
-
-    // Track background
-    ctx.strokeStyle = 'rgba(255,255,255,0.1)';
-    ctx.lineWidth = 14;
-    ctx.lineCap = 'round';
-    ctx.beginPath(); ctx.arc(cx, cy, r, sAngle, sAngle+totalA); ctx.stroke();
-
-    // Tick marks
-    ctx.strokeStyle = 'rgba(255,255,255,0.4)';
-    ctx.lineWidth = 2;
-    for (let i=0; i<=10; i++) {
-      const ta = sAngle + totalA * (i/10);
-      const isMajor = (i%5===0);
-      const len = isMajor ? 12 : 6;
-      ctx.beginPath();
-      ctx.moveTo(cx + Math.cos(ta)*(r-10), cy + Math.sin(ta)*(r-10));
-      ctx.lineTo(cx + Math.cos(ta)*(r-10+len), cy + Math.sin(ta)*(r-10+len));
-      ctx.stroke();
-    }
-
-    // Neon Fill
-    if (frac > 0) {
-      const arcG = ctx.createConicGradient(sAngle, cx, cy);
-      arcG.addColorStop(0, '#00ffff');
-      arcG.addColorStop(0.35, '#00ffaa');
-      arcG.addColorStop(0.6, '#ffee00');
-      arcG.addColorStop(0.85, '#ff4400');
-      arcG.addColorStop(1, '#ff0000');
-      ctx.strokeStyle = arcG;
-      ctx.lineWidth = 14;
-      ctx.shadowColor = '#00ffff'; ctx.shadowBlur = 15;
-      ctx.beginPath(); ctx.arc(cx, cy, r, sAngle, nAngle); ctx.stroke();
-      ctx.shadowBlur = 0;
-    }
-
-    // Glowing Needle
-    ctx.strokeStyle = '#fff';
-    ctx.lineWidth = 4;
-    ctx.shadowColor = '#fff'; ctx.shadowBlur = 10;
-    ctx.beginPath();
-    ctx.moveTo(cx, cy);
-    ctx.lineTo(cx + Math.cos(nAngle)*(r-12), cy + Math.sin(nAngle)*(r-12));
+    ctx.fillStyle = 'rgba(6,13,14,0.84)';
+    ctx.beginPath(); ctx.roundRect(panelX, panelY, panelW, panelH, 7); ctx.fill();
+    ctx.strokeStyle = inWindow ? 'rgba(65,218,169,0.8)' : 'rgba(255,255,255,0.16)';
+    ctx.lineWidth = 1;
     ctx.stroke();
-    ctx.shadowBlur = 0;
 
-    // Centre Hub
-    ctx.fillStyle = '#fff';
-    ctx.beginPath(); ctx.arc(cx, cy, 6, 0, Math.PI*2); ctx.fill();
-    ctx.fillStyle = '#222';
-    ctx.beginPath(); ctx.arc(cx, cy, 3, 0, Math.PI*2); ctx.fill();
+    ctx.font = '700 11px "Share Tech Mono"';
+    ctx.textAlign = 'left';
+    ctx.fillStyle = 'rgba(255,255,255,0.62)';
+    ctx.fillText('LAUNCH POWER', barX, panelY + 19);
+    ctx.textAlign = 'right';
+    ctx.fillStyle = inWindow ? '#63e0b7' : (tooHot ? '#ff755c' : '#f6c453');
+    const status = p.speed === 0 ? 'HOLD' : (inWindow ? 'RELEASE' : (tooHot ? 'TOO HOT' : 'BUILD'));
+    ctx.fillText(`${status}  ${Math.round(p.speed)}`, barX + barW, panelY + 19);
 
-    // Digital Speed Text
-    ctx.font = '900 24px Outfit';
-    ctx.fillStyle = '#fff';
-    ctx.textAlign = 'center';
-    ctx.shadowColor = 'rgba(0,0,0,0.8)'; ctx.shadowBlur = 4;
-    ctx.fillText(Math.floor(p.speed), cx, cy - 20);
-    ctx.font = '600 11px Outfit';
-    ctx.fillStyle = '#00ffcc';
-    ctx.fillText('MPH', cx, cy - 6);
-    ctx.shadowBlur = 0;
-    
-    // Rev warning
-    if (frac > 0.95) {
-      ctx.fillStyle = '#ff0000';
-      if (Math.floor(this.time * 10) % 2 === 0) {
-        ctx.fillText('MAX!', cx, cy + 25);
-      }
+    ctx.fillStyle = 'rgba(255,255,255,0.1)';
+    ctx.beginPath(); ctx.roundRect(barX, barY, barW, barH, 4); ctx.fill();
+
+    const powerGrad = ctx.createLinearGradient(barX, 0, barX + barW, 0);
+    powerGrad.addColorStop(0, '#46a6d8');
+    powerGrad.addColorStop(0.55, '#f6c453');
+    powerGrad.addColorStop(1, '#f25c35');
+    ctx.fillStyle = powerGrad;
+    if (speedFrac > 0) {
+      ctx.beginPath(); ctx.roundRect(barX, barY, Math.max(4, barW * speedFrac), barH, 4); ctx.fill();
     }
+
+    ctx.fillStyle = 'rgba(72,225,172,0.46)';
+    ctx.fillRect(barX + barW * minFrac, barY - 4, Math.max(4, barW * (maxFrac - minFrac)), barH + 8);
+    ctx.strokeStyle = '#76f0c4';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(barX + barW * minFrac, barY - 4, Math.max(4, barW * (maxFrac - minFrac)), barH + 8);
+
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(barX + barW * idealFrac, barY - 7);
+    ctx.lineTo(barX + barW * idealFrac, barY + barH + 7);
+    ctx.stroke();
+
+    const needleX = barX + barW * speedFrac;
+    ctx.fillStyle = '#fff';
+    ctx.beginPath();
+    ctx.moveTo(needleX, barY - 7);
+    ctx.lineTo(needleX - 5, barY - 13);
+    ctx.lineTo(needleX + 5, barY - 13);
+    ctx.closePath();
+    ctx.fill();
   }
 
   _drawCountdown(ctx, ox, oy, vpW, vpH) {
