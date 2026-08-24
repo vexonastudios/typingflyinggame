@@ -154,6 +154,7 @@ body {
 .game-card:hover .card-glow--orange { opacity: 1; }
 .game-card:hover .card-glow--purple { opacity: 1; }
 .game-card:hover .card-glow--green { opacity: 1; }
+.game-card:hover .card-glow--paintball { opacity: 1; }
 
 .card-glow {
   position: absolute;
@@ -199,6 +200,10 @@ body {
 .card-glow--green {
   box-shadow: inset 0 0 0 2px rgba(74,222,128,0.7), 0 0 40px rgba(74,222,128,0.25);
   border: 2px solid rgba(74,222,128,0.7);
+}
+.card-glow--paintball {
+  box-shadow: inset 0 0 0 2px rgba(31,224,212,0.78), 0 0 45px rgba(31,224,212,0.2), 0 0 70px rgba(255,91,143,0.12);
+  border: 2px solid rgba(31,224,212,0.78);
 }
 
 .game-card--locked {
@@ -725,6 +730,92 @@ body {
   background-position: center 58%;
   background-size: cover;
 }
+
+/* Family Paintball Showdown preview */
+.card-art--family-paintball {
+  background: linear-gradient(180deg, #8cb6b5 0 47%, #71835c 47% 100%);
+  isolation: isolate;
+}
+.art-paintball-sky {
+  position: absolute;
+  inset: 0 0 53%;
+  background: linear-gradient(150deg, rgba(255,255,255,.18), transparent 55%);
+}
+.art-paintball-trench {
+  position: absolute;
+  z-index: 1;
+  bottom: -18%;
+  width: 68%;
+  height: 64%;
+  background: linear-gradient(180deg, #435841, #243630);
+  border-top: 8px solid #947955;
+}
+.art-paintball-trench--left { left: -25%; transform: rotate(13deg); }
+.art-paintball-trench--right { right: -26%; transform: rotate(-14deg); }
+.art-paintball-player {
+  position: absolute;
+  z-index: 3;
+  width: 22px;
+  height: 51px;
+  border-radius: 7px 7px 3px 3px;
+  box-shadow: 0 8px 15px rgba(0,0,0,.25);
+}
+.art-paintball-player::before {
+  content: '';
+  position: absolute;
+  top: -16px;
+  left: 2px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: inherit;
+  box-shadow: inset 0 -5px rgba(0,0,0,.18);
+}
+.art-paintball-player::after {
+  content: '';
+  position: absolute;
+  top: 13px;
+  left: 16px;
+  width: 40px;
+  height: 7px;
+  border-radius: 5px;
+  background: #11262d;
+  transform: rotate(-7deg);
+  transform-origin: left;
+}
+.art-paintball-player--cyan { left: 29%; bottom: 22%; background: #1fe0d4; }
+.art-paintball-player--pink { right: 24%; bottom: 39%; background: #ff5b8f; transform: scale(.76); }
+.art-paintball-splat {
+  position: absolute;
+  z-index: 4;
+  left: 53%;
+  top: 44%;
+  width: 25px;
+  height: 20px;
+  border-radius: 50%;
+  background: #ff5b8f;
+  box-shadow: 17px -9px 0 -7px #ff5b8f, -15px 12px 0 -8px #ff5b8f, 23px 12px 0 -9px #ff5b8f;
+  transform: rotate(-18deg);
+}
+.art-paintball-crosshair {
+  position: absolute;
+  z-index: 5;
+  left: 50%;
+  top: 47%;
+  width: 38px;
+  height: 38px;
+  border: 2px solid rgba(255,255,255,.9);
+  border-radius: 50%;
+  box-shadow: 0 0 0 3px rgba(0,0,0,.12);
+}
+.art-paintball-crosshair::before,
+.art-paintball-crosshair::after {
+  content: '';
+  position: absolute;
+  background: white;
+}
+.art-paintball-crosshair::before { left: 17px; top: -9px; width: 2px; height: 53px; }
+.art-paintball-crosshair::after { top: 17px; left: -9px; width: 53px; height: 2px; }
 .art-race-number {
   position: absolute;
   top: 50%; left: 50%; transform: translate(-50%, -50%);
@@ -795,6 +886,8 @@ body {
 .badge--orange  { background: rgba(249,115,22,0.18); color: #fdba74; border: 1px solid rgba(249,115,22,0.3); }
 .badge--purple  { background: rgba(168,85,247,0.18); color: #d8b4fe; border: 1px solid rgba(168,85,247,0.3); }
 .badge--green   { background: rgba(74,222,128,0.18); color: #86efac; border: 1px solid rgba(74,222,128,0.3); }
+.badge--paintball { background: rgba(31,224,212,0.14); color: #9dfbf3; border: 1px solid rgba(31,224,212,0.34); }
+.badge--soon { background: rgba(255,91,143,0.14); color: #ffb0c8; border: 1px solid rgba(255,91,143,0.34); }
 .badge--api     { background: rgba(168,85,247,0.18); color: #d8b4fe; border: 1px solid rgba(168,85,247,0.3); }
 .badge--players { background: rgba(255,208,96,0.14); color: #ffd060; border: 1px solid rgba(255,208,96,0.3); }
 .badge--dim     { background: rgba(255,255,255,0.07); color: var(--muted); border: 1px solid var(--border); }
@@ -854,6 +947,10 @@ body {
 
 #card-mathrace .card-play-btn {
   background: linear-gradient(135deg, #7e22ce, #a855f7);
+}
+
+#card-family-paintball .card-play-btn {
+  background: linear-gradient(135deg, #137a72, #d43f71);
 }
 
 /* Duck Hunt Duel card */
