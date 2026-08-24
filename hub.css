@@ -155,6 +155,7 @@ body {
 .game-card:hover .card-glow--purple { opacity: 1; }
 .game-card:hover .card-glow--green { opacity: 1; }
 .game-card:hover .card-glow--paintball { opacity: 1; }
+.game-card:hover .card-glow--baseball { opacity: 1; }
 
 .card-glow {
   position: absolute;
@@ -205,6 +206,10 @@ body {
   box-shadow: inset 0 0 0 2px rgba(31,224,212,0.78), 0 0 45px rgba(31,224,212,0.2), 0 0 70px rgba(255,91,143,0.12);
   border: 2px solid rgba(31,224,212,0.78);
 }
+.card-glow--baseball {
+  box-shadow: inset 0 0 0 2px rgba(243,197,82,0.8), 0 0 44px rgba(217,72,55,0.24);
+  border: 2px solid rgba(243,197,82,0.8);
+}
 
 .game-card--locked {
   opacity: 0.45;
@@ -220,6 +225,89 @@ body {
   justify-content: center;
   overflow: hidden;
   flex-shrink: 0;
+}
+
+/* ---- Fence Busters ---- */
+.card-art--baseball {
+  background: #4f8f42;
+}
+.card-art--baseball img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 62%;
+  filter: saturate(1.05) contrast(1.03);
+}
+.card-art--baseball::after {
+  position: absolute;
+  inset: 0;
+  content: "";
+  background: linear-gradient(180deg, transparent 45%, rgba(28,17,7,0.38));
+  pointer-events: none;
+}
+.art-baseball-bat {
+  position: absolute;
+  z-index: 2;
+  right: 21%;
+  bottom: -6%;
+  width: 13px;
+  height: 118px;
+  border: 2px solid rgba(94,51,24,0.7);
+  border-radius: 7px 7px 3px 3px;
+  background: linear-gradient(90deg, #9b5a2d, #f1bd72 44%, #ad6a36);
+  box-shadow: 0 8px 15px rgba(0,0,0,0.34);
+  transform: rotate(58deg);
+  transform-origin: bottom;
+}
+.art-baseball-ball {
+  position: absolute;
+  z-index: 3;
+  top: 39%;
+  left: 53%;
+  width: 22px;
+  aspect-ratio: 1;
+  border: 1px solid #d5d1c6;
+  border-radius: 50%;
+  background: #fffdf4;
+  box-shadow: 0 0 0 4px rgba(255,255,255,0.14), -20px 9px 16px rgba(255,255,255,0.3);
+}
+.art-baseball-ball::before,
+.art-baseball-ball::after {
+  position: absolute;
+  top: 5px;
+  width: 8px;
+  height: 10px;
+  border: 1px solid #d94837;
+  border-top-color: transparent;
+  border-bottom-color: transparent;
+  border-radius: 50%;
+  content: "";
+}
+.art-baseball-ball::before { left: 2px; }
+.art-baseball-ball::after { right: 2px; }
+.badge--baseball {
+  color: #ffda74;
+  background: rgba(217,72,55,0.18);
+}
+.badge--new {
+  color: #182117;
+  background: var(--accent-gold);
+}
+.card-play-btn--baseball {
+  color: #fff;
+  background: linear-gradient(135deg, #b82f27, #e85b36);
+}
+#card-baseball:hover .art-baseball-bat {
+  animation: baseball-card-swing 0.72s ease-in-out infinite alternate;
+}
+#card-baseball:hover .art-baseball-ball {
+  animation: baseball-card-flight 0.72s ease-in-out infinite alternate;
+}
+@keyframes baseball-card-swing {
+  to { transform: rotate(23deg); }
+}
+@keyframes baseball-card-flight {
+  to { transform: translate(-42px, -28px) scale(0.72); }
 }
 
 /* Sky art */

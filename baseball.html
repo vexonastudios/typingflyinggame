@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-ZTP50MJ7CX"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-ZTP50MJ7CX');
+  </script>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+  <title>Fence Busters | Baseball Batting Game</title>
+  <meta name="description" content="Read the pitch, protect the strike zone, and drive the ball over the farm fence in this timing-based baseball batting game."/>
+  <link rel="canonical" href="https://games.bodeebooks.com/baseball"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800;900&family=Roboto+Slab:wght@700;900&display=swap"/>
+  <link rel="icon" type="image/svg+xml" href="favicon.svg"/>
+  <link rel="stylesheet" href="baseball.css?v=1.0"/>
+  <link rel="stylesheet" href="play-timer.css"/>
+  <script src="profile-manager.js"></script>
+  <script src="play-timer.js"></script>
+  <script defer src="https://www.bodeebooks.com/bodee-analytics.js"></script>
+</head>
+<body>
+  <canvas id="gameCanvas" aria-label="Fence Busters baseball field"></canvas>
+
+  <nav id="gameTools" class="game-tools hidden" aria-label="Game controls">
+    <a class="icon-btn" href="index.html" aria-label="Return to game hub" title="Game Hub"><i data-lucide="house"></i></a>
+    <button id="pauseBtn" class="icon-btn" type="button" aria-label="Pause game" title="Pause (Escape)"><i data-lucide="pause"></i></button>
+    <button id="soundBtn" class="icon-btn" type="button" aria-label="Mute sound" title="Mute Sound"><i data-lucide="volume-2"></i></button>
+    <button id="fullscreenBtn" class="icon-btn" type="button" aria-label="Enter fullscreen" title="Fullscreen (F)"><i data-lucide="maximize"></i></button>
+  </nav>
+
+  <main id="gameSetup" class="setup-screen">
+    <section class="setup-panel" aria-labelledby="gameTitle">
+      <header class="title-lockup">
+        <span class="title-mark" aria-hidden="true">⚾</span>
+        <div>
+          <p class="eyebrow">Bodee Books Backyard Series</p>
+          <h1 id="gameTitle">Fence <strong>Busters</strong></h1>
+          <p class="tagline">Read it. Time it. Drive it.</p>
+        </div>
+      </header>
+
+      <div class="setup-grid">
+        <fieldset class="option-group event-group">
+          <legend>Event</legend>
+          <label class="event-option selected">
+            <input type="radio" name="event" value="discipline" checked/>
+            <i data-lucide="scan-eye"></i>
+            <span><strong>Batting Challenge</strong><small>20 pitches</small></span>
+          </label>
+          <label class="event-option">
+            <input type="radio" name="event" value="derby"/>
+            <i data-lucide="flame"></i>
+            <span><strong>Home Run Derby</strong><small>10 outs</small></span>
+          </label>
+          <label class="event-option">
+            <input type="radio" name="event" value="targets"/>
+            <i data-lucide="crosshair"></i>
+            <span><strong>Target Field</strong><small>15 pitches</small></span>
+          </label>
+        </fieldset>
+
+        <fieldset class="option-group">
+          <legend>Pitcher</legend>
+          <div class="segmented-options">
+            <label><input type="radio" name="difficulty" value="rookie"/><span>Rookie</span></label>
+            <label><input type="radio" name="difficulty" value="allstar" checked/><span>All-Star</span></label>
+            <label><input type="radio" name="difficulty" value="legend"/><span>Legend</span></label>
+          </div>
+          <p id="pitcherNote" class="option-note">Fastballs, changeups, and breaking pitches</p>
+        </fieldset>
+
+        <fieldset class="option-group">
+          <legend>Lineup</legend>
+          <div class="segmented-options two-options">
+            <label><input type="radio" name="players" value="1" checked/><span>Solo</span></label>
+            <label><input type="radio" name="players" value="2"/><span>2 Players</span></label>
+          </div>
+        </fieldset>
+
+        <div class="name-fields">
+          <label><span>Batter 1</span><input id="p1Name" type="text" maxlength="16" value="Slugger 1"/></label>
+          <label id="p2NameField" class="hidden"><span>Batter 2</span><input id="p2Name" type="text" maxlength="16" value="Slugger 2"/></label>
+        </div>
+      </div>
+
+      <div class="setup-actions">
+        <button id="startBtn" class="primary-btn" type="button"><i data-lucide="play"></i><span>Step to the Plate</span></button>
+        <a href="index.html" class="secondary-btn"><i data-lucide="arrow-left"></i><span>Game Hub</span></a>
+        <span id="bestRecord" class="best-record">Best: 0</span>
+      </div>
+    </section>
+  </main>
+
+  <header id="gameHud" class="game-hud hidden" aria-live="polite">
+    <div class="hud-player">
+      <span id="activePlayer" class="hud-kicker">Slugger 1</span>
+      <strong id="scoreValue">0</strong>
+    </div>
+    <div class="hud-event">
+      <span id="eventValue">Batting Challenge</span>
+      <strong id="remainingValue">20 PITCHES</strong>
+    </div>
+    <div class="hud-stats">
+      <span><small>STREAK</small><strong id="streakValue">0</strong></span>
+      <span><small>BEST</small><strong id="distanceValue">0 FT</strong></span>
+    </div>
+  </header>
+
+  <div id="countdown" class="countdown hidden" aria-live="assertive">3</div>
+  <div id="pitchReadout" class="pitch-readout hidden" aria-live="polite">
+    <span id="pitchType">FASTBALL</span>
+    <strong id="timingValue">PERFECT</strong>
+  </div>
+  <div id="turnBanner" class="turn-banner hidden" aria-live="assertive">
+    <span>NOW BATTING</span>
+    <strong id="turnName">Slugger 1</strong>
+  </div>
+
+  <button id="swingBtn" class="swing-btn hidden" type="button" aria-label="Swing the bat">
+    <span class="swing-ball" aria-hidden="true">⚾</span>
+    <strong>SWING</strong>
+  </button>
+
+  <section id="pauseOverlay" class="modal-overlay hidden" aria-labelledby="pauseTitle">
+    <div class="modal-panel compact-panel">
+      <span class="modal-icon" aria-hidden="true"><i data-lucide="pause"></i></span>
+      <h2 id="pauseTitle">Seventh-Inning Stretch</h2>
+      <div class="modal-actions">
+        <button id="resumeBtn" class="primary-btn" type="button"><i data-lucide="play"></i><span>Resume</span></button>
+        <button id="restartBtn" class="secondary-btn" type="button"><i data-lucide="refresh-cw"></i><span>Restart Event</span></button>
+        <button id="setupBtn" class="secondary-btn" type="button"><i data-lucide="sliders-horizontal"></i><span>Setup</span></button>
+      </div>
+    </div>
+  </section>
+
+  <section id="resultsOverlay" class="modal-overlay hidden" aria-labelledby="resultsTitle">
+    <div class="modal-panel results-panel">
+      <span id="resultsIcon" class="modal-icon" aria-hidden="true"><i data-lucide="trophy"></i></span>
+      <p class="eyebrow">Final Scorecard</p>
+      <h2 id="resultsTitle">Fence Cleared!</h2>
+      <div id="resultsList" class="results-list"></div>
+      <div class="modal-actions">
+        <button id="playAgainBtn" class="primary-btn" type="button"><i data-lucide="rotate-ccw"></i><span>Bat Again</span></button>
+        <button id="resultsSetupBtn" class="secondary-btn" type="button"><i data-lucide="sliders-horizontal"></i><span>Setup</span></button>
+        <a href="index.html" class="secondary-btn"><i data-lucide="house"></i><span>Game Hub</span></a>
+      </div>
+    </div>
+  </section>
+
+  <script src="https://cdn.jsdelivr.net/npm/lucide@0.468.0/dist/umd/lucide.min.js"></script>
+  <script src="baseball.js?v=1.0"></script>
+</body>
+</html>
