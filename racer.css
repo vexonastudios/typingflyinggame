@@ -390,3 +390,34 @@ body {
   transition: background 0.15s, color 0.15s;
 }
 .hub-link-btn:hover { background: rgba(255,255,255,0.14); color: #fff; }
+
+/* Compact setup and retain scrolling on short landscape displays. */
+@media (max-height: 520px) and (orientation: landscape) {
+  .overlay {
+    align-items: flex-start;
+    overflow-x: hidden;
+    overflow-y: auto;
+    padding: 58px 12px 16px;
+  }
+
+  .setup-box {
+    width: min(640px, 100%);
+    margin: 0 auto;
+    padding: 14px 22px 18px;
+    border-radius: 12px;
+  }
+
+  .setup-box::before { border-radius: 13px; }
+  .setup-box .r-back-btn { top: 12px !important; left: 14px !important; }
+  .setup-logo { font-size: 1.8rem; margin-bottom: 0; }
+  .setup-title { font-size: 2rem; }
+  .setup-sub { margin-bottom: 8px; }
+  .mode-row { margin-bottom: 8px; }
+  .mode-label,
+  .diff-label { margin-bottom: 4px; }
+  .mode-opt,
+  .diff-opt { padding: 6px; }
+  .difficulty-row { margin-bottom: 9px; }
+  .controls-display { gap: 10px; margin-bottom: 9px; padding: 8px 12px; }
+  .start-btn { padding: 10px 38px; font-size: 0.95rem; }
+}

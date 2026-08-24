@@ -660,6 +660,9 @@ class SkyTyperGame {
     this.ui.mainMenuPanel.style.display = "none";
     this.ui.pausePanel.style.display = "none";
     this.ui.debriefPanel.style.display = "none";
+    if (window.matchMedia("(max-width: 820px), (max-height: 520px) and (orientation: landscape)").matches) {
+      requestAnimationFrame(() => this.canvas.scrollIntoView({ block: "start" }));
+    }
     this.maxWaves = this.settings.waves;
     this.maxHealth = this.settings.shields;
     this.shields = this.settings.shields;

@@ -606,3 +606,62 @@ html, body {
   color: rgba(255,255,255,0.7);
 }
 .btn-results--ghost:hover { border-color: rgba(255,255,255,0.5); color: #fff; box-shadow: none; }
+
+/* Keep every mode and setting reachable on phone-sized viewports. */
+@media (max-width: 680px) {
+  #titleScreen,
+  #tournamentScreen {
+    justify-content: flex-start;
+    overflow-x: hidden;
+    overflow-y: auto;
+  }
+
+  .title-content {
+    width: 100%;
+    min-height: max-content;
+    gap: 14px;
+    padding: 68px 12px 24px;
+  }
+
+  .title-logo { font-size: clamp(2rem, 10vw, 2.8rem); }
+  .mode-cards { width: 100%; gap: 10px; }
+  .mode-card { width: min(100%, 340px); padding: 16px 18px; }
+  .title-settings { gap: 12px !important; margin-top: 0 !important; }
+  .name-inputs { flex-direction: column !important; gap: 10px !important; }
+  .game-settings-row { width: 100%; gap: 12px !important; padding: 12px !important; }
+}
+
+@media (max-height: 520px) and (orientation: landscape) {
+  #titleScreen,
+  #tournamentScreen {
+    justify-content: flex-start;
+    overflow-x: hidden;
+    overflow-y: auto;
+  }
+
+  .title-content {
+    width: 100%;
+    min-height: max-content;
+    gap: 8px;
+    padding: 60px 12px 20px;
+  }
+
+  .title-eyebrow { display: none; }
+  .title-logo { font-size: 2rem; }
+  .title-tagline { font-size: 0.8rem; }
+  .mode-cards { width: 100%; flex-wrap: nowrap; gap: 8px; }
+  .mode-card { flex: 1; min-width: 0; width: auto; padding: 10px 8px; }
+  .mode-icon { font-size: 1.5rem; margin-bottom: 2px; }
+  .mode-card h2 { font-size: 1rem; margin-bottom: 4px; }
+  .mode-card p { font-size: 0.7rem; margin-bottom: 5px; }
+  .mode-keys { padding: 2px 5px; font-size: 0.58rem; }
+  .btn-tournament-launch { padding: 7px 24px; }
+  .title-settings { gap: 8px !important; margin-top: 0 !important; }
+  .name-inputs { gap: 8px !important; }
+  .name-inputs .setting-input { padding: 7px 10px !important; font-size: 0.85rem !important; }
+  .game-settings-row { gap: 10px !important; padding: 8px 14px !important; }
+  #hud.hud-solo {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(160px, 1fr) minmax(56px, 1fr);
+  }
+}

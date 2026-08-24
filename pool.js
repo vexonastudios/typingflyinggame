@@ -7,8 +7,9 @@
   // Base dimensions — we scale up/down from these based on viewport
   const BASE_W = 960, BASE_H = 520;
   function calcDimensions() {
+    const compactLandscape = window.matchMedia('(max-height: 520px) and (orientation: landscape)').matches;
     const maxW = Math.min(window.innerWidth - 40, 1400);
-    const maxH = Math.min(window.innerHeight - 200, 780);
+    const maxH = Math.min(window.innerHeight - (compactLandscape ? 115 : 200), 780);
     const scale = Math.min(maxW / BASE_W, maxH / BASE_H, 1.5);
     return {
       W: Math.round(BASE_W * scale),
@@ -1133,4 +1134,3 @@
   }
 
 })();
-

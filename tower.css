@@ -492,3 +492,48 @@ body {
   text-shadow: 0 4px 15px rgba(0,0,0,0.8);
   border-radius: 12px;
 }
+
+/* Lobby controls stay readable and reachable on narrow or short screens. */
+@media (max-width: 600px) {
+  #lobbyScreen {
+    justify-content: flex-start;
+    overflow-x: hidden;
+    overflow-y: auto;
+  }
+
+  .lobby-card {
+    width: 100%;
+    min-height: max-content;
+    gap: 16px;
+    padding: 68px 12px 24px;
+    border-radius: 0;
+  }
+
+  .lobby-card h1 { font-size: 2.4rem; }
+  .controls-panel { flex-direction: column; gap: 10px; }
+  .controls-col { width: 100%; padding: 12px; }
+}
+
+@media (max-height: 520px) and (orientation: landscape) {
+  #lobbyScreen {
+    justify-content: flex-start;
+    overflow-x: hidden;
+    overflow-y: auto;
+  }
+
+  .lobby-card {
+    min-height: max-content;
+    gap: 10px;
+    margin: 0 auto;
+    padding: 58px 18px 18px;
+  }
+
+  .lobby-card h1 { font-size: 2rem; }
+  .lobby-card > p { font-size: 0.85rem; }
+  .player-buttons { margin-top: 5px; }
+  .btn { padding: 8px 18px; }
+  .controls-panel { gap: 10px; }
+  .controls-col { padding: 9px; }
+  .player-name-input { margin-bottom: 7px; padding: 6px; }
+  .answer-box { padding: 8px 10px; }
+}

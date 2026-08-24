@@ -564,7 +564,7 @@ class DuckHuntDuel {
     const n2 = document.getElementById('p2Name').value.trim() || 'Player 2';
     const n3 = document.getElementById('p3Name').value.trim() || 'Player 3';
     this.p1 = makePlayer('p1', n1); 
-    this.p2 = makePlayer('p2', n2);
+    this.p2 = this.mode === 'solo' ? null : makePlayer('p2', n2);
     if (this.mode === 'trio') this.p3 = makePlayer('p3', n3);
     else this.p3 = null;
 
@@ -573,11 +573,12 @@ class DuckHuntDuel {
     _refreshDatalist();
     
     document.getElementById('nameLabelP1').textContent = `🔴 ${this.p1.name}`;
-    document.getElementById('nameLabelP2').textContent = `🔵 ${this.p2.name}`;
+    if (this.p2) document.getElementById('nameLabelP2').textContent = `🔵 ${this.p2.name}`;
     if (this.p3) document.getElementById('nameLabelP3').textContent = `🟣 ${this.p3.name}`;
 
     this.wind = 0; this.windTarget = 0;
     this._resize();
+    document.getElementById('hud').classList.toggle('hud-solo', this.mode === 'solo');
     document.getElementById('hudP2').style.display = this.mode === 'solo' ? 'none' : 'flex';
     document.getElementById('hudP3').style.display = this.mode === 'trio' ? 'flex' : 'none';
     this._showScreen('gameScreen');
