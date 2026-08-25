@@ -16,7 +16,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800;900&family=Roboto+Slab:wght@700;900&display=swap"/>
   <link rel="icon" type="image/svg+xml" href="favicon.svg"/>
-  <link rel="stylesheet" href="baseball.css?v=1.0"/>
+  <link rel="stylesheet" href="baseball.css?v=2.0"/>
   <link rel="stylesheet" href="play-timer.css"/>
   <script src="profile-manager.js"></script>
   <script src="play-timer.js"></script>
@@ -87,6 +87,17 @@
         </div>
       </div>
 
+      <section class="mission-brief" aria-labelledby="missionTitle">
+        <div class="mission-heading">
+          <span class="mission-icon" aria-hidden="true"><i data-lucide="clipboard-check"></i></span>
+          <span>
+            <small>Game Goals</small>
+            <strong id="missionTitle">Complete the scorecard</strong>
+          </span>
+        </div>
+        <div id="missionGoals" class="mission-goals"></div>
+      </section>
+
       <div class="setup-actions">
         <button id="startBtn" class="primary-btn" type="button"><i data-lucide="play"></i><span>Step to the Plate</span></button>
         <a href="index.html" class="secondary-btn"><i data-lucide="arrow-left"></i><span>Game Hub</span></a>
@@ -108,16 +119,36 @@
       <span><small>STREAK</small><strong id="streakValue">0</strong></span>
       <span><small>BEST</small><strong id="distanceValue">0 FT</strong></span>
     </div>
+    <div id="heatHud" class="hud-heat">
+      <span class="heat-copy"><small>HOT BAT</small><strong id="heatValue">0%</strong></span>
+      <span class="heat-track"><i id="heatFill"></i><b></b><b></b><b></b></span>
+    </div>
   </header>
 
   <div id="countdown" class="countdown hidden" aria-live="assertive">3</div>
   <div id="pitchReadout" class="pitch-readout hidden" aria-live="polite">
     <span id="pitchType">FASTBALL</span>
     <strong id="timingValue">PERFECT</strong>
+    <small id="pitchMeta" class="pitch-meta">92 MPH</small>
+    <span id="timingGauge" class="timing-gauge hidden" aria-hidden="true">
+      <i class="timing-sweet"></i>
+      <b id="timingMarker"></b>
+    </span>
   </div>
   <div id="turnBanner" class="turn-banner hidden" aria-live="assertive">
     <span>NOW BATTING</span>
     <strong id="turnName">Slugger 1</strong>
+  </div>
+
+  <div id="milestoneToast" class="milestone-toast hidden" aria-live="polite">
+    <span id="milestoneKicker">MOMENTUM</span>
+    <strong id="milestoneText">HOT BAT</strong>
+  </div>
+
+  <div id="bigPlay" class="big-play hidden" aria-live="assertive">
+    <span id="bigPlayKicker">BACKYARD BLAST</span>
+    <strong id="bigPlayText">HOME RUN!</strong>
+    <small id="bigPlayDetail">412 FT</small>
   </div>
 
   <button id="swingBtn" class="swing-btn hidden" type="button" aria-label="Swing the bat">
@@ -142,7 +173,15 @@
       <span id="resultsIcon" class="modal-icon" aria-hidden="true"><i data-lucide="trophy"></i></span>
       <p class="eyebrow">Final Scorecard</p>
       <h2 id="resultsTitle">Fence Cleared!</h2>
+      <div class="performance-summary">
+        <span id="performanceGrade" class="performance-grade">A</span>
+        <span class="performance-copy">
+          <strong id="performanceTitle">All-Star Performance</strong>
+          <small id="performanceDetail">Quality decisions and hard contact</small>
+        </span>
+      </div>
       <div id="resultsList" class="results-list"></div>
+      <div id="resultsGoals" class="results-goals"></div>
       <div class="modal-actions">
         <button id="playAgainBtn" class="primary-btn" type="button"><i data-lucide="rotate-ccw"></i><span>Bat Again</span></button>
         <button id="resultsSetupBtn" class="secondary-btn" type="button"><i data-lucide="sliders-horizontal"></i><span>Setup</span></button>
@@ -152,6 +191,6 @@
   </section>
 
   <script src="https://cdn.jsdelivr.net/npm/lucide@0.468.0/dist/umd/lucide.min.js"></script>
-  <script src="baseball.js?v=1.0"></script>
+  <script src="baseball.js?v=2.0"></script>
 </body>
 </html>
