@@ -5,6 +5,7 @@
   const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
   const lerp = (a, b, amount) => a + (b - a) * amount;
   const easeOut = value => 1 - Math.pow(1 - value, 3);
+  const flightEase = value => 1 - Math.pow(1 - value, 1.35);
   const random = (min, max) => min + Math.random() * (max - min);
 
   const EVENT_CONFIG = {
@@ -515,7 +516,7 @@
 
       this.flight = {
         progress: 0,
-        duration: grounder ? 0.78 : (homeRun ? 1.36 : 1.16),
+        duration: grounder ? 0.96 : (homeRun ? 1.55 : 1.36),
         direction,
         distance,
         quality: adjustedQuality,
@@ -1533,12 +1534,16 @@
       const controlY = this.flight.grounder
         ? lerp(startY, destinationY, 0.55) + this.H * 0.08
         : Math.min(this.H * 0.14, destinationY - this.H * (0.1 + this.flight.quality * 0.12));
-      const t = easeOut(progress);
+      const t = flightEase(progress);
       const inv = 1 - t;
       return {
         x: inv * inv * startX + 2 * inv * t * controlX + t * t * destinationX,
         y: inv * inv * startY + 2 * inv * t * controlY + t * t * destinationY,
-        radius: lerp(Math.min(18, this.W * 0.032), 3.5, t),
+        radius: lerp(
+          Math.min(18, this.W * 0.032),
+          clamp(this.W * 0.014, 6, 8),
+          t,
+        ),
       };
     }
 
@@ -1548,20 +1553,27 @@
 
     _drawFlight(ctx) {
       const position = this._flightPosition(this.flight.progress);
+      const trailColor = this.flight.foul ? '#ffd84d' : '#ffe36e';
       ctx.save();
-      for (let index = 7; index >= 1; index--) {
-        const from = this._flightPosition(Math.max(0, this.flight.progress - index * 0.027));
-        const to = this._flightPosition(Math.max(0, this.flight.progress - (index - 1) * 0.027));
-        ctx.globalAlpha = (8 - index) / 8 * 0.68;
-        ctx.strokeStyle = this.flight.foul ? '#f3c552' : '#fffdf0';
-        ctx.lineWidth = Math.max(1.5, position.radius * (0.12 + (8 - index) * 0.045));
+      ctx.lineCap = 'round';
+      for (let index = 10; index >= 1; index--) {
+        const from = this._flightPosition(Math.max(0, this.flight.progress - index * 0.025));
+        const to = this._flightPosition(Math.max(0, this.flight.progress - (index - 1) * 0.025));
+        const strength = (11 - index) / 10;
+        ctx.globalAlpha = strength * 0.42;
+        ctx.strokeStyle = '#142016';
+        ctx.lineWidth = Math.max(4, position.radius * (0.42 + strength * 0.18));
         ctx.beginPath();
         ctx.moveTo(from.x, from.y);
         ctx.lineTo(to.x, to.y);
         ctx.stroke();
+        ctx.globalAlpha = strength * 0.88;
+        ctx.strokeStyle = trailColor;
+        ctx.lineWidth = Math.max(2, position.radius * (0.18 + strength * 0.12));
+        ctx.stroke();
       }
       const destination = this._flightPosition(1);
-      const shadowProgress = easeOut(this.flight.progress);
+      const shadowProgress = flightEase(this.flight.progress);
       ctx.globalAlpha = 0.08 + shadowProgress * 0.2;
       ctx.fillStyle = '#08150a';
       ctx.beginPath();
@@ -1569,6 +1581,16 @@
       ctx.fill();
       ctx.restore();
       this._drawBall(ctx, position.x, position.y, position.radius, this.flight.progress * 12);
+      ctx.save();
+      ctx.globalAlpha = 0.72 + Math.sin(this.time * 10) * 0.12;
+      ctx.strokeStyle = trailColor;
+      ctx.lineWidth = 2.25;
+      ctx.shadowColor = '#172418';
+      ctx.shadowBlur = 5;
+      ctx.beginPath();
+      ctx.arc(position.x, position.y, position.radius + 5, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
     }
 
     _drawTargets(ctx) {
