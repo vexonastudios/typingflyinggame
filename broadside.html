@@ -1,0 +1,270 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#173537" />
+    <title>Broadside Bay | Bodee Books</title>
+    <meta
+      name="description"
+      content="Take the helm in a 3D sailing battle. Work the wind, bring your port and starboard cannons to bear, and reclaim Broadside Bay."
+    />
+    <link rel="canonical" href="https://games.bodeebooks.com/broadside" />
+    <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800&family=Outfit:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="play-timer.css" />
+    <link rel="stylesheet" href="broadside.css?v=1.0" />
+    <script src="profile-manager.js"></script>
+    <script src="play-timer.js"></script>
+    <script defer src="https://www.bodeebooks.com/bodee-analytics.js"></script>
+  </head>
+  <body>
+    <canvas id="sea" aria-label="Broadside Bay naval battlefield"></canvas>
+    <div class="vignette" aria-hidden="true"></div>
+    <div id="shipLabels" aria-hidden="true"></div>
+
+    <header class="topbar">
+      <a class="brand" href="index.html" title="Game Hub"
+        ><i data-lucide="ship-wheel"></i><span>BROADSIDE <b>BAY</b></span></a
+      >
+      <div class="operation">
+        <span id="location">THE OUTER REEF</span><strong id="objective">First Broadside</strong>
+      </div>
+      <nav aria-label="Game controls" class="tools">
+        <button id="sound" class="icon" aria-label="Mute sound" title="Mute sound">
+          <i data-lucide="volume-2"></i>
+        </button>
+        <button id="help" class="icon" aria-label="Controls" title="Controls">
+          <i data-lucide="circle-help"></i>
+        </button>
+        <button
+          id="timer"
+          class="icon timer-tool"
+          aria-label="Playtime limit"
+          title="Playtime limit"
+        >
+          <i data-lucide="timer"></i><span id="timerValue"></span>
+        </button>
+        <button id="pause" class="icon" aria-label="Pause battle" title="Pause (Esc)" disabled>
+          <i data-lucide="pause"></i>
+        </button>
+        <button id="fullscreen" class="icon" aria-label="Enter fullscreen" title="Fullscreen (F)">
+          <i data-lucide="maximize"></i>
+        </button>
+      </nav>
+    </header>
+
+    <div class="ship-status" id="shipStatus">
+      <div class="ship-identity">
+        <i data-lucide="sailboat"></i>
+        <div><span>YOUR SHIP</span><strong>Resolute</strong></div>
+        <b id="hullText">150 / 150</b>
+      </div>
+      <div
+        class="hull-track"
+        role="progressbar"
+        aria-label="Hull strength"
+        aria-valuemin="0"
+        aria-valuemax="150"
+        aria-valuenow="150"
+        id="hullMeter"
+      >
+        <div id="hullFill"></div>
+      </div>
+      <div class="wind-status">
+        <i data-lucide="wind"></i><span id="windState">Crosswind</span
+        ><strong id="windPower">84% sail power</strong>
+      </div>
+    </div>
+
+    <aside class="chart-panel" aria-label="Navigation chart">
+      <div class="chart-top"><span>SEA CHART</span><span>N</span></div>
+      <canvas id="chart" width="300" height="300" aria-label="Ship and island positions"></canvas>
+      <div class="chart-bottom">
+        <span><b class="fleet-dot"></b> Resolute</span><span id="remaining">1 raider</span>
+      </div>
+    </aside>
+    <div id="bearingNotice" class="bearing-notice" hidden>
+      <i data-lucide="navigation"></i><span>Raider bearing</span>
+    </div>
+    <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+    <div id="battleLog" class="battle-log" aria-live="off"></div>
+
+    <section id="helm" class="helm-console" aria-label="Ship controls" hidden>
+      <button
+        id="port"
+        class="battery port"
+        title="Fire port broadside (Q)"
+        aria-label="Fire port broadside"
+      >
+        <span class="battery-heading"
+          ><i data-lucide="move-left"></i><strong>PORT</strong><kbd>Q</kbd></span
+        >
+        <span class="gun-row" id="portGuns" aria-hidden="true"
+          ><i></i><i></i><i></i><i></i><i></i
+        ></span>
+        <span class="battery-state" id="portState">READY</span>
+        <span class="battery-detail" id="portDetail">5 GUNS LOADED</span>
+        <span class="reload-track"><i id="portProgress"></i></span>
+      </button>
+      <div class="helm-center">
+        <div class="sail-heading"><span>SAILS</span><strong id="sailName">Battle sail</strong></div>
+        <input
+          id="sails"
+          type="range"
+          min="0"
+          max="3"
+          step="1"
+          value="2"
+          aria-label="Sail setting"
+          title="Sails (W / S)"
+        />
+        <div class="helm-row">
+          <button class="steer icon" id="left" aria-label="Steer to port" title="Steer left (A)">
+            <i data-lucide="rotate-ccw"></i>
+          </button>
+          <div class="speed"><strong id="speed">0.0</strong><span>KNOTS</span></div>
+          <button
+            class="steer icon"
+            id="right"
+            aria-label="Steer to starboard"
+            title="Steer right (D)"
+          >
+            <i data-lucide="rotate-cw"></i>
+          </button>
+        </div>
+        <span class="compass-heading" id="heading">347 NNW</span>
+      </div>
+      <button
+        id="starboard"
+        class="battery starboard"
+        title="Fire starboard broadside (E)"
+        aria-label="Fire starboard broadside"
+      >
+        <span class="battery-heading"
+          ><kbd>E</kbd><strong>STARBOARD</strong><i data-lucide="move-right"></i
+        ></span>
+        <span class="gun-row" id="starboardGuns" aria-hidden="true"
+          ><i></i><i></i><i></i><i></i><i></i
+        ></span>
+        <span class="battery-state" id="starboardState">READY</span>
+        <span class="battery-detail" id="starboardDetail">5 GUNS LOADED</span>
+        <span class="reload-track"><i id="starboardProgress"></i></span>
+      </button>
+    </section>
+
+    <section id="harbor" class="harbor" aria-labelledby="gameTitle">
+      <div class="harbor-title">
+        <span class="eyebrow">TAKE THE HELM</span>
+        <h1 id="gameTitle">Broadside Bay</h1>
+        <p id="orders">Clear the raider guarding the bay.</p>
+      </div>
+      <div class="harbor-options">
+        <label for="mission">CHART A COURSE</label>
+        <select id="mission">
+          <option value="0">01 / First Broadside</option>
+          <option value="1">02 / The Crossfire</option>
+          <option value="2">03 / The Iron Admiral</option>
+        </select>
+        <fieldset class="difficulty">
+          <legend>COMMAND</legend>
+          <label><input type="radio" name="difficulty" value="cadet" /><span>Cadet</span></label
+          ><label
+            ><input type="radio" name="difficulty" value="captain" checked /><span
+              >Captain</span
+            ></label
+          >
+        </fieldset>
+        <button id="start" class="primary" disabled>
+          <i data-lucide="anchor"></i><span>Preparing ship...</span
+          ><i data-lucide="arrow-right"></i>
+        </button>
+        <span class="career" id="career">10 cannons. Two broadsides. One captain.</span>
+      </div>
+    </section>
+
+    <dialog id="pauseDialog" class="dialog">
+      <span class="dialog-mark"><i data-lucide="anchor"></i></span
+      ><span class="eyebrow">AT ANCHOR</span>
+      <h2>Battle paused</h2>
+      <button id="resume" class="primary"><i data-lucide="play"></i>Resume battle</button>
+      <div class="dialog-actions">
+        <button id="restart" class="secondary"><i data-lucide="rotate-ccw"></i>Restart</button
+        ><button id="returnHarbor" class="secondary"><i data-lucide="compass"></i>Harbor</button>
+      </div>
+    </dialog>
+
+    <dialog id="helpDialog" class="dialog help-dialog">
+      <button class="icon dialog-close" id="closeHelp" aria-label="Close controls">
+        <i data-lucide="x"></i>
+      </button>
+      <span class="eyebrow">CAPTAIN'S ORDERS</span>
+      <h2>Present your broadside</h2>
+      <div class="orders-diagram" aria-hidden="true">
+        <span class="port">PORT<br /><b>Q</b></span
+        ><i data-lucide="sailboat"></i><span class="starboard">STARBOARD<br /><b>E</b></span>
+      </div>
+      <p>
+        Bring a side of your ship toward the enemy. Fire that battery, sail past, and turn to bring
+        your other loaded side around.
+      </p>
+      <dl class="controls-list">
+        <div>
+          <dt><kbd>A</kbd><kbd>D</kbd></dt>
+          <dd>Turn the helm</dd>
+        </div>
+        <div>
+          <dt><kbd>W</kbd><kbd>S</kbd></dt>
+          <dd>Raise or lower sails</dd>
+        </div>
+        <div>
+          <dt><kbd>Q</kbd><kbd>E</kbd></dt>
+          <dd>Fire port or starboard</dd>
+        </div>
+        <div>
+          <dt><kbd>F</kbd><kbd>Esc</kbd></dt>
+          <dd>Fullscreen / pause</dd>
+        </div>
+      </dl>
+      <p class="help-note">
+        The sectors show where your cannons fire. Lead moving ships. Each side reloads separately.
+        Sailing into the wind reduces your speed.
+      </p>
+      <button id="helpReady" class="primary"><i data-lucide="check"></i>Understood</button>
+    </dialog>
+
+    <dialog id="resultDialog" class="dialog result-dialog">
+      <span class="dialog-mark"><i data-lucide="flag"></i></span
+      ><span class="eyebrow" id="resultEyebrow">BAY SECURED</span>
+      <h2 id="resultTitle">A captain's victory</h2>
+      <p id="resultDescription"></p>
+      <div class="result-stats">
+        <div><strong id="resultAccuracy">0%</strong><span>ACCURACY</span></div>
+        <div><strong id="resultAlternations">0</strong><span>SIDE SWITCHES</span></div>
+        <div><strong id="resultHull">0%</strong><span>HULL LEFT</span></div>
+      </div>
+      <button id="next" class="primary">
+        <i data-lucide="arrow-right"></i><span>Next encounter</span>
+      </button>
+      <div class="dialog-actions">
+        <button id="retry" class="secondary"><i data-lucide="rotate-ccw"></i>Replay</button
+        ><button id="resultHarbor" class="secondary"><i data-lucide="compass"></i>Harbor</button>
+      </div>
+    </dialog>
+
+    <div id="loadError" class="load-error" role="alert" hidden>
+      <h2>The ship couldn't launch</h2>
+      <p id="errorDetail">Please reload the page to try again.</p>
+      <a href="broadside.html" class="primary">Try again</a><a href="index.html">Game Hub</a>
+    </div>
+    <noscript
+      >This game needs JavaScript. <a href="index.html">Return to the Game Hub</a>.</noscript
+    >
+    <script src="broadside-game/vendor/lucide.min.js"></script>
+    <script type="module" src="broadside-game/game.mjs?v=1.0"></script>
+  </body>
+</html>
