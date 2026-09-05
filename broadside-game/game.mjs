@@ -140,6 +140,8 @@ class BroadsideGame {
     this.labels = new Map();
     this.savedResult = false;
     this.timerPaused = false;
+    this.controlsSeen = false;
+    this.pendingLaunch = false;
     this.bind();
     this.makeLabels();
     this.updateHud();
@@ -152,7 +154,10 @@ class BroadsideGame {
   }
 
   bind() {
-    $('start').addEventListener('click', () => this.start());
+    $('start').addEventListener('click', () => {
+      if (this.controlsSeen) this.start();
+      else this.openHelp(true);
+    });
     $('mission').addEventListener('change', () => this.preview());
     document
       .querySelectorAll('[name="difficulty"]')
@@ -205,22 +210,13 @@ class BroadsideGame {
       icons();
     });
     $('timer').addEventListener('click', () => $('kid-timer-btn')?.click());
-    $('help').addEventListener('click', () => {
-      this.helpWasPlaying = this.state === 'playing' && !this.paused;
-      this.paused = this.state === 'playing';
-      this.clearInput();
-      $('helpDialog').showModal();
-    });
-    const closeHelp = () => {
-      $('helpDialog').close();
-      if (this.helpWasPlaying) this.resume();
-      this.helpWasPlaying = false;
-    };
-    $('closeHelp').addEventListener('click', closeHelp);
-    $('helpReady').addEventListener('click', closeHelp);
+    for (const id of ['help', 'harborHelp', 'helmHelp'])
+      $(id).addEventListener('click', () => this.openHelp());
+    $('closeHelp').addEventListener('click', () => this.closeHelp());
+    $('helpReady').addEventListener('click', () => this.closeHelp(true));
     $('helpDialog').addEventListener('cancel', (event) => {
       event.preventDefault();
-      closeHelp();
+      this.closeHelp();
     });
     $('pauseDialog').addEventListener('cancel', (event) => {
       event.preventDefault();
@@ -306,6 +302,31 @@ class BroadsideGame {
     this.touch.clear();
     $('left').classList.remove('held');
     $('right').classList.remove('held');
+  }
+
+  openHelp(pendingLaunch = false) {
+    if ($('helpDialog').open) return;
+    this.pendingLaunch = pendingLaunch;
+    this.helpWasPlaying = this.state === 'playing' && !this.paused;
+    if (this.helpWasPlaying) this.paused = true;
+    this.clearInput();
+    $('helpReady').querySelector('span').textContent = pendingLaunch
+      ? 'Start battle'
+      : this.helpWasPlaying
+        ? 'Back to battle'
+        : 'Understood';
+    $('helpDialog').showModal();
+  }
+
+  closeHelp(acknowledged = false) {
+    const launch = this.pendingLaunch && acknowledged;
+    const resume = this.helpWasPlaying;
+    this.pendingLaunch = false;
+    this.helpWasPlaying = false;
+    if (acknowledged) this.controlsSeen = true;
+    $('helpDialog').close();
+    if (launch) this.start();
+    else if (resume) this.resume();
   }
 
   preview() {
@@ -507,12 +528,12 @@ class BroadsideGame {
           ? `${side} cannons reloading, ${battery.remaining.toFixed(1)} seconds`
           : `Fire ${side} broadside`,
       );
-      $(`${side}State`).textContent = reloading ? `${battery.remaining.toFixed(1)}s` : 'READY';
+      $(`${side}State`).textContent = reloading ? `${battery.remaining.toFixed(1)}s` : 'FIRE';
       $(`${side}Detail`).textContent = battery.guns.some((g) => g.state === 'firing')
         ? 'FIRING SALVO'
         : reloading
           ? 'RELOADING'
-          : '5 GUNS LOADED';
+          : 'READY / 5 GUNS';
       $(`${side}Progress`).style.transform =
         `scaleX(${1 - battery.remaining / (BATTERY.reload + BATTERY.stagger * 4)})`;
       [...$(`${side}Guns`).children].forEach((gun, i) => {

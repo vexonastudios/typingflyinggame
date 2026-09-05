@@ -25,6 +25,8 @@ Static browser game at `/broadside`. Serve the repository over HTTP; there is no
 
 Pause, help, the family playtime overlay, lost window focus, and a hidden browser tab suspend simulation time. The camera frames the nearest opponent on portrait screens. The wind arrow on the chart points downwind.
 
+The first launch of each page visit opens a controls briefing before simulation starts. The briefing adapts to keyboard or touch, and can be reopened from How to play in the harbor or Controls above the helm. Closing a launch briefing cancels the launch; Start battle acknowledges it. Ready batteries display FIRE as the explicit action.
+
 ## Files and verification
 
 - `combat.mjs`: shared deterministic simulation and encounter definitions.

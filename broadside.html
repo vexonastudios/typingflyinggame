@@ -17,7 +17,7 @@
       rel="stylesheet"
     />
     <link rel="stylesheet" href="play-timer.css" />
-    <link rel="stylesheet" href="broadside.css?v=1.0" />
+    <link rel="stylesheet" href="broadside.css?v=1.1" />
     <script src="profile-manager.js"></script>
     <script src="play-timer.js"></script>
     <script defer src="https://www.bodeebooks.com/bodee-analytics.js"></script>
@@ -95,6 +95,15 @@
     <div id="battleLog" class="battle-log" aria-live="off"></div>
 
     <section id="helm" class="helm-console" aria-label="Ship controls" hidden>
+      <div class="helm-reference">
+        <span class="keyboard-only"><kbd>A</kbd><kbd>D</kbd> Turn</span>
+        <span class="keyboard-only"><kbd>W</kbd><kbd>S</kbd> Sails</span>
+        <span class="keyboard-only"><kbd>Q</kbd><kbd>E</kbd> Fire</span>
+        <span class="touch-only">Hold the arrows to turn</span>
+        <button id="helmHelp" class="text-control" type="button">
+          <i data-lucide="book-open"></i>Controls
+        </button>
+      </div>
       <button
         id="port"
         class="battery port"
@@ -107,8 +116,8 @@
         <span class="gun-row" id="portGuns" aria-hidden="true"
           ><i></i><i></i><i></i><i></i><i></i
         ></span>
-        <span class="battery-state" id="portState">READY</span>
-        <span class="battery-detail" id="portDetail">5 GUNS LOADED</span>
+        <span class="battery-state" id="portState">FIRE</span>
+        <span class="battery-detail" id="portDetail">READY / 5 GUNS</span>
         <span class="reload-track"><i id="portProgress"></i></span>
       </button>
       <div class="helm-center">
@@ -151,8 +160,8 @@
         <span class="gun-row" id="starboardGuns" aria-hidden="true"
           ><i></i><i></i><i></i><i></i><i></i
         ></span>
-        <span class="battery-state" id="starboardState">READY</span>
-        <span class="battery-detail" id="starboardDetail">5 GUNS LOADED</span>
+        <span class="battery-state" id="starboardState">FIRE</span>
+        <span class="battery-detail" id="starboardDetail">READY / 5 GUNS</span>
         <span class="reload-track"><i id="starboardProgress"></i></span>
       </button>
     </section>
@@ -183,6 +192,9 @@
           <i data-lucide="anchor"></i><span>Preparing ship...</span
           ><i data-lucide="arrow-right"></i>
         </button>
+        <button id="harborHelp" class="text-control" type="button">
+          <i data-lucide="book-open"></i>How to play
+        </button>
         <span class="career" id="career">10 cannons. Two broadsides. One captain.</span>
       </div>
     </section>
@@ -198,43 +210,80 @@
       </div>
     </dialog>
 
-    <dialog id="helpDialog" class="dialog help-dialog">
+    <dialog
+      id="helpDialog"
+      class="dialog help-dialog"
+      aria-labelledby="helpTitle"
+      aria-describedby="helpAim"
+    >
       <button class="icon dialog-close" id="closeHelp" aria-label="Close controls">
         <i data-lucide="x"></i>
       </button>
-      <span class="eyebrow">CAPTAIN'S ORDERS</span>
-      <h2>Present your broadside</h2>
+      <span class="eyebrow">CAPTAIN'S CONTROLS</span>
+      <h2 id="helpTitle">How to sail &amp; fire</h2>
       <div class="orders-diagram" aria-hidden="true">
-        <span class="port">PORT<br /><b>Q</b></span
-        ><i data-lucide="sailboat"></i><span class="starboard">STARBOARD<br /><b>E</b></span>
+        <span class="port">LEFT SIDE<br /><b>PORT</b></span>
+        <i data-lucide="sailboat"></i
+        ><span class="starboard">RIGHT SIDE<br /><b>STARBOARD</b></span>
       </div>
-      <p>
-        Bring a side of your ship toward the enemy. Fire that battery, sail past, and turn to bring
-        your other loaded side around.
+      <p id="helpAim">
+        Turn your ship until the enemy is inside a colored firing sector. Your cannons fire out of
+        the sides.
       </p>
-      <dl class="controls-list">
+      <dl class="controls-list keyboard-only">
+        <div class="port">
+          <dt><kbd>Q</kbd></dt>
+          <dd>
+            <strong>Fire left / Port</strong><small>Press Q or click the PORT fire button.</small>
+          </dd>
+        </div>
+        <div class="starboard">
+          <dt><kbd>E</kbd></dt>
+          <dd>
+            <strong>Fire right / Starboard</strong
+            ><small>Press E or click the STARBOARD fire button.</small>
+          </dd>
+        </div>
         <div>
           <dt><kbd>A</kbd><kbd>D</kbd></dt>
-          <dd>Turn the helm</dd>
+          <dd><strong>Turn your ship</strong><small>Hold A for left or D for right.</small></dd>
         </div>
         <div>
           <dt><kbd>W</kbd><kbd>S</kbd></dt>
-          <dd>Raise or lower sails</dd>
-        </div>
-        <div>
-          <dt><kbd>Q</kbd><kbd>E</kbd></dt>
-          <dd>Fire port or starboard</dd>
-        </div>
-        <div>
-          <dt><kbd>F</kbd><kbd>Esc</kbd></dt>
-          <dd>Fullscreen / pause</dd>
+          <dd><strong>Change speed</strong><small>W raises the sails. S lowers them.</small></dd>
         </div>
       </dl>
-      <p class="help-note">
-        The sectors show where your cannons fire. Lead moving ships. Each side reloads separately.
-        Sailing into the wind reduces your speed.
+      <dl class="controls-list touch-only">
+        <div class="port">
+          <dt><i data-lucide="move-left"></i></dt>
+          <dd><strong>Fire left / Port</strong><small>Tap FIRE on the PORT button.</small></dd>
+        </div>
+        <div class="starboard">
+          <dt><i data-lucide="move-right"></i></dt>
+          <dd>
+            <strong>Fire right / Starboard</strong><small>Tap FIRE on the STARBOARD button.</small>
+          </dd>
+        </div>
+        <div>
+          <dt><i data-lucide="rotate-ccw"></i><i data-lucide="rotate-cw"></i></dt>
+          <dd>
+            <strong>Turn your ship</strong><small>Hold either arrow beside the speed gauge.</small>
+          </dd>
+        </div>
+        <div>
+          <dt><i data-lucide="sailboat"></i></dt>
+          <dd><strong>Change speed</strong><small>Drag the SAILS slider right or left.</small></dd>
+        </div>
+      </dl>
+      <p class="keyboard-only help-shortcuts">
+        <kbd>F</kbd> Fullscreen <span aria-hidden="true">/</span> <kbd>Esc</kbd> Pause
       </p>
-      <button id="helpReady" class="primary"><i data-lucide="check"></i>Understood</button>
+      <p class="help-note">
+        Each side reloads separately. Fire one side, turn, and use the other while it reloads.
+      </p>
+      <button id="helpReady" class="primary">
+        <i data-lucide="check"></i><span>Understood</span>
+      </button>
     </dialog>
 
     <dialog id="resultDialog" class="dialog result-dialog">
@@ -265,6 +314,6 @@
       >This game needs JavaScript. <a href="index.html">Return to the Game Hub</a>.</noscript
     >
     <script src="broadside-game/vendor/lucide.min.js"></script>
-    <script type="module" src="broadside-game/game.mjs?v=1.0"></script>
+    <script type="module" src="broadside-game/game.mjs?v=1.1"></script>
   </body>
 </html>
